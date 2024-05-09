@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::commitment::{ParamsKZG, ParamsVerifierKZG};
+use super::commitment::ParamsVerifierKZG;
 use crate::{arithmetic::parallelize, poly::commitment::MSM};
 use group::{Curve, Group};
 use halo2_middleware::zal::traits::MsmAccel;
@@ -133,16 +133,6 @@ where
 
     pub(crate) fn add_msm(&mut self, other: MSMKZG<E>) {
         self.projectives_msms.push(other);
-    }
-}
-
-impl<E: MultiMillerLoop> From<&ParamsKZG<E>> for DualMSM<E>
-where
-    E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
-    E::G1: CurveExt<AffineExt = E::G1Affine>,
-{
-    fn from(_params: &ParamsKZG<E>) -> Self {
-        DualMSM::new()
     }
 }
 
