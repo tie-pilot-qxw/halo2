@@ -112,11 +112,8 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>group::ff::{BatchInvert, Field};
 
-<span class="kw">use </span><span class="kw">super</span>::ParamsIPA;
 <span class="kw">use crate</span>::{arithmetic::CurveAffine, poly::ipa::strategy::GuardIPA};
 <span class="kw">use crate</span>::{
     poly::{commitment::MSM, ipa::msm::MSMIPA, Error},
@@ -127,13 +124,12 @@
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
 /// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
 </span><span class="kw">pub fn </span>verify_proof&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
-    params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsIPA&lt;C&gt;,
     <span class="kw-2">mut </span>msm: MSMIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;,
     transcript: <span class="kw-2">&amp;mut </span>T,
     x: C::Scalar,
     v: C::Scalar,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;GuardIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;, Error&gt; {
-    <span class="kw">let </span>k = params.k <span class="kw">as </span>usize;
+    <span class="kw">let </span>k = msm.params.k <span class="kw">as </span>usize;
 
     <span class="comment">// P&#39; = P - [v] G_0 + [ξ] S
     </span>msm.add_constant_term(-v); <span class="comment">// add [-v] G_0

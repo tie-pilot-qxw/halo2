@@ -162,14 +162,18 @@
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Debug;
+<span class="kw">use </span>std::marker::PhantomData;
 
 <span class="kw">use </span>halo2_middleware::ff::Field;
 
 <span class="kw">use super</span>::{construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4};
 <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
-<span class="kw">use </span><span class="kw">crate</span>::poly::commitment::{Params, Verifier, MSM};
-<span class="kw">use </span><span class="kw">crate</span>::poly::ipa::commitment::{IPACommitmentScheme, ParamsIPA, ParamsVerifierIPA};
+<span class="kw">use </span><span class="kw">crate</span>::poly::commitment::{ParamsVerifier, Verifier, MSM};
+<span class="kw">use </span><span class="kw">crate</span>::poly::ipa::commitment::IPACommitmentScheme;
 <span class="kw">use </span><span class="kw">crate</span>::poly::ipa::msm::MSMIPA;
 <span class="kw">use </span><span class="kw">crate</span>::poly::ipa::strategy::GuardIPA;
 <span class="kw">use </span><span class="kw">crate</span>::poly::query::{CommitmentReference, VerifierQuery};
@@ -178,20 +182,20 @@
 
 <span class="doccomment">/// IPA multi-open verifier
 </span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>VerifierIPA&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
-    params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsIPA&lt;C&gt;,
+</span><span class="kw">pub struct </span>VerifierIPA&lt;C: CurveAffine&gt; {
+    _marker: PhantomData&lt;C&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; Verifier&lt;<span class="lifetime">&#39;params</span>, IPACommitmentScheme&lt;C&gt;&gt;
-    <span class="kw">for </span>VerifierIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;
-{
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; Verifier&lt;<span class="lifetime">&#39;params</span>, IPACommitmentScheme&lt;C&gt;&gt; <span class="kw">for </span>VerifierIPA&lt;C&gt; {
     <span class="kw">type </span>Guard = GuardIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;;
     <span class="kw">type </span>MSMAccumulator = MSMIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;;
 
     <span class="kw">const </span>QUERY_INSTANCE: bool = <span class="bool-val">true</span>;
 
-    <span class="kw">fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsVerifierIPA&lt;C&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ params }
+    <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            _marker: PhantomData,
+        }
     }
 
     <span class="kw">fn </span>verify_proof&lt;<span class="lifetime">&#39;com</span>, E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;, I&gt;(
@@ -215,8 +219,10 @@
 
         <span class="comment">// Compress the commitments and expected evaluations at x together.
         // using the challenge x_1
-        </span><span class="kw">let </span><span class="kw-2">mut </span>q_commitments: Vec&lt;<span class="kw">_</span>&gt; = <span class="macro">vec!</span>[
-        (<span class="self">self</span>.params.empty_msm(), C::Scalar::ONE); <span class="comment">// (accumulator, next x_1 power).
+        </span><span class="kw">let </span>empty_msm = ParamsVerifier::&lt;<span class="lifetime">&#39;params</span>, C&gt;::empty_msm(msm.params);
+        <span class="kw">let </span><span class="kw-2">mut </span>q_commitments: Vec&lt;<span class="kw">_</span>&gt; = <span class="macro">vec!</span>[
+
+        (empty_msm, C::Scalar::ONE); <span class="comment">// (accumulator, next x_1 power).
         </span>point_sets.len()];
 
         <span class="comment">// A vec of vecs of evals. The outer vec corresponds to the point set,
@@ -307,7 +313,7 @@
         );
 
         <span class="comment">// Verify the opening proof
-        </span><span class="kw">super</span>::commitment::verify_proof(<span class="self">self</span>.params, msm, transcript, <span class="kw-2">*</span>x_3, v)
+        </span><span class="kw">super</span>::commitment::verify_proof(msm, transcript, <span class="kw-2">*</span>x_3, v)
     }
 }
 </code></pre></div></section></main></body></html>

@@ -209,21 +209,9 @@
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Debug;
 
-<span class="kw">use </span><span class="kw">super</span>::commitment::ParamsKZG;
+<span class="kw">use </span><span class="kw">super</span>::commitment::ParamsVerifierKZG;
 <span class="kw">use crate</span>::{arithmetic::parallelize, poly::commitment::MSM};
 <span class="kw">use </span>group::{Curve, Group};
 <span class="kw">use </span>halo2_middleware::zal::traits::MsmAccel;
@@ -269,7 +257,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;E: Engine + Debug&gt; MSM&lt;E::G1Affine&gt; <span class="kw">for </span>MSMKZG&lt;E&gt;
+<span class="kw">impl</span>&lt;E: Engine&gt; MSM&lt;E::G1Affine&gt; <span class="kw">for </span>MSMKZG&lt;E&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
@@ -324,7 +312,7 @@
     projectives_msms: Vec&lt;MSMKZG&lt;E&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;E: Engine + Debug&gt; Default <span class="kw">for </span>PreMSM&lt;E&gt;
+<span class="kw">impl</span>&lt;E: Engine&gt; Default <span class="kw">for </span>PreMSM&lt;E&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
@@ -336,7 +324,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;E: Engine + Debug&gt; PreMSM&lt;E&gt;
+<span class="kw">impl</span>&lt;E: Engine&gt; PreMSM&lt;E&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
@@ -359,37 +347,25 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E: MultiMillerLoop + Debug&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsKZG&lt;E&gt;&gt; <span class="kw">for </span>DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;
-<span class="kw">where
-    </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
-    E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
-{
-    <span class="kw">fn </span>from(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
-        DualMSM::new(params)
-    }
-}
-
 <span class="doccomment">/// Two channel MSM accumulator
-</span><span class="attr">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>DualMSM&lt;<span class="lifetime">&#39;a</span>, E: Engine&gt;
+</span><span class="attr">#[derive(Debug, Default, Clone)]
+</span><span class="kw">pub struct </span>DualMSM&lt;E: Engine&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ParamsKZG&lt;E&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) left: MSMKZG&lt;E&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) right: MSMKZG&lt;E&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: MultiMillerLoop + Debug&gt; DualMSM&lt;<span class="lifetime">&#39;a</span>, E&gt;
+<span class="kw">impl</span>&lt;E: MultiMillerLoop&gt; DualMSM&lt;E&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
     <span class="doccomment">/// Create a new two channel MSM accumulator instance
-    </span><span class="kw">pub fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ParamsKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            params,
             left: MSMKZG::new(),
             right: MSMKZG::new(),
         }
@@ -408,9 +384,9 @@
     }
 
     <span class="doccomment">/// Performs final pairing check with given verifier params and two channel linear combination
-    </span><span class="kw">pub fn </span>check(<span class="self">self</span>, engine: <span class="kw-2">&amp;</span><span class="kw">impl </span>MsmAccel&lt;E::G1Affine&gt;) -&gt; bool {
-        <span class="kw">let </span>s_g2_prepared = E::G2Prepared::from(<span class="self">self</span>.params.s_g2);
-        <span class="kw">let </span>n_g2_prepared = E::G2Prepared::from(-<span class="self">self</span>.params.g2);
+    </span><span class="kw">pub fn </span>check(<span class="self">self</span>, engine: <span class="kw-2">&amp;</span><span class="kw">impl </span>MsmAccel&lt;E::G1Affine&gt;, params: <span class="kw-2">&amp;</span>ParamsVerifierKZG&lt;E&gt;) -&gt; bool {
+        <span class="kw">let </span>s_g2_prepared = E::G2Prepared::from(params.s_g2);
+        <span class="kw">let </span>n_g2_prepared = E::G2Prepared::from((-E::G2::generator()).into());
 
         <span class="kw">let </span>left = <span class="self">self</span>.left.eval(engine);
         <span class="kw">let </span>right = <span class="self">self</span>.right.eval(engine);

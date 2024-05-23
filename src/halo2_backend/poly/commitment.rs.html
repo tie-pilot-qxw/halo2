@@ -277,16 +277,6 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::{
     query::{ProverQuery, VerifierQuery},
     strategy::Guard,
@@ -313,11 +303,7 @@
     </span><span class="kw">type </span>Curve: CurveAffine&lt;ScalarExt = <span class="self">Self</span>::Scalar&gt;;
 
     <span class="doccomment">/// Constant prover parameters
-    </span><span class="kw">type </span>ParamsProver: <span class="kw">for</span>&lt;<span class="lifetime">&#39;params</span>&gt; ParamsProver&lt;
-        <span class="lifetime">&#39;params</span>,
-        <span class="self">Self</span>::Curve,
-        ParamsVerifier = <span class="self">Self</span>::ParamsVerifier,
-    &gt;;
+    </span><span class="kw">type </span>ParamsProver: ParamsProver&lt;<span class="self">Self</span>::Curve&gt;;
 
     <span class="doccomment">/// Constant verifier parameters
     </span><span class="kw">type </span>ParamsVerifier: <span class="kw">for</span>&lt;<span class="lifetime">&#39;params</span>&gt; ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, <span class="self">Self</span>::Curve&gt;;
@@ -329,11 +315,10 @@
     </span><span class="kw">fn </span>read_params&lt;R: io::Read&gt;(reader: <span class="kw-2">&amp;mut </span>R) -&gt; io::Result&lt;<span class="self">Self</span>::ParamsProver&gt;;
 }
 
-<span class="doccomment">/// Parameters for circuit synthesis and prover parameters.
-</span><span class="kw">pub trait </span>Params&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt;: Sized + Clone + Debug {
-    <span class="doccomment">/// Multiscalar multiplication engine
-    </span><span class="kw">type </span>MSM: MSM&lt;C&gt; + <span class="lifetime">&#39;params</span>;
-
+<span class="doccomment">/// Common for Verifier and Prover.
+///
+/// Parameters for circuit synthesis and prover parameters.
+</span><span class="kw">pub trait </span>Params&lt;C: CurveAffine&gt;: Sized + Clone + Debug {
     <span class="doccomment">/// Logarithmic size of the circuit
     </span><span class="kw">fn </span>k(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32;
 
@@ -342,10 +327,6 @@
 
     <span class="doccomment">/// Downsize `Params` with smaller `k`.
     </span><span class="kw">fn </span>downsize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: u32);
-
-    <span class="doccomment">/// Generates an empty multiscalar multiplication struct using the
-    /// appropriate params.
-    </span><span class="kw">fn </span>empty_msm(<span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::MSM;
 
     <span class="doccomment">/// This commits to a polynomial using its evaluations over the $2^k$ size
     /// evaluation domain. The commitment will be blinded by the blinding factor
@@ -365,10 +346,7 @@
 }
 
 <span class="doccomment">/// Parameters for circuit synthesis and prover parameters.
-</span><span class="kw">pub trait </span>ParamsProver&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt;: Params&lt;<span class="lifetime">&#39;params</span>, C&gt; {
-    <span class="doccomment">/// Constant verifier parameters.
-    </span><span class="kw">type </span>ParamsVerifier: ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, C&gt;;
-
+</span><span class="kw">pub trait </span>ParamsProver&lt;C: CurveAffine&gt;: Params&lt;C&gt; {
     <span class="doccomment">/// Returns new instance of parameters
     </span><span class="kw">fn </span>new(k: u32) -&gt; <span class="self">Self</span>;
 
@@ -381,16 +359,18 @@
         poly: <span class="kw-2">&amp;</span>Polynomial&lt;C::ScalarExt, Coeff&gt;,
         r: Blind&lt;C::ScalarExt&gt;,
     ) -&gt; C::CurveExt;
-
-    <span class="doccomment">/// Getter for g generators
-    </span><span class="kw">fn </span>get_g(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[C];
-
-    <span class="doccomment">/// Returns verification parameters.
-    </span><span class="kw">fn </span>verifier_params(<span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span><span class="self">Self</span>::ParamsVerifier;
 }
 
 <span class="doccomment">/// Verifier specific functionality with circuit constraints
-</span><span class="kw">pub trait </span>ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt;: Params&lt;<span class="lifetime">&#39;params</span>, C&gt; {}
+</span><span class="kw">pub trait </span>ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt;: Params&lt;C&gt; {
+    <span class="doccomment">/// Multiscalar multiplication engine
+    </span><span class="kw">type </span>MSM: MSM&lt;C&gt; + <span class="lifetime">&#39;params</span>;
+    <span class="doccomment">/// Can commit to instance or not.
+    </span><span class="kw">const </span>COMMIT_INSTANCE: bool;
+    <span class="doccomment">/// Generates an empty multiscalar multiplication struct using the
+    /// appropriate params.
+    </span><span class="kw">fn </span>empty_msm(<span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::MSM;
+}
 
 <span class="doccomment">/// Multiscalar multiplication engine
 </span><span class="kw">pub trait </span>MSM&lt;C: CurveAffine&gt;: Clone + Debug + Send + Sync {
@@ -479,7 +459,7 @@
     </span><span class="kw">const </span>QUERY_INSTANCE: bool;
 
     <span class="doccomment">/// Creates new verifier instance
-    </span><span class="kw">fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>Scheme::ParamsVerifier) -&gt; <span class="self">Self</span>;
+    </span><span class="kw">fn </span>new() -&gt; <span class="self">Self</span>;
 
     <span class="doccomment">/// Process the proof and return unfinished result named `Guard`
     </span><span class="kw">fn </span>verify_proof&lt;
@@ -499,7 +479,7 @@
                 Item = VerifierQuery&lt;
                     <span class="lifetime">&#39;com</span>,
                     Scheme::Curve,
-                    &lt;Scheme::ParamsVerifier <span class="kw">as </span>Params&lt;<span class="lifetime">&#39;params</span>, Scheme::Curve&gt;&gt;::MSM,
+                    &lt;Scheme::ParamsVerifier <span class="kw">as </span>ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, Scheme::Curve&gt;&gt;::MSM,
                 &gt;,
             &gt; + Clone;
 }

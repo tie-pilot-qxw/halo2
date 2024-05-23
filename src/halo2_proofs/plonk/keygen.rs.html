@@ -120,16 +120,16 @@
 <span class="doccomment">/// Generate a `VerifyingKey` from an instance of `Circuit`.
 /// By default, selector compression is turned **ON**.
 ///
-/// **NOTE**: This `keygen_vk` is legacy one, assuming that `compress_selector: true`.  
-/// Hence, it is HIGHLY recommended to pair this util with `keygen_pk`.  
+/// **NOTE**: This `keygen_vk` is legacy one, assuming that `compress_selector: true`.
+/// Hence, it is HIGHLY recommended to pair this util with `keygen_pk`.
 /// In addition, when using this for key generation, user MUST use `compress_selectors: true`.
-</span><span class="kw">pub fn </span>keygen_vk&lt;<span class="lifetime">&#39;params</span>, C, P, ConcreteCircuit&gt;(
+</span><span class="kw">pub fn </span>keygen_vk&lt;C, P, ConcreteCircuit&gt;(
     params: <span class="kw-2">&amp;</span>P,
     circuit: <span class="kw-2">&amp;</span>ConcreteCircuit,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;VerifyingKey&lt;C&gt;, Error&gt;
 <span class="kw">where
     </span>C: CurveAffine,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
     ConcreteCircuit: Circuit&lt;C::Scalar&gt;,
     C::Scalar: FromUniformBytes&lt;<span class="number">64</span>&gt;,
 {
@@ -142,16 +142,16 @@
 ///
 /// **NOTE**: This `keygen_vk_custom` MUST share the same `compress_selectors` with
 /// `ProvingKey` generation process.
-/// Otherwise, the user could get unmatching pk/vk pair.  
+/// Otherwise, the user could get unmatching pk/vk pair.
 /// Hence, it is HIGHLY recommended to pair this util with `keygen_pk_custom`.
-</span><span class="kw">pub fn </span>keygen_vk_custom&lt;<span class="lifetime">&#39;params</span>, C, P, ConcreteCircuit&gt;(
+</span><span class="kw">pub fn </span>keygen_vk_custom&lt;C, P, ConcreteCircuit&gt;(
     params: <span class="kw-2">&amp;</span>P,
     circuit: <span class="kw-2">&amp;</span>ConcreteCircuit,
     compress_selectors: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;VerifyingKey&lt;C&gt;, Error&gt;
 <span class="kw">where
     </span>C: CurveAffine,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
     ConcreteCircuit: Circuit&lt;C::Scalar&gt;,
     C::Scalar: FromUniformBytes&lt;<span class="number">64</span>&gt;,
 {
@@ -162,17 +162,17 @@
 <span class="doccomment">/// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
 /// By default, selector compression is turned **ON**.
 ///
-/// **NOTE**: This `keygen_pk` is legacy one, assuming that `compress_selector: true`.  
-/// Hence, it is HIGHLY recommended to pair this util with `keygen_vk`.  
+/// **NOTE**: This `keygen_pk` is legacy one, assuming that `compress_selector: true`.
+/// Hence, it is HIGHLY recommended to pair this util with `keygen_vk`.
 /// In addition, when using this for key generation, user MUST use `compress_selectors: true`.
-</span><span class="kw">pub fn </span>keygen_pk&lt;<span class="lifetime">&#39;params</span>, C, P, ConcreteCircuit&gt;(
+</span><span class="kw">pub fn </span>keygen_pk&lt;C, P, ConcreteCircuit&gt;(
     params: <span class="kw-2">&amp;</span>P,
     vk: VerifyingKey&lt;C&gt;,
     circuit: <span class="kw-2">&amp;</span>ConcreteCircuit,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;ProvingKey&lt;C&gt;, Error&gt;
 <span class="kw">where
     </span>C: CurveAffine,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
     ConcreteCircuit: Circuit&lt;C::Scalar&gt;,
 {
     keygen_pk_custom(params, vk, circuit, <span class="bool-val">true</span>)
@@ -184,9 +184,9 @@
 ///
 /// **NOTE**: This `keygen_pk_custom` MUST share the same `compress_selectors` with
 /// `VerifyingKey` generation process.
-/// Otherwise, the user could get unmatching pk/vk pair.  
+/// Otherwise, the user could get unmatching pk/vk pair.
 /// Hence, it is HIGHLY recommended to pair this util with `keygen_vk_custom`.
-</span><span class="kw">pub fn </span>keygen_pk_custom&lt;<span class="lifetime">&#39;params</span>, C, P, ConcreteCircuit&gt;(
+</span><span class="kw">pub fn </span>keygen_pk_custom&lt;C, P, ConcreteCircuit&gt;(
     params: <span class="kw-2">&amp;</span>P,
     vk: VerifyingKey&lt;C&gt;,
     circuit: <span class="kw-2">&amp;</span>ConcreteCircuit,
@@ -194,7 +194,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;ProvingKey&lt;C&gt;, Error&gt;
 <span class="kw">where
     </span>C: CurveAffine,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
     ConcreteCircuit: Circuit&lt;C::Scalar&gt;,
 {
     <span class="kw">let </span>(compiled_circuit, <span class="kw">_</span>, <span class="kw">_</span>) = compile_circuit(params.k(), circuit, compress_selectors)<span class="question-mark">?</span>;

@@ -450,13 +450,13 @@
 }
 
 <span class="doccomment">/// Generate a `VerifyingKey` from an instance of `CompiledCircuit`.
-</span><span class="kw">pub fn </span>keygen_vk&lt;<span class="lifetime">&#39;params</span>, C, P&gt;(
+</span><span class="kw">pub fn </span>keygen_vk&lt;C, P&gt;(
     params: <span class="kw-2">&amp;</span>P,
     circuit: <span class="kw-2">&amp;</span>CompiledCircuit&lt;C::Scalar&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;VerifyingKey&lt;C&gt;, Error&gt;
 <span class="kw">where
     </span>C: CurveAffine,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
     C::Scalar: FromUniformBytes&lt;<span class="number">64</span>&gt;,
 {
     <span class="kw">let </span>cs_mid = <span class="kw-2">&amp;</span>circuit.cs;
@@ -501,14 +501,14 @@
 }
 
 <span class="doccomment">/// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `CompiledCircuit`.
-</span><span class="kw">pub fn </span>keygen_pk&lt;<span class="lifetime">&#39;params</span>, C, P&gt;(
+</span><span class="kw">pub fn </span>keygen_pk&lt;C, P&gt;(
     params: <span class="kw-2">&amp;</span>P,
     vk: VerifyingKey&lt;C&gt;,
     circuit: <span class="kw-2">&amp;</span>CompiledCircuit&lt;C::Scalar&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;ProvingKey&lt;C&gt;, Error&gt;
 <span class="kw">where
     </span>C: CurveAffine,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
 {
     <span class="kw">let </span>cs = <span class="kw-2">&amp;</span>circuit.cs;
 

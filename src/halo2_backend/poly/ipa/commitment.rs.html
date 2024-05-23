@@ -400,13 +400,6 @@
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! This module contains an implementation of the polynomial commitment scheme
 //! described in the [Halo][halo] paper.
 //!
@@ -466,11 +459,18 @@
 <span class="doccomment">/// Verifier parameters
 </span><span class="kw">pub type </span>ParamsVerifierIPA&lt;C&gt; = ParamsIPA&lt;C&gt;;
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, C&gt; <span class="kw">for </span>ParamsIPA&lt;C&gt; {}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; Params&lt;<span class="lifetime">&#39;params</span>, C&gt; <span class="kw">for </span>ParamsIPA&lt;C&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, C&gt; <span class="kw">for </span>ParamsIPA&lt;C&gt; {
     <span class="kw">type </span>MSM = MSMIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;;
 
+    <span class="comment">// IPA params always support commitment.
+    </span><span class="kw">const </span>COMMIT_INSTANCE: bool = <span class="bool-val">true</span>;
+
+    <span class="kw">fn </span>empty_msm(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MSMIPA&lt;C&gt; {
+        MSMIPA::new(<span class="self">self</span>)
+    }
+}
+
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Params&lt;C&gt; <span class="kw">for </span>ParamsIPA&lt;C&gt; {
     <span class="kw">fn </span>k(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.k
     }
@@ -486,10 +486,6 @@
         <span class="self">self</span>.n = <span class="number">1 </span>&lt;&lt; k;
         <span class="self">self</span>.g.truncate(<span class="self">self</span>.n <span class="kw">as </span>usize);
         <span class="self">self</span>.g_lagrange = g_to_lagrange(<span class="self">self</span>.g.iter().map(|g| g.to_curve()).collect(), k);
-    }
-
-    <span class="kw">fn </span>empty_msm(<span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span><span class="self">self</span>) -&gt; MSMIPA&lt;C&gt; {
-        MSMIPA::new(<span class="self">self</span>)
     }
 
     <span class="doccomment">/// This commits to a polynomial using its evaluations over the $2^k$ size
@@ -553,13 +549,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; ParamsProver&lt;<span class="lifetime">&#39;params</span>, C&gt; <span class="kw">for </span>ParamsIPA&lt;C&gt; {
-    <span class="kw">type </span>ParamsVerifier = ParamsVerifierIPA&lt;C&gt;;
-
-    <span class="kw">fn </span>verifier_params(<span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span><span class="self">Self</span>::ParamsVerifier {
-        <span class="self">self
-    </span>}
-
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; ParamsProver&lt;C&gt; <span class="kw">for </span>ParamsIPA&lt;C&gt; {
     <span class="doccomment">/// Initializes parameters for the curve, given a random oracle to draw
     /// points from.
     </span><span class="kw">fn </span>new(k: u32) -&gt; <span class="self">Self </span>{
@@ -641,10 +631,6 @@
         tmp_bases.push(<span class="self">self</span>.w);
 
         engine.msm(<span class="kw-2">&amp;</span>tmp_scalars, <span class="kw-2">&amp;</span>tmp_bases)
-    }
-
-    <span class="kw">fn </span>get_g(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[C] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.g
     }
 }
 
@@ -783,7 +769,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>commitment_msm = MSMIPA::new(<span class="kw-2">&amp;</span>params);
         commitment_msm.append_term(Fq::one(), p.into());
 
-        <span class="kw">let </span>guard = verify_proof(<span class="kw-2">&amp;</span>params, commitment_msm, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">*</span>x, v).unwrap();
+        <span class="kw">let </span>guard = verify_proof(commitment_msm, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">*</span>x, v).unwrap();
         <span class="kw">let </span>ch_verifier = transcript.squeeze_challenge();
         <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>ch_prover, <span class="kw-2">*</span>ch_verifier);
 

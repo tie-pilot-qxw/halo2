@@ -159,7 +159,7 @@
     arithmetic::CurveAffine,
     plonk::{ChallengeX, ChallengeY, Error, VerifyingKey},
     poly::{
-        commitment::{Params, MSM},
+        commitment::{ParamsVerifier, MSM},
         VerifierQuery,
     },
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},
@@ -239,7 +239,7 @@
 }
 
 <span class="kw">impl</span>&lt;C: CurveAffine&gt; PartiallyEvaluated&lt;C&gt; {
-    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>verify&lt;<span class="lifetime">&#39;params</span>, P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;(
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>verify&lt;<span class="lifetime">&#39;params</span>, P: ParamsVerifier&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;(
         <span class="self">self</span>,
         params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>P,
         expressions: <span class="kw">impl </span>Iterator&lt;Item = C::Scalar&gt;,

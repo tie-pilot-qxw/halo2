@@ -197,11 +197,8 @@
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::{
-    commitment::{KZGCommitmentScheme, ParamsKZG},
+    commitment::{KZGCommitmentScheme, ParamsVerifierKZG},
     msm::DualMSM,
 };
 <span class="kw">use crate</span>::{
@@ -223,105 +220,108 @@
 
 <span class="doccomment">/// Wrapper for linear verification accumulator
 </span><span class="attr">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>GuardKZG&lt;<span class="lifetime">&#39;params</span>, E: MultiMillerLoop + Debug&gt;
+</span><span class="kw">pub struct </span>GuardKZG&lt;E: MultiMillerLoop&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) msm_accumulator: DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) msm_accumulator: DualMSM&lt;E&gt;,
 }
 
 <span class="doccomment">/// Define accumulator type as `DualMSM`
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E&gt; Guard&lt;KZGCommitmentScheme&lt;E&gt;&gt; <span class="kw">for </span>GuardKZG&lt;<span class="lifetime">&#39;params</span>, E&gt;
+</span><span class="kw">impl</span>&lt;E&gt; Guard&lt;KZGCommitmentScheme&lt;E&gt;&gt; <span class="kw">for </span>GuardKZG&lt;E&gt;
 <span class="kw">where
     </span>E: MultiMillerLoop + Debug,
     E::G1Affine: SerdeCurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
     E::G2Affine: SerdeCurveAffine,
 {
-    <span class="kw">type </span>MSMAccumulator = DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;;
+    <span class="kw">type </span>MSMAccumulator = DualMSM&lt;E&gt;;
 }
 
 <span class="doccomment">/// KZG specific operations
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E: MultiMillerLoop + Debug&gt; GuardKZG&lt;<span class="lifetime">&#39;params</span>, E&gt;
+</span><span class="kw">impl</span>&lt;E&gt; GuardKZG&lt;E&gt;
 <span class="kw">where
-    </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
+    </span>E: MultiMillerLoop,
+    E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(msm_accumulator: DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(msm_accumulator: DualMSM&lt;E&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ msm_accumulator }
     }
 }
 
 <span class="doccomment">/// A verifier that checks multiple proofs in a batch
 </span><span class="attr">#[derive(Clone, Debug)]
-</span><span class="kw">pub struct </span>AccumulatorStrategy&lt;<span class="lifetime">&#39;params</span>, E: Engine&gt;
+</span><span class="kw">pub struct </span>AccumulatorStrategy&lt;E: Engine&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) msm_accumulator: DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) msm_accumulator: DualMSM&lt;E&gt;,
+    params: ParamsVerifierKZG&lt;E&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E: MultiMillerLoop + Debug&gt; AccumulatorStrategy&lt;<span class="lifetime">&#39;params</span>, E&gt;
+<span class="kw">impl</span>&lt;E&gt; AccumulatorStrategy&lt;E&gt;
 <span class="kw">where
-    </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
+    </span>E: MultiMillerLoop,
+    E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
     <span class="doccomment">/// Constructs an empty batch verifier
-    </span><span class="kw">pub fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(params: <span class="kw-2">&amp;</span>ParamsVerifierKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
         AccumulatorStrategy {
-            msm_accumulator: DualMSM::new(params),
+            msm_accumulator: DualMSM::new(),
+            params: params.clone(),
         }
     }
 
     <span class="doccomment">/// Constructs and initialized new batch verifier
-    </span><span class="kw">pub fn </span>with(msm_accumulator: DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;) -&gt; <span class="self">Self </span>{
-        AccumulatorStrategy { msm_accumulator }
+    </span><span class="kw">pub fn </span>with(msm_accumulator: DualMSM&lt;E&gt;, params: <span class="kw-2">&amp;</span>ParamsVerifierKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
+        AccumulatorStrategy {
+            msm_accumulator,
+            params: params.clone(),
+        }
     }
 }
 
 <span class="doccomment">/// A verifier that checks a single proof
 </span><span class="attr">#[derive(Clone, Debug)]
-</span><span class="kw">pub struct </span>SingleStrategy&lt;<span class="lifetime">&#39;params</span>, E: Engine&gt;
+</span><span class="kw">pub struct </span>SingleStrategy&lt;E: Engine&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) msm: DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) msm: DualMSM&lt;E&gt;,
+    params: ParamsVerifierKZG&lt;E&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E: MultiMillerLoop + Debug&gt; SingleStrategy&lt;<span class="lifetime">&#39;params</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E: MultiMillerLoop + Debug&gt; SingleStrategy&lt;E&gt;
 <span class="kw">where
     </span>E::G1Affine: CurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
 {
     <span class="doccomment">/// Constructs an empty batch verifier
-    </span><span class="kw">pub fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsVerifierKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
         SingleStrategy {
-            msm: DualMSM::new(params),
+            msm: DualMSM::new(),
+            params: params.clone(),
         }
     }
 }
 
-<span class="kw">impl</span>&lt;
-        <span class="lifetime">&#39;params</span>,
-        E: MultiMillerLoop + Debug,
-        V: Verifier&lt;
-            <span class="lifetime">&#39;params</span>,
-            KZGCommitmentScheme&lt;E&gt;,
-            MSMAccumulator = DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;,
-            Guard = GuardKZG&lt;<span class="lifetime">&#39;params</span>, E&gt;,
-        &gt;,
-    &gt; VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, KZGCommitmentScheme&lt;E&gt;, V&gt; <span class="kw">for </span>AccumulatorStrategy&lt;<span class="lifetime">&#39;params</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E, V&gt; VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, KZGCommitmentScheme&lt;E&gt;, V&gt;
+    <span class="kw">for </span>AccumulatorStrategy&lt;E&gt;
 <span class="kw">where
-    </span>E::G1Affine: SerdeCurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
+    </span>E: MultiMillerLoop + Debug,
+    V: Verifier&lt;<span class="lifetime">&#39;params</span>, KZGCommitmentScheme&lt;E&gt;, MSMAccumulator = DualMSM&lt;E&gt;, Guard = GuardKZG&lt;E&gt;&gt;,
+    E::G1Affine: SerdeCurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
     E::G2Affine: SerdeCurveAffine,
 {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="kw">fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsVerifierKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
         AccumulatorStrategy::new(params)
     }
 
@@ -335,34 +335,28 @@
         </span><span class="kw">let </span>guard = f(<span class="self">self</span>.msm_accumulator)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             msm_accumulator: guard.msm_accumulator,
+            params: <span class="self">self</span>.params,
         })
     }
 
     <span class="kw">fn </span>finalize(<span class="self">self</span>) -&gt; bool {
         <span class="comment">// ZAL: Verification is (supposedly) cheap, hence we don&#39;t use an accelerator engine
         </span><span class="kw">let </span>default_engine = H2cEngine::new();
-        <span class="self">self</span>.msm_accumulator.check(<span class="kw-2">&amp;</span>default_engine)
+        <span class="self">self</span>.msm_accumulator.check(<span class="kw-2">&amp;</span>default_engine, <span class="kw-2">&amp;</span><span class="self">self</span>.params)
     }
 }
 
-<span class="kw">impl</span>&lt;
-        <span class="lifetime">&#39;params</span>,
-        E: MultiMillerLoop + Debug,
-        V: Verifier&lt;
-            <span class="lifetime">&#39;params</span>,
-            KZGCommitmentScheme&lt;E&gt;,
-            MSMAccumulator = DualMSM&lt;<span class="lifetime">&#39;params</span>, E&gt;,
-            Guard = GuardKZG&lt;<span class="lifetime">&#39;params</span>, E&gt;,
-        &gt;,
-    &gt; VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, KZGCommitmentScheme&lt;E&gt;, V&gt; <span class="kw">for </span>SingleStrategy&lt;<span class="lifetime">&#39;params</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, E, V&gt; VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, KZGCommitmentScheme&lt;E&gt;, V&gt; <span class="kw">for </span>SingleStrategy&lt;E&gt;
 <span class="kw">where
-    </span>E::G1Affine: SerdeCurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
+    </span>E: MultiMillerLoop + Debug,
+    V: Verifier&lt;<span class="lifetime">&#39;params</span>, KZGCommitmentScheme&lt;E&gt;, MSMAccumulator = DualMSM&lt;E&gt;, Guard = GuardKZG&lt;E&gt;&gt;,
+    E::G1Affine: SerdeCurveAffine&lt;ScalarExt = &lt;E <span class="kw">as </span>Engine&gt;::Fr, CurveExt = &lt;E <span class="kw">as </span>Engine&gt;::G1&gt;,
     E::G1: CurveExt&lt;AffineExt = E::G1Affine&gt;,
     E::G2Affine: SerdeCurveAffine,
 {
     <span class="kw">type </span>Output = ();
 
-    <span class="kw">fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>ParamsVerifierKZG&lt;E&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new(params)
     }
 
@@ -375,7 +369,7 @@
         <span class="kw">let </span>msm = guard.msm_accumulator;
         <span class="comment">// Verification is (supposedly) cheap, hence we don&#39;t use an accelerator engine
         </span><span class="kw">let </span>default_engine = H2cEngine::new();
-        <span class="kw">if </span>msm.check(<span class="kw-2">&amp;</span>default_engine) {
+        <span class="kw">if </span>msm.check(<span class="kw-2">&amp;</span>default_engine, <span class="kw-2">&amp;</span><span class="self">self</span>.params) {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(Error::ConstraintSystemFailure)

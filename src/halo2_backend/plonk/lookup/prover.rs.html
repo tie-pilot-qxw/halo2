@@ -506,8 +506,6 @@
 <a href="#490" id="490">490</a>
 <a href="#491" id="491">491</a>
 <a href="#492" id="492">492</a>
-<a href="#493" id="493">493</a>
-<a href="#494" id="494">494</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::ProvingKey;
 <span class="kw">use </span><span class="kw">super</span>::Argument;
 <span class="kw">use </span><span class="kw">crate</span>::plonk::evaluation::evaluate;
@@ -573,10 +571,9 @@
 </span><span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>lookup_commit_permuted&lt;
     <span class="lifetime">&#39;a</span>,
-    <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;a</span>,
     F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;,
     C,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
     E: EncodedChallenge&lt;C&gt;,
     R: RngCore,
     T: TranscriptWrite&lt;C, E&gt;,
@@ -690,8 +687,7 @@
     /// added to the Lookup and finally returned by the method.
     </span><span class="attr">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit_product&lt;
-        <span class="lifetime">&#39;params</span>,
-        P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+        P: Params&lt;C&gt;,
         E: EncodedChallenge&lt;C&gt;,
         R: RngCore,
         T: TranscriptWrite&lt;C, E&gt;,
@@ -917,7 +913,7 @@
 /// - the first row in a sequence of like values in A&#39; is the row
 ///   that has the corresponding value in S&#39;.
 /// This method returns (A&#39;, S&#39;) if no errors are encountered.
-</span><span class="kw">fn </span>permute_expression_pair&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine, P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;, R: RngCore&gt;(
+</span><span class="kw">fn </span>permute_expression_pair&lt;C: CurveAffine, P: Params&lt;C&gt;, R: RngCore&gt;(
     pk: <span class="kw-2">&amp;</span>ProvingKey&lt;C&gt;,
     params: <span class="kw-2">&amp;</span>P,
     domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,

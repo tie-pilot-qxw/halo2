@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["KZGCommitmentScheme","ParamsKZG"],"type":["ParamsVerifierKZG"]};
+window.SIDEBAR_ITEMS = {"struct":["KZGCommitmentScheme","ParamsKZG","ParamsVerifierKZG"]};

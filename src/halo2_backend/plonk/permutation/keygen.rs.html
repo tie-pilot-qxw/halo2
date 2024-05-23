@@ -413,7 +413,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_vk&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine, P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_vk&lt;C: CurveAffine, P: Params&lt;C&gt;&gt;(
         <span class="self">self</span>,
         params: <span class="kw-2">&amp;</span>P,
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
@@ -422,7 +422,7 @@
         build_vk(params, domain, p, |i, j| <span class="self">self</span>.mapping[i][j])
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_pk&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine, P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_pk&lt;C: CurveAffine, P: Params&lt;C&gt;&gt;(
         <span class="self">self</span>,
         params: <span class="kw-2">&amp;</span>P,
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
@@ -432,7 +432,7 @@
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_pk&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine, P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;(
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_pk&lt;C: CurveAffine, P: Params&lt;C&gt;&gt;(
     params: <span class="kw-2">&amp;</span>P,
     domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
     p: <span class="kw-2">&amp;</span>Argument,
@@ -508,7 +508,7 @@
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_vk&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine, P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;(
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_vk&lt;C: CurveAffine, P: Params&lt;C&gt;&gt;(
     params: <span class="kw-2">&amp;</span>P,
     domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
     p: <span class="kw-2">&amp;</span>Argument,

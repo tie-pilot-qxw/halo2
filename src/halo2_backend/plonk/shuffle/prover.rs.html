@@ -268,7 +268,6 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::ProvingKey;
 <span class="kw">use </span><span class="kw">super</span>::Argument;
 <span class="kw">use </span><span class="kw">crate</span>::plonk::evaluation::evaluate;
@@ -312,7 +311,7 @@
 /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
 ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
 </span><span class="attr">#[allow(clippy::too_many_arguments)]
-</span><span class="kw">fn </span>shuffle_compress&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;a</span>, F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;, C, P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;(
+</span><span class="kw">fn </span>shuffle_compress&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;a</span>, F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;, C, P: Params&lt;C&gt;&gt;(
     arg: <span class="kw-2">&amp;</span>Argument&lt;F&gt;,
     pk: <span class="kw-2">&amp;</span>ProvingKey&lt;C&gt;,
     params: <span class="kw-2">&amp;</span>P,
@@ -367,10 +366,9 @@
 </span><span class="attr">#[allow(clippy::too_many_arguments)]
 </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>shuffle_commit_product&lt;
     <span class="lifetime">&#39;a</span>,
-    <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;a</span>,
     F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;,
     C,
-    P: Params&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    P: Params&lt;C&gt;,
     E: EncodedChallenge&lt;C&gt;,
     R: RngCore,
     T: TranscriptWrite&lt;C, E&gt;,

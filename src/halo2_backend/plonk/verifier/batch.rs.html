@@ -151,8 +151,7 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::plonk::Error;
+</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{plonk::Error, poly::commitment::ParamsVerifier};
 <span class="kw">use </span>group::ff::Field;
 <span class="kw">use </span>halo2_middleware::ff::FromUniformBytes;
 <span class="kw">use </span>halo2_middleware::zal::impls::H2cEngine;
@@ -166,7 +165,7 @@
     },
     plonk::VerifyingKey,
     poly::{
-        commitment::{Params, MSM},
+        commitment::MSM,
         ipa::{
             commitment::{IPACommitmentScheme, ParamsVerifierIPA},
             msm::MSMIPA,
@@ -185,8 +184,7 @@
     msm: MSMIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt;
-    VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, IPACommitmentScheme&lt;C&gt;, VerifierIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, IPACommitmentScheme&lt;C&gt;, VerifierIPA&lt;C&gt;&gt;
     <span class="kw">for </span>BatchStrategy&lt;<span class="lifetime">&#39;params</span>, C&gt;
 {
     <span class="kw">type </span>Output = MSMIPA&lt;<span class="lifetime">&#39;params</span>, C&gt;;
@@ -279,7 +277,7 @@
                 })
             })
             .try_fold_and_reduce(
-                || params.empty_msm(),
+                || ParamsVerifier::&lt;<span class="lifetime">&#39;_</span>, C&gt;::empty_msm(params),
                 |acc, res| res.map(|proof_msm| accumulate_msm(acc, proof_msm)),
             );
 
