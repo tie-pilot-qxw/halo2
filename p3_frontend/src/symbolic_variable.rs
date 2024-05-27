@@ -1,4 +1,5 @@
-//! `SymbolicVariable` copied from plonky3 and adapted for the Air to Plonkish usecase.
+//! `SymbolicVariable` copied from plonky3 and adapted for the Air to Plonkish usecase, at commit
+//! `7b5b8a69f633bc61c530f3722701e5f701b11963`.
 
 // The MIT License (MIT)
 //

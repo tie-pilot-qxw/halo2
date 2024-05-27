@@ -207,13 +207,8 @@ impl<F: PrimeField + Hash> p3Field for FWrap<F> {
     }
 
     fn try_inverse(&self) -> Option<Self> {
-        let inverse = self.0.invert();
-
-        if inverse.is_some().into() {
-            Some(Self(inverse.unwrap()))
-        } else {
-            None
-        }
+        let inverse: Option<F> = self.0.invert().into();
+        inverse.map(|u| FWrap(u))
     }
 
     #[allow(clippy::let_and_return)]
