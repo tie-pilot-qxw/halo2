@@ -343,7 +343,7 @@ mod test {
     #[test]
     #[ignore]
     fn test_performance_h2c_msm_zal() {
-        let (min_k, max_k) = (1, 14);
+        let (min_k, max_k) = (3, 14);
         let (points, scalars) = gen_points_scalars::<G1Affine>(max_k);
 
         for k in min_k..=max_k {

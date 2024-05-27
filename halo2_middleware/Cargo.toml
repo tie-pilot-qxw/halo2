@@ -30,7 +30,6 @@ halo2curves = { version = "0.6.0", default-features = false }
 serde = { version = "1", optional = true, features = ["derive"] }
 serde_derive = { version = "1", optional = true}
 rayon = "1.8"
-rand_core = "0.6.4"
 
 [dev-dependencies]
 ark-std = { version = "0.3" }
