@@ -1,4 +1,5 @@
 pub mod circuit;
+pub mod circuit_linker;
 pub mod expression;
 pub mod lookup;
 pub mod multicore;
