@@ -308,6 +308,13 @@ mod test {
             .msm_with_cached_scalars(&coeffs_descriptor, points);
         end_timer!(t3);
         assert_eq!(e0, e3);
+
+        let t4 = start_timer!(|| format!("H2cEngine msm cached inputs k={}", k));
+        let e4 = engine
+            .msm_backend
+            .msm_with_cached_inputs(&coeffs_descriptor, &base_descriptor);
+        end_timer!(t4);
+        assert_eq!(e0, e4);
     }
 
     fn run_msm_zal_custom<C: CurveAffine>(points: &[C], scalars: &[C::Scalar], k: usize) {
