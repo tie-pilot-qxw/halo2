@@ -1,4 +1,3 @@
-use halo2_backend::poly::commitment::ParamsProver;
 use halo2_backend::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_backend::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_backend::poly::kzg::strategy::SingleStrategy;
@@ -110,10 +109,10 @@ pub(crate) fn setup_prove_verify(
     println!("Verifying...");
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    let strategy = SingleStrategy::new(verifier_params);
+    let strategy = SingleStrategy::new(&verifier_params);
 
-    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
-        &params,
+    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
+        &verifier_params,
         &vk,
         strategy,
         &vec_slices,
