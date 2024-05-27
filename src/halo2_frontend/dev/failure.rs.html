@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_frontend/src/dev/failure.rs`."><title>failure.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_frontend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (2bbb61989 2023-10-04)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_frontend/src/dev/failure.rs`."><title>failure.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_frontend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (8c127df75 2024-05-16)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -14,7 +14,7 @@
     });
 </script>
 
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../halo2_frontend/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -933,11 +933,11 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>FailureLocation {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::InRegion { region, offset } =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;in {region} at offset {offset}&quot;</span>),
+            <span class="self">Self</span>::InRegion { region, offset } =&gt; <span class="macro">write!</span>(f, <span class="string">"in {region} at offset {offset}"</span>),
             <span class="self">Self</span>::OutsideRegion { row } =&gt; {
-                <span class="macro">write!</span>(f, <span class="string">&quot;outside any region, on row {row}&quot;</span>)
+                <span class="macro">write!</span>(f, <span class="string">"outside any region, on row {row}"</span>)
             }
         }
     }
@@ -957,17 +957,17 @@
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>find_expressions&lt;<span class="lifetime">&#39;a</span>, F: Field&gt;(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>find_expressions&lt;<span class="lifetime">'a</span>, F: Field&gt;(
         cs: <span class="kw-2">&amp;</span>ConstraintSystem&lt;F&gt;,
         regions: <span class="kw-2">&amp;</span>[Region],
         failure_row: usize,
-        failure_expressions: <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Expression&lt;F&gt;&gt;,
+        failure_expressions: <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Expression&lt;F&gt;&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>failure_columns: HashSet&lt;Column&lt;Any&gt;&gt; = failure_expressions
             .flat_map(|expression| {
                 expression.evaluate(
                     <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">vec!</span>[],
-                    <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+                    <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"virtual selectors are removed during optimization"</span>),
                     <span class="kw-2">&amp;</span>|query| <span class="macro">vec!</span>[cs.fixed_queries[query.index.unwrap()].<span class="number">0</span>.into()],
                     <span class="kw-2">&amp;</span>|query| <span class="macro">vec!</span>[cs.advice_queries[query.index.unwrap()].<span class="number">0</span>.into()],
                     <span class="kw-2">&amp;</span>|query| <span class="macro">vec!</span>[cs.instance_queries[query.index.unwrap()].<span class="number">0</span>.into()],
@@ -1003,8 +1003,8 @@
                     <span class="comment">// We match the region if any input columns overlap, rather than all of
                     // them, because matching complex selector columns is hard. As long as
                     // regions are rectangles, and failures occur due to assignments entirely
-                    // within single regions, &quot;any&quot; will be equivalent to &quot;all&quot;. If these
-                    // assumptions change, we&#39;ll start getting bug reports from users :)
+                    // within single regions, "any" will be equivalent to "all". If these
+                    // assumptions change, we'll start getting bug reports from users :)
                     </span>(start..=end).contains(<span class="kw-2">&amp;</span>failure_row) &amp;&amp; !failure_columns.is_disjoint(<span class="kw-2">&amp;</span>r.columns)
                 } <span class="kw">else </span>{
                     <span class="comment">// Zero-area region
@@ -1082,7 +1082,7 @@
         /// `FailureLocation::InRegion` is most common, and may be due to the intentional
         /// use of a lookup (if its inputs are conditional on a complex selector), or an
         /// unintentional lookup constraint that overlaps the region (indicating that the
-        /// lookup&#39;s inputs should be made conditional).
+        /// lookup's inputs should be made conditional).
         ///
         /// `FailureLocation::OutsideRegion` is uncommon, and could mean that:
         /// - The input expressions do not correctly constrain a default value that exists
@@ -1104,7 +1104,7 @@
         /// `FailureLocation::InRegion` is most common, and may be due to the intentional
         /// use of a lookup (if its inputs are conditional on a complex selector), or an
         /// unintentional lookup constraint that overlaps the region (indicating that the
-        /// lookup&#39;s inputs should be made conditional).
+        /// lookup's inputs should be made conditional).
         ///
         /// `FailureLocation::OutsideRegion` is uncommon, and could mean that:
         /// - The input expressions do not correctly constrain a default value that exists
@@ -1123,7 +1123,7 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>VerifyFailure {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::CellNotAssigned {
                 gate,
@@ -1134,7 +1134,7 @@
             } =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;{} uses {} at offset {}, which requires cell in column {:?} at offset {} with annotation {:?} to be assigned.&quot;</span>,
+                    <span class="string">"{} uses {} at offset {}, which requires cell in column {:?} at offset {} with annotation {:?} to be assigned."</span>,
                     region, gate, gate_offset, column, offset, region.get_column_annotation((<span class="kw-2">*</span>column).into())
                 )
             }
@@ -1147,7 +1147,7 @@
             } =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;{region} uses {gate} at offset {gate_offset}, which requires cell in instance column {column:?} at row {row} to be assigned.&quot;</span>,
+                    <span class="string">"{region} uses {gate} at offset {gate_offset}, which requires cell in instance column {column:?} at row {row} to be assigned."</span>,
                 )
             }
             <span class="self">Self</span>::ConstraintNotSatisfied {
@@ -1155,7 +1155,7 @@
                 location,
                 cell_values,
             } =&gt; {
-                <span class="macro">writeln!</span>(f, <span class="string">&quot;{constraint} is not satisfied {location}&quot;</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(f, <span class="string">"{constraint} is not satisfied {location}"</span>)<span class="question-mark">?</span>;
                 <span class="kw">for </span>(dvc, value) <span class="kw">in </span>cell_values.iter().map(|(vc, string)| {
                     <span class="kw">let </span>ann_map = <span class="kw">match </span>location {
                         FailureLocation::InRegion { region, offset: <span class="kw">_ </span>} =&gt; {
@@ -1166,14 +1166,14 @@
 
                     (DebugVirtualCell::from((vc, ann_map.as_ref())), string)
                 }) {
-                    <span class="macro">writeln!</span>(f, <span class="string">&quot;- {dvc} = {value}&quot;</span>)<span class="question-mark">?</span>;
+                    <span class="macro">writeln!</span>(f, <span class="string">"- {dvc} = {value}"</span>)<span class="question-mark">?</span>;
                 }
                 <span class="prelude-val">Ok</span>(())
             }
             <span class="self">Self</span>::ConstraintPoisoned { constraint } =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;{constraint} is active on an unusable row - missing selector?&quot;
+                    <span class="string">"{constraint} is active on an unusable row - missing selector?"
                 </span>)
             }
             <span class="self">Self</span>::Lookup {
@@ -1183,7 +1183,7 @@
             } =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;Lookup {name}(index: {lookup_index}) is not satisfied {location}&quot;</span>,
+                    <span class="string">"Lookup {name}(index: {lookup_index}) is not satisfied {location}"</span>,
                 )
             }
             <span class="self">Self</span>::Shuffle {
@@ -1193,13 +1193,13 @@
             } =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;Shuffle {name}(index: {shuffle_index}) is not satisfied {location}&quot;
+                    <span class="string">"Shuffle {name}(index: {shuffle_index}) is not satisfied {location}"
                 </span>)
             }
             <span class="self">Self</span>::Permutation { column, location } =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;Equality constraint not satisfied by cell ({}, {})&quot;</span>,
+                    <span class="string">"Equality constraint not satisfied by cell ({}, {})"</span>,
                     location.get_debug_column(<span class="kw-2">*</span>column),
                     location
                 )
@@ -1209,7 +1209,7 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>VerifyFailure {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
             VerifyFailure::ConstraintNotSatisfied {
                 constraint,
@@ -1245,9 +1245,9 @@
                         .collect(),
                 };
 
-                <span class="macro">write!</span>(f, <span class="string">&quot;{debug:#?}&quot;</span>)
+                <span class="macro">write!</span>(f, <span class="string">"{debug:#?}"</span>)
             }
-            <span class="kw">_ </span>=&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{self:#}&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">write!</span>(f, <span class="string">"{self:#}"</span>),
         }
     }
 }
@@ -1256,13 +1256,13 @@
 ///
 /// ```text
 /// error: cell not assigned
-///   Cell layout in region &#39;Faulty synthesis&#39;:
+///   Cell layout in region 'Faulty synthesis':
 ///     | Offset | A0 | A1 |
 ///     +--------+----+----+
 ///     |    0   | x0 |    |
 ///     |    1   |    |  X | &lt;--{ X marks the spot! 🦜
 ///
-///   Gate &#39;Equality check&#39; (applied at offset 1) queries these cells.
+///   Gate 'Equality check' (applied at offset 1) queries these cells.
 /// ```
 </span><span class="kw">fn </span>render_cell_not_assigned&lt;F: Field&gt;(
     gates: <span class="kw-2">&amp;</span>[Gate&lt;F&gt;],
@@ -1287,16 +1287,16 @@
             .entry(cell_column)
             .or_insert_with(|| {
                 <span class="kw">if </span>cell.column == column &amp;&amp; gate_offset <span class="kw">as </span>i32 + cell.rotation.<span class="number">0 </span>== offset <span class="kw">as </span>i32 {
-                    <span class="string">&quot;X&quot;</span>.to_string()
+                    <span class="string">"X"</span>.to_string()
                 } <span class="kw">else </span>{
-                    <span class="macro">format!</span>(<span class="string">&quot;x{i}&quot;</span>)
+                    <span class="macro">format!</span>(<span class="string">"x{i}"</span>)
                 }
             });
     }
 
-    <span class="macro">eprintln!</span>(<span class="string">&quot;error: cell not assigned&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"error: cell not assigned"</span>);
     emitter::render_cell_layout(
-        <span class="string">&quot;  &quot;</span>,
+        <span class="string">"  "</span>,
         <span class="kw-2">&amp;</span>FailureLocation::InRegion {
             region: region.clone(),
             offset: gate_offset,
@@ -1305,13 +1305,13 @@
         <span class="kw-2">&amp;</span>layout,
         |row_offset, rotation| {
             <span class="kw">if </span>(row_offset.unwrap() + rotation) <span class="kw">as </span>isize == offset {
-                <span class="macro">eprint!</span>(<span class="string">&quot; &lt;--{{ X marks the spot! 🦜&quot;</span>);
+                <span class="macro">eprint!</span>(<span class="string">" &lt;--{{ X marks the spot! 🦜"</span>);
             }
         },
     );
     <span class="macro">eprintln!</span>();
     <span class="macro">eprintln!</span>(
-        <span class="string">&quot;  Gate &#39;{}&#39; (applied at offset {}) queries these cells.&quot;</span>,
+        <span class="string">"  Gate '{}' (applied at offset {}) queries these cells."</span>,
         gate.name, gate_offset
     );
 }
@@ -1320,13 +1320,13 @@
 ///
 /// ```text
 /// error: constraint not satisfied
-///   Cell layout in region &#39;somewhere&#39;:
+///   Cell layout in region 'somewhere':
 ///     | Offset | A0 |
 ///     +--------+----+
-///     |    0   | x0 | &lt;--{ Gate &#39;foo&#39; applied here
+///     |    0   | x0 | &lt;--{ Gate 'foo' applied here
 ///     |    1   | x1 |
 ///
-///   Constraint &#39;bar&#39;:
+///   Constraint 'bar':
 ///     x1 + x1 * 0x100 + x1 * 0x10000 + x1 * 0x100_0000 - x0 = 0
 ///
 ///   Assigned cell values:
@@ -1351,21 +1351,21 @@
             .entry(cell.rotation)
             .or_default()
             .entry(cell.column)
-            .or_insert(<span class="macro">format!</span>(<span class="string">&quot;x{i}&quot;</span>));
+            .or_insert(<span class="macro">format!</span>(<span class="string">"x{i}"</span>));
     }
 
-    <span class="macro">eprintln!</span>(<span class="string">&quot;error: constraint not satisfied&quot;</span>);
-    emitter::render_cell_layout(<span class="string">&quot;  &quot;</span>, location, <span class="kw-2">&amp;</span>columns, <span class="kw-2">&amp;</span>layout, |<span class="kw">_</span>, rotation| {
+    <span class="macro">eprintln!</span>(<span class="string">"error: constraint not satisfied"</span>);
+    emitter::render_cell_layout(<span class="string">"  "</span>, location, <span class="kw-2">&amp;</span>columns, <span class="kw-2">&amp;</span>layout, |<span class="kw">_</span>, rotation| {
         <span class="kw">if </span>rotation == <span class="number">0 </span>{
-            <span class="macro">eprint!</span>(<span class="string">&quot; &lt;--{{ Gate &#39;{}&#39; applied here&quot;</span>, constraint.gate.name);
+            <span class="macro">eprint!</span>(<span class="string">" &lt;--{{ Gate '{}' applied here"</span>, constraint.gate.name);
         }
     });
 
     <span class="comment">// Print the unsatisfied constraint, in terms of the local variables.
     </span><span class="macro">eprintln!</span>();
-    <span class="macro">eprintln!</span>(<span class="string">&quot;  Constraint &#39;{}&#39;:&quot;</span>, constraint.name);
+    <span class="macro">eprintln!</span>(<span class="string">"  Constraint '{}':"</span>, constraint.name);
     <span class="macro">eprintln!</span>(
-        <span class="string">&quot;    {} = 0&quot;</span>,
+        <span class="string">"    {} = 0"</span>,
         emitter::expression_to_string(
             <span class="kw-2">&amp;</span>gates[constraint.gate.index].polynomials()[constraint.index],
             <span class="kw-2">&amp;</span>layout
@@ -1374,9 +1374,9 @@
 
     <span class="comment">// Print the map from local variables to assigned values.
     </span><span class="macro">eprintln!</span>();
-    <span class="macro">eprintln!</span>(<span class="string">&quot;  Assigned cell values:&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"  Assigned cell values:"</span>);
     <span class="kw">for </span>(i, (<span class="kw">_</span>, value)) <span class="kw">in </span>cell_values.iter().enumerate() {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;    x{i} = {value}&quot;</span>);
+        <span class="macro">eprintln!</span>(<span class="string">"    x{i} = {value}"</span>);
     }
 }
 
@@ -1389,7 +1389,7 @@
 ///   Lookup inputs:
 ///     L0 = x1 * x0 + (1 - x1) * 0x2
 ///     ^
-///     | Cell layout in region &#39;Faulty synthesis&#39;:
+///     | Cell layout in region 'Faulty synthesis':
 ///     |   | Offset | A0 | F1 |
 ///     |   +--------+----+----+
 ///     |   |    1   | x0 | x1 | &lt;--{ Lookup inputs queried here
@@ -1408,7 +1408,7 @@
     <span class="kw">let </span>cs = <span class="kw-2">&amp;</span>prover.cs;
     <span class="kw">let </span>lookup = <span class="kw-2">&amp;</span>cs.lookups[lookup_index];
 
-    <span class="comment">// Get the absolute row on which the lookup&#39;s inputs are being queried, so we can
+    <span class="comment">// Get the absolute row on which the lookup's inputs are being queried, so we can
     // fetch the input values.
     </span><span class="kw">let </span>row = <span class="kw">match </span>location {
         FailureLocation::InRegion { region, offset } =&gt; {
@@ -1417,56 +1417,56 @@
         FailureLocation::OutsideRegion { row } =&gt; <span class="kw-2">*</span>row,
     } <span class="kw">as </span>i32;
 
-    <span class="comment">// Recover the fixed columns from the table expressions. We don&#39;t allow composite
+    <span class="comment">// Recover the fixed columns from the table expressions. We don't allow composite
     // expressions for the table side of lookups.
     </span><span class="kw">let </span>lookup_columns = lookup.table_expressions.iter().map(|expr| {
         expr.evaluate(
-            <span class="kw-2">&amp;</span>|f| <span class="macro">format! </span>{<span class="string">&quot;Const: {f:#?}&quot;</span>},
-            <span class="kw-2">&amp;</span>|s| <span class="macro">format! </span>{<span class="string">&quot;S{}&quot;</span>, s.<span class="number">0</span>},
+            <span class="kw-2">&amp;</span>|f| <span class="macro">format!</span> {<span class="string">"Const: {f:#?}"</span>},
+            <span class="kw-2">&amp;</span>|s| <span class="macro">format!</span> {<span class="string">"S{}"</span>, s.<span class="number">0</span>},
             <span class="kw-2">&amp;</span>|query| {
                 <span class="macro">format!</span>(
-                    <span class="string">&quot;{:?}&quot;</span>,
+                    <span class="string">"{:?}"</span>,
                     prover
                         .cs
                         .general_column_annotations
                         .get(<span class="kw-2">&amp;</span>ColumnMid::new(Any::Fixed, query.column_index))
                         .cloned()
-                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;F{}&quot;</span>, query.column_index()))
+                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"F{}"</span>, query.column_index()))
                 )
             },
             <span class="kw-2">&amp;</span>|query| {
                 <span class="macro">format!</span>(
-                    <span class="string">&quot;{:?}&quot;</span>,
+                    <span class="string">"{:?}"</span>,
                     prover
                         .cs
                         .general_column_annotations
                         .get(<span class="kw-2">&amp;</span>ColumnMid::new(Any::Advice, query.column_index))
                         .cloned()
-                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;A{}&quot;</span>, query.column_index()))
+                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"A{}"</span>, query.column_index()))
                 )
             },
             <span class="kw-2">&amp;</span>|query| {
                 <span class="macro">format!</span>(
-                    <span class="string">&quot;{:?}&quot;</span>,
+                    <span class="string">"{:?}"</span>,
                     prover
                         .cs
                         .general_column_annotations
                         .get(<span class="kw-2">&amp;</span>ColumnMid::new(Any::Instance, query.column_index))
                         .cloned()
-                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;I{}&quot;</span>, query.column_index()))
+                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"I{}"</span>, query.column_index()))
                 )
             },
-            <span class="kw-2">&amp;</span>|challenge| <span class="macro">format! </span>{<span class="string">&quot;C{}&quot;</span>, challenge.index()},
-            <span class="kw-2">&amp;</span>|query| <span class="macro">format! </span>{<span class="string">&quot;-{query}&quot;</span>},
-            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format! </span>{<span class="string">&quot;{a} + {b}&quot;</span>},
-            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format! </span>{<span class="string">&quot;{a} * {b}&quot;</span>},
-            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format! </span>{<span class="string">&quot;{a} * {b:?}&quot;</span>},
+            <span class="kw-2">&amp;</span>|challenge| <span class="macro">format!</span> {<span class="string">"C{}"</span>, challenge.index()},
+            <span class="kw-2">&amp;</span>|query| <span class="macro">format!</span> {<span class="string">"-{query}"</span>},
+            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format!</span> {<span class="string">"{a} + {b}"</span>},
+            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format!</span> {<span class="string">"{a} * {b}"</span>},
+            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format!</span> {<span class="string">"{a} * {b:?}"</span>},
         )
     });
 
-    <span class="kw">fn </span>cell_value&lt;<span class="lifetime">&#39;a</span>, F: Field, Q: Into&lt;AnyQuery&gt; + Copy&gt;(
-        load: <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a</span>,
-    ) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; BTreeMap&lt;metadata::VirtualCell, String&gt; + <span class="lifetime">&#39;a </span>{
+    <span class="kw">fn </span>cell_value&lt;<span class="lifetime">'a</span>, F: Field, Q: Into&lt;AnyQuery&gt; + Copy&gt;(
+        load: <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">'a</span>,
+    ) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; BTreeMap&lt;metadata::VirtualCell, String&gt; + <span class="lifetime">'a </span>{
         <span class="kw">move </span>|query| {
             <span class="kw">let </span>AnyQuery {
                 column_type,
@@ -1486,25 +1486,25 @@
         }
     }
 
-    <span class="macro">eprintln!</span>(<span class="string">&quot;error: lookup input does not exist in table&quot;</span>);
-    <span class="macro">eprint!</span>(<span class="string">&quot;  (&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"error: lookup input does not exist in table"</span>);
+    <span class="macro">eprint!</span>(<span class="string">"  ("</span>);
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..lookup.input_expressions.len() {
-        <span class="macro">eprint!</span>(<span class="string">&quot;{}L{}&quot;</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">&quot;&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;, &quot; </span>}, i);
+        <span class="macro">eprint!</span>(<span class="string">"{}L{}"</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">", " </span>}, i);
     }
 
-    <span class="macro">eprint!</span>(<span class="string">&quot;) ∉ (&quot;</span>);
+    <span class="macro">eprint!</span>(<span class="string">") ∉ ("</span>);
     <span class="kw">for </span>(i, column) <span class="kw">in </span>lookup_columns.enumerate() {
-        <span class="macro">eprint!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">&quot;&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;, &quot; </span>}, column);
+        <span class="macro">eprint!</span>(<span class="string">"{}{}"</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">", " </span>}, column);
     }
-    <span class="macro">eprintln!</span>(<span class="string">&quot;)&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">")"</span>);
 
     <span class="macro">eprintln!</span>();
-    <span class="macro">eprintln!</span>(<span class="string">&quot;  Lookup &#39;{name}&#39; inputs:&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"  Lookup '{name}' inputs:"</span>);
     <span class="kw">for </span>(i, input) <span class="kw">in </span>lookup.input_expressions.iter().enumerate() {
-        <span class="comment">// Fetch the cell values (since we don&#39;t store them in VerifyFailure::Lookup).
+        <span class="comment">// Fetch the cell values (since we don't store them in VerifyFailure::Lookup).
         </span><span class="kw">let </span>cell_values = input.evaluate(
             <span class="kw-2">&amp;</span>|<span class="kw">_</span>| BTreeMap::default(),
-            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"virtual selectors are removed during optimization"</span>),
             <span class="kw-2">&amp;</span>cell_value(<span class="kw-2">&amp;</span>util::load(n, row, <span class="kw-2">&amp;</span>cs.fixed_queries, <span class="kw-2">&amp;</span>prover.fixed)),
             <span class="kw-2">&amp;</span>cell_value(<span class="kw-2">&amp;</span>util::load(n, row, <span class="kw-2">&amp;</span>cs.advice_queries, <span class="kw-2">&amp;</span>prover.advice)),
             <span class="kw-2">&amp;</span>cell_value(<span class="kw-2">&amp;</span>util::load_instance(
@@ -1538,30 +1538,30 @@
                 .entry(cell.rotation)
                 .or_default()
                 .entry(cell.column)
-                .or_insert(<span class="macro">format!</span>(<span class="string">&quot;x{i}&quot;</span>));
+                .or_insert(<span class="macro">format!</span>(<span class="string">"x{i}"</span>));
         }
 
         <span class="kw">if </span>i != <span class="number">0 </span>{
             <span class="macro">eprintln!</span>();
         }
         <span class="macro">eprintln!</span>(
-            <span class="string">&quot;    L{} = {}&quot;</span>,
+            <span class="string">"    L{} = {}"</span>,
             i,
             emitter::expression_to_string(input, <span class="kw-2">&amp;</span>layout)
         );
-        <span class="macro">eprintln!</span>(<span class="string">&quot;    ^&quot;</span>);
+        <span class="macro">eprintln!</span>(<span class="string">"    ^"</span>);
 
-        emitter::render_cell_layout(<span class="string">&quot;    | &quot;</span>, location, <span class="kw-2">&amp;</span>columns, <span class="kw-2">&amp;</span>layout, |<span class="kw">_</span>, rotation| {
+        emitter::render_cell_layout(<span class="string">"    | "</span>, location, <span class="kw-2">&amp;</span>columns, <span class="kw-2">&amp;</span>layout, |<span class="kw">_</span>, rotation| {
             <span class="kw">if </span>rotation == <span class="number">0 </span>{
-                <span class="macro">eprint!</span>(<span class="string">&quot; &lt;--{{ Lookup &#39;{name}&#39; inputs queried here&quot;</span>);
+                <span class="macro">eprint!</span>(<span class="string">" &lt;--{{ Lookup '{name}' inputs queried here"</span>);
             }
         });
 
         <span class="comment">// Print the map from local variables to assigned values.
-        </span><span class="macro">eprintln!</span>(<span class="string">&quot;    |&quot;</span>);
-        <span class="macro">eprintln!</span>(<span class="string">&quot;    | Assigned cell values:&quot;</span>);
+        </span><span class="macro">eprintln!</span>(<span class="string">"    |"</span>);
+        <span class="macro">eprintln!</span>(<span class="string">"    | Assigned cell values:"</span>);
         <span class="kw">for </span>(i, (<span class="kw">_</span>, value)) <span class="kw">in </span>cell_values.iter().enumerate() {
-            <span class="macro">eprintln!</span>(<span class="string">&quot;    |   x{i} = {value}&quot;</span>);
+            <span class="macro">eprintln!</span>(<span class="string">"    |   x{i} = {value}"</span>);
         }
     }
 }
@@ -1576,7 +1576,7 @@
     <span class="kw">let </span>cs = <span class="kw-2">&amp;</span>prover.cs;
     <span class="kw">let </span>shuffle = <span class="kw-2">&amp;</span>cs.shuffles[shuffle_index];
 
-    <span class="comment">// Get the absolute row on which the shuffle&#39;s inputs are being queried, so we can
+    <span class="comment">// Get the absolute row on which the shuffle's inputs are being queried, so we can
     // fetch the input values.
     </span><span class="kw">let </span>row = <span class="kw">match </span>location {
         FailureLocation::InRegion { region, offset } =&gt; {
@@ -1587,52 +1587,52 @@
 
     <span class="kw">let </span>shuffle_columns = shuffle.shuffle_expressions.iter().map(|expr| {
         expr.evaluate(
-            <span class="kw-2">&amp;</span>|f| <span class="macro">format! </span>{<span class="string">&quot;Const: {f:#?}&quot;</span>},
-            <span class="kw-2">&amp;</span>|s| <span class="macro">format! </span>{<span class="string">&quot;S{}&quot;</span>, s.<span class="number">0</span>},
+            <span class="kw-2">&amp;</span>|f| <span class="macro">format!</span> {<span class="string">"Const: {f:#?}"</span>},
+            <span class="kw-2">&amp;</span>|s| <span class="macro">format!</span> {<span class="string">"S{}"</span>, s.<span class="number">0</span>},
             <span class="kw-2">&amp;</span>|query| {
                 <span class="macro">format!</span>(
-                    <span class="string">&quot;{:?}&quot;</span>,
+                    <span class="string">"{:?}"</span>,
                     prover
                         .cs
                         .general_column_annotations
                         .get(<span class="kw-2">&amp;</span>ColumnMid::new(Any::Fixed, query.column_index))
                         .cloned()
-                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;F{}&quot;</span>, query.column_index()))
+                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"F{}"</span>, query.column_index()))
                 )
             },
             <span class="kw-2">&amp;</span>|query| {
                 <span class="macro">format!</span>(
-                    <span class="string">&quot;{:?}&quot;</span>,
+                    <span class="string">"{:?}"</span>,
                     prover
                         .cs
                         .general_column_annotations
                         .get(<span class="kw-2">&amp;</span>ColumnMid::new(Any::Advice, query.column_index))
                         .cloned()
-                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;A{}&quot;</span>, query.column_index()))
+                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"A{}"</span>, query.column_index()))
                 )
             },
             <span class="kw-2">&amp;</span>|query| {
                 <span class="macro">format!</span>(
-                    <span class="string">&quot;{:?}&quot;</span>,
+                    <span class="string">"{:?}"</span>,
                     prover
                         .cs
                         .general_column_annotations
                         .get(<span class="kw-2">&amp;</span>ColumnMid::new(Any::Instance, query.column_index))
                         .cloned()
-                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;I{}&quot;</span>, query.column_index()))
+                        .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"I{}"</span>, query.column_index()))
                 )
             },
-            <span class="kw-2">&amp;</span>|challenge| <span class="macro">format! </span>{<span class="string">&quot;C{}&quot;</span>, challenge.index()},
-            <span class="kw-2">&amp;</span>|query| <span class="macro">format! </span>{<span class="string">&quot;-{query}&quot;</span>},
-            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format! </span>{<span class="string">&quot;{a} + {b}&quot;</span>},
-            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format! </span>{<span class="string">&quot;{a} * {b}&quot;</span>},
-            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format! </span>{<span class="string">&quot;{a} * {b:?}&quot;</span>},
+            <span class="kw-2">&amp;</span>|challenge| <span class="macro">format!</span> {<span class="string">"C{}"</span>, challenge.index()},
+            <span class="kw-2">&amp;</span>|query| <span class="macro">format!</span> {<span class="string">"-{query}"</span>},
+            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format!</span> {<span class="string">"{a} + {b}"</span>},
+            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format!</span> {<span class="string">"{a} * {b}"</span>},
+            <span class="kw-2">&amp;</span>|a, b| <span class="macro">format!</span> {<span class="string">"{a} * {b:?}"</span>},
         )
     });
 
-    <span class="kw">fn </span>cell_value&lt;<span class="lifetime">&#39;a</span>, F: Field, Q: Into&lt;AnyQuery&gt; + Copy&gt;(
-        load: <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a</span>,
-    ) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; BTreeMap&lt;metadata::VirtualCell, String&gt; + <span class="lifetime">&#39;a </span>{
+    <span class="kw">fn </span>cell_value&lt;<span class="lifetime">'a</span>, F: Field, Q: Into&lt;AnyQuery&gt; + Copy&gt;(
+        load: <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">'a</span>,
+    ) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; BTreeMap&lt;metadata::VirtualCell, String&gt; + <span class="lifetime">'a </span>{
         <span class="kw">move </span>|query| {
             <span class="kw">let </span>AnyQuery {
                 column_type,
@@ -1652,24 +1652,24 @@
         }
     }
 
-    <span class="macro">eprintln!</span>(<span class="string">&quot;error: input does not exist in shuffle&quot;</span>);
-    <span class="macro">eprint!</span>(<span class="string">&quot;  (&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"error: input does not exist in shuffle"</span>);
+    <span class="macro">eprint!</span>(<span class="string">"  ("</span>);
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..shuffle.input_expressions.len() {
-        <span class="macro">eprint!</span>(<span class="string">&quot;{}L{}&quot;</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">&quot;&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;, &quot; </span>}, i);
+        <span class="macro">eprint!</span>(<span class="string">"{}L{}"</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">", " </span>}, i);
     }
-    <span class="macro">eprint!</span>(<span class="string">&quot;) &lt;-&gt; (&quot;</span>);
+    <span class="macro">eprint!</span>(<span class="string">") &lt;-&gt; ("</span>);
     <span class="kw">for </span>(i, column) <span class="kw">in </span>shuffle_columns.enumerate() {
-        <span class="macro">eprint!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">&quot;&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;, &quot; </span>}, column);
+        <span class="macro">eprint!</span>(<span class="string">"{}{}"</span>, <span class="kw">if </span>i == <span class="number">0 </span>{ <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">", " </span>}, column);
     }
-    <span class="macro">eprintln!</span>(<span class="string">&quot;)&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">")"</span>);
 
     <span class="macro">eprintln!</span>();
-    <span class="macro">eprintln!</span>(<span class="string">&quot;  Shuffle &#39;{name}&#39; inputs:&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"  Shuffle '{name}' inputs:"</span>);
     <span class="kw">for </span>(i, input) <span class="kw">in </span>shuffle.input_expressions.iter().enumerate() {
-        <span class="comment">// Fetch the cell values (since we don&#39;t store them in VerifyFailure::Shuffle).
+        <span class="comment">// Fetch the cell values (since we don't store them in VerifyFailure::Shuffle).
         </span><span class="kw">let </span>cell_values = input.evaluate(
             <span class="kw-2">&amp;</span>|<span class="kw">_</span>| BTreeMap::default(),
-            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"virtual selectors are removed during optimization"</span>),
             <span class="kw-2">&amp;</span>cell_value(<span class="kw-2">&amp;</span>util::load(n, row, <span class="kw-2">&amp;</span>cs.fixed_queries, <span class="kw-2">&amp;</span>prover.fixed)),
             <span class="kw-2">&amp;</span>cell_value(<span class="kw-2">&amp;</span>util::load(n, row, <span class="kw-2">&amp;</span>cs.advice_queries, <span class="kw-2">&amp;</span>prover.advice)),
             <span class="kw-2">&amp;</span>cell_value(<span class="kw-2">&amp;</span>util::load_instance(
@@ -1703,30 +1703,30 @@
                 .entry(cell.rotation)
                 .or_default()
                 .entry(cell.column)
-                .or_insert(<span class="macro">format!</span>(<span class="string">&quot;x{i}&quot;</span>));
+                .or_insert(<span class="macro">format!</span>(<span class="string">"x{i}"</span>));
         }
 
         <span class="kw">if </span>i != <span class="number">0 </span>{
             <span class="macro">eprintln!</span>();
         }
         <span class="macro">eprintln!</span>(
-            <span class="string">&quot;    Sh{} = {}&quot;</span>,
+            <span class="string">"    Sh{} = {}"</span>,
             i,
             emitter::expression_to_string(input, <span class="kw-2">&amp;</span>layout)
         );
-        <span class="macro">eprintln!</span>(<span class="string">&quot;    ^&quot;</span>);
+        <span class="macro">eprintln!</span>(<span class="string">"    ^"</span>);
 
-        emitter::render_cell_layout(<span class="string">&quot;    | &quot;</span>, location, <span class="kw-2">&amp;</span>columns, <span class="kw-2">&amp;</span>layout, |<span class="kw">_</span>, rotation| {
+        emitter::render_cell_layout(<span class="string">"    | "</span>, location, <span class="kw-2">&amp;</span>columns, <span class="kw-2">&amp;</span>layout, |<span class="kw">_</span>, rotation| {
             <span class="kw">if </span>rotation == <span class="number">0 </span>{
-                <span class="macro">eprint!</span>(<span class="string">&quot; &lt;--{{ Shuffle &#39;{name}&#39; inputs queried here&quot;</span>);
+                <span class="macro">eprint!</span>(<span class="string">" &lt;--{{ Shuffle '{name}' inputs queried here"</span>);
             }
         });
 
         <span class="comment">// Print the map from local variables to assigned values.
-        </span><span class="macro">eprintln!</span>(<span class="string">&quot;    |&quot;</span>);
-        <span class="macro">eprintln!</span>(<span class="string">&quot;    | Assigned cell values:&quot;</span>);
+        </span><span class="macro">eprintln!</span>(<span class="string">"    |"</span>);
+        <span class="macro">eprintln!</span>(<span class="string">"    | Assigned cell values:"</span>);
         <span class="kw">for </span>(i, (<span class="kw">_</span>, value)) <span class="kw">in </span>cell_values.iter().enumerate() {
-            <span class="macro">eprintln!</span>(<span class="string">&quot;    |   x{i} = {value}&quot;</span>);
+            <span class="macro">eprintln!</span>(<span class="string">"    |   x{i} = {value}"</span>);
         }
     }
 }
@@ -1766,7 +1766,7 @@
                 shuffle_index,
                 location,
             } =&gt; render_shuffle(prover, name, <span class="kw-2">*</span>shuffle_index, location),
-            <span class="kw">_ </span>=&gt; <span class="macro">eprintln!</span>(<span class="string">&quot;{self}&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">eprintln!</span>(<span class="string">"{self}"</span>),
         }
     }
 }

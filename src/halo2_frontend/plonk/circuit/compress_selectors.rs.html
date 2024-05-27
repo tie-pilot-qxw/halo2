@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_frontend/src/plonk/circuit/compress_selectors.rs`."><title>compress_selectors.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_frontend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (2bbb61989 2023-10-04)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_frontend/src/plonk/circuit/compress_selectors.rs`."><title>compress_selectors.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_frontend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (8c127df75 2024-05-16)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -14,7 +14,7 @@
     });
 </script>
 
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../halo2_frontend/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -438,7 +438,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>selector_assignments = <span class="macro">vec!</span>[];
 
     <span class="comment">// All provided selectors of degree 0 are assumed to be either concrete
-    // selectors or do not appear in a gate. Let&#39;s address these first.
+    // selectors or do not appear in a gate. Let's address these first.
     </span>selectors.retain(|selector| {
         <span class="kw">if </span>selector.max_degree == <span class="number">0 </span>{
             <span class="comment">// This is a complex selector, or a selector that does not appear in any
@@ -464,7 +464,7 @@
         </span>}
     });
 
-    <span class="comment">// All of the remaining `selectors` are simple. Let&#39;s try to combine them.
+    <span class="comment">// All of the remaining `selectors` are simple. Let's try to combine them.
     // First, we compute the exclusion matrix that has (j, k) = true if selector
     // j and selector k conflict -- that is, they are both enabled on the same
     // row. This matrix is symmetric and the diagonal entries are false, so we
@@ -492,7 +492,7 @@
         }
     }
 
-    <span class="comment">// Simple selectors that we&#39;ve added to combinations already.
+    <span class="comment">// Simple selectors that we've added to combinations already.
     </span><span class="kw">let </span><span class="kw-2">mut </span>added = <span class="macro">vec!</span>[<span class="bool-val">false</span>; selectors.len()];
 
     <span class="kw">for </span>(i, selector) <span class="kw">in </span>selectors.iter().enumerate() {
@@ -510,23 +510,23 @@
         <span class="kw">let </span><span class="kw-2">mut </span>combination_added = <span class="macro">vec!</span>[i];
 
         <span class="comment">// Try to find other selectors that can join this one.
-        </span><span class="lifetime">&#39;try_selectors</span>: <span class="kw">for </span>(j, selector) <span class="kw">in </span>selectors.iter().enumerate().skip(i + <span class="number">1</span>) {
+        </span><span class="lifetime">'try_selectors</span>: <span class="kw">for </span>(j, selector) <span class="kw">in </span>selectors.iter().enumerate().skip(i + <span class="number">1</span>) {
             <span class="kw">if </span>d + combination.len() == max_degree {
                 <span class="comment">// Short circuit; nothing can be added to this
                 // combination.
-                </span><span class="kw">break </span><span class="lifetime">&#39;try_selectors</span>;
+                </span><span class="kw">break </span><span class="lifetime">'try_selectors</span>;
             }
 
             <span class="comment">// Skip selectors that have been added to previous combinations
             </span><span class="kw">if </span>added[j] {
-                <span class="kw">continue </span><span class="lifetime">&#39;try_selectors</span>;
+                <span class="kw">continue </span><span class="lifetime">'try_selectors</span>;
             }
 
             <span class="comment">// Is this selector excluded from co-existing in the same
             // combination with any of the other selectors so far?
             </span><span class="kw">for </span><span class="kw-2">&amp;</span>i <span class="kw">in </span>combination_added.iter() {
                 <span class="kw">if </span>exclusion_matrix[j][i] {
-                    <span class="kw">continue </span><span class="lifetime">&#39;try_selectors</span>;
+                    <span class="kw">continue </span><span class="lifetime">'try_selectors</span>;
                 }
             }
 
@@ -536,7 +536,7 @@
             </span><span class="kw">let </span>new_d = std::cmp::max(d, selector.max_degree - <span class="number">1</span>);
             <span class="kw">if </span>new_d + combination.len() + <span class="number">1 </span>&gt; max_degree {
                 <span class="comment">// Guess not.
-                </span><span class="kw">continue </span><span class="lifetime">&#39;try_selectors</span>;
+                </span><span class="kw">continue </span><span class="lifetime">'try_selectors</span>;
             }
 
             d = new_d;
@@ -574,7 +574,7 @@
                 .iter_mut()
                 .zip(selector.activations.iter())
             {
-                <span class="comment">// This will not overwrite another selector&#39;s activations because
+                <span class="comment">// This will not overwrite another selector's activations because
                 // we have ensured that selectors are disjoint.
                 </span><span class="kw">if </span><span class="kw-2">*</span>selector {
                     <span class="kw-2">*</span>combination = assigned_root;
@@ -604,7 +604,7 @@
     <span class="kw">use </span>proptest::collection::{vec, SizeRange};
     <span class="kw">use </span>proptest::prelude::<span class="kw-2">*</span>;
 
-    <span class="macro">prop_compose! </span>{
+    <span class="macro">prop_compose!</span> {
         <span class="kw">fn </span>arb_selector(assignment_size: usize, max_degree: usize)
                        (degree <span class="kw">in </span><span class="number">0</span>..max_degree,
                         assignment <span class="kw">in </span>vec(any::&lt;bool&gt;(), assignment_size))
@@ -613,7 +613,7 @@
         }
     }
 
-    <span class="macro">prop_compose! </span>{
+    <span class="macro">prop_compose!</span> {
         <span class="kw">fn </span>arb_selector_list(assignment_size: usize, max_degree: usize, num_selectors: <span class="kw">impl </span>Into&lt;SizeRange&gt;)
                             (list <span class="kw">in </span>vec(arb_selector(assignment_size, max_degree), num_selectors))
                             -&gt; Vec&lt;SelectorDescription&gt;
@@ -628,7 +628,7 @@
         }
     }
 
-    <span class="macro">prop_compose! </span>{
+    <span class="macro">prop_compose!</span> {
         <span class="kw">fn </span>arb_instance(max_assignment_size: usize,
                         max_degree: usize,
                         max_selectors: usize)
@@ -643,7 +643,7 @@
         }
     }
 
-    <span class="macro">proptest! </span>{
+    <span class="macro">proptest!</span> {
         <span class="attr">#![proptest_config(ProptestConfig::with_cases(<span class="number">10000</span>))]
         #[test]
         </span><span class="kw">fn </span>test_selector_combination((selectors, max_degree) <span class="kw">in </span>arb_instance(<span class="number">10</span>, <span class="number">10</span>, <span class="number">15</span>)) {
@@ -671,8 +671,8 @@
             }
 
             <span class="comment">// Test that, for each selector, the provided expression
-            //  1. evaluates to zero on rows where the selector&#39;s activation is off
-            //  2. evaluates to nonzero on rows where the selector&#39;s activation is on
+            //  1. evaluates to zero on rows where the selector's activation is off
+            //  2. evaluates to nonzero on rows where the selector's activation is on
             //  3. is of degree d such that d + (selector.max_degree - 1) &lt;= max_degree
             //     OR selector.max_degree is zero
             </span><span class="kw">for </span>selector <span class="kw">in </span>selector_assignments {
@@ -687,15 +687,15 @@
                 {
                     <span class="kw">let </span>eval = selector.expression.evaluate(
                         <span class="kw-2">&amp;</span>|c| c,
-                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"should not occur in returned expressions"</span>),
                         <span class="kw-2">&amp;</span>|query| {
                             <span class="comment">// Should be the correct combination in the expression
                             </span><span class="macro">assert_eq!</span>(selector.combination_index, query.index.unwrap());
                             assignment
                         },
-                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
-                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
-                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"should not occur in returned expressions"</span>),
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"should not occur in returned expressions"</span>),
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"should not occur in returned expressions"</span>),
                         <span class="kw-2">&amp;</span>|a| -a,
                         <span class="kw-2">&amp;</span>|a, b| a + b,
                         <span class="kw-2">&amp;</span>|a, b| a * b,

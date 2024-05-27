@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_backend/src/plonk/circuit.rs`."><title>circuit.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_backend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (2bbb61989 2023-10-04)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_backend/src/plonk/circuit.rs`."><title>circuit.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_backend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (8c127df75 2024-05-16)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -14,7 +14,7 @@
     });
 </script>
 
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../halo2_backend/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -446,7 +446,7 @@
     }
 
     <span class="kw">fn </span>write_identifier&lt;W: std::io::Write&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, _writer: <span class="kw-2">&amp;mut </span>W) -&gt; std::io::Result&lt;()&gt; {
-        <span class="macro">unimplemented!</span>(<span class="string">&quot;unused method&quot;</span>)
+        <span class="macro">unimplemented!</span>(<span class="string">"unused method"</span>)
     }
 }
 
@@ -544,9 +544,9 @@
     }
 
     <span class="doccomment">/// Compute the number of blinding factors necessary to perfectly blind
-    /// each of the prover&#39;s witness polynomials.
+    /// each of the prover's witness polynomials.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>blinding_factors(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="comment">// All of the prover&#39;s advice columns are evaluated at no more than
+        <span class="comment">// All of the prover's advice columns are evaluated at no more than
         </span><span class="kw">let </span>factors = <span class="kw-2">*</span><span class="self">self</span>.num_advice_queries.iter().max().unwrap_or(<span class="kw-2">&amp;</span><span class="number">1</span>);
         <span class="comment">// distinct points during gate checks.
 
@@ -565,7 +565,7 @@
         // h(x_3) is also not revealed; the verifier only learns a single
         // evaluation of a polynomial in x_1 which has h(x_3) and another random
         // polynomial evaluated at x_3 as coefficients -- this random polynomial
-        // is &quot;random_poly&quot; in the vanishing argument.
+        // is "random_poly" in the vanishing argument.
 
         // Add an additional blinding factor as a slight defense against
         // off-by-one errors.
@@ -595,7 +595,7 @@
                 <span class="kw">return </span>index;
             }
         }
-        <span class="macro">panic!</span>(<span class="string">&quot;get_any_query_index called for non-existent query&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"get_any_query_index called for non-existent query"</span>);
     }
 
     <span class="doccomment">/// Returns the list of phases
@@ -612,7 +612,7 @@
     <span class="doccomment">/// Obtain a pinned version of this constraint system; a structure with the
     /// minimal parameters needed to determine the rest of the constraint
     /// system.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pinned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PinnedConstraintSystem&lt;<span class="lifetime">&#39;_</span>, F&gt; {
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pinned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PinnedConstraintSystem&lt;<span class="lifetime">'_</span>, F&gt; {
         PinnedConstraintSystem {
             num_fixed_columns: <span class="kw-2">&amp;</span><span class="self">self</span>.num_fixed_columns,
             num_advice_columns: <span class="kw-2">&amp;</span><span class="self">self</span>.num_advice_columns,
@@ -632,10 +632,10 @@
     }
 }
 
-<span class="kw">struct </span>PinnedGates&lt;<span class="lifetime">&#39;a</span>, F: Field&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;GateBack&lt;F&gt;&gt;);
+<span class="kw">struct </span>PinnedGates&lt;<span class="lifetime">'a</span>, F: Field&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;GateBack&lt;F&gt;&gt;);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F: Field&gt; std::fmt::Debug <span class="kw">for </span>PinnedGates&lt;<span class="lifetime">&#39;a</span>, F&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), std::fmt::Error&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, F: Field&gt; std::fmt::Debug <span class="kw">for </span>PinnedGates&lt;<span class="lifetime">'a</span>, F&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), std::fmt::Error&gt; {
         f.debug_list()
             .entries(<span class="self">self</span>.<span class="number">0</span>.iter().map(|gate| <span class="kw-2">&amp;</span>gate.poly))
             .finish()
@@ -643,48 +643,48 @@
 }
 
 <span class="doccomment">/// Represents the minimal parameters that determine a `ConstraintSystem`.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PinnedConstraintSystem&lt;<span class="lifetime">&#39;a</span>, F: Field&gt; {
-    num_fixed_columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>usize,
-    num_advice_columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>usize,
-    num_instance_columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>usize,
-    num_challenges: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>usize,
-    advice_column_phase: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;u8&gt;,
-    challenge_phase: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;u8&gt;,
-    gates: PinnedGates&lt;<span class="lifetime">&#39;a</span>, F&gt;,
-    advice_queries: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;(ColumnMid, Rotation)&gt;,
-    instance_queries: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;(ColumnMid, Rotation)&gt;,
-    fixed_queries: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;(ColumnMid, Rotation)&gt;,
-    permutation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>PermutationArgumentBack,
-    lookups: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;LookupArgumentBack&lt;F&gt;&gt;,
-    shuffles: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;ShuffleArgumentBack&lt;F&gt;&gt;,
-    minimum_degree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="prelude-ty">Option</span>&lt;usize&gt;,
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PinnedConstraintSystem&lt;<span class="lifetime">'a</span>, F: Field&gt; {
+    num_fixed_columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>usize,
+    num_advice_columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>usize,
+    num_instance_columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>usize,
+    num_challenges: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>usize,
+    advice_column_phase: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;u8&gt;,
+    challenge_phase: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;u8&gt;,
+    gates: PinnedGates&lt;<span class="lifetime">'a</span>, F&gt;,
+    advice_queries: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;(ColumnMid, Rotation)&gt;,
+    instance_queries: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;(ColumnMid, Rotation)&gt;,
+    fixed_queries: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;(ColumnMid, Rotation)&gt;,
+    permutation: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>PermutationArgumentBack,
+    lookups: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;LookupArgumentBack&lt;F&gt;&gt;,
+    shuffles: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;ShuffleArgumentBack&lt;F&gt;&gt;,
+    minimum_degree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F: Field&gt; std::fmt::Debug <span class="kw">for </span>PinnedConstraintSystem&lt;<span class="lifetime">&#39;a</span>, F&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        <span class="kw">let </span><span class="kw-2">mut </span>debug_struct = f.debug_struct(<span class="string">&quot;PinnedConstraintSystem&quot;</span>);
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, F: Field&gt; std::fmt::Debug <span class="kw">for </span>PinnedConstraintSystem&lt;<span class="lifetime">'a</span>, F&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="kw">let </span><span class="kw-2">mut </span>debug_struct = f.debug_struct(<span class="string">"PinnedConstraintSystem"</span>);
         debug_struct
-            .field(<span class="string">&quot;num_fixed_columns&quot;</span>, <span class="self">self</span>.num_fixed_columns)
-            .field(<span class="string">&quot;num_advice_columns&quot;</span>, <span class="self">self</span>.num_advice_columns)
-            .field(<span class="string">&quot;num_instance_columns&quot;</span>, <span class="self">self</span>.num_instance_columns);
-        <span class="comment">// Only show multi-phase related fields if it&#39;s used.
+            .field(<span class="string">"num_fixed_columns"</span>, <span class="self">self</span>.num_fixed_columns)
+            .field(<span class="string">"num_advice_columns"</span>, <span class="self">self</span>.num_advice_columns)
+            .field(<span class="string">"num_instance_columns"</span>, <span class="self">self</span>.num_instance_columns);
+        <span class="comment">// Only show multi-phase related fields if it's used.
         </span><span class="kw">if </span><span class="kw-2">*</span><span class="self">self</span>.num_challenges &gt; <span class="number">0 </span>{
             debug_struct
-                .field(<span class="string">&quot;num_challenges&quot;</span>, <span class="self">self</span>.num_challenges)
-                .field(<span class="string">&quot;advice_column_phase&quot;</span>, <span class="self">self</span>.advice_column_phase)
-                .field(<span class="string">&quot;challenge_phase&quot;</span>, <span class="self">self</span>.challenge_phase);
+                .field(<span class="string">"num_challenges"</span>, <span class="self">self</span>.num_challenges)
+                .field(<span class="string">"advice_column_phase"</span>, <span class="self">self</span>.advice_column_phase)
+                .field(<span class="string">"challenge_phase"</span>, <span class="self">self</span>.challenge_phase);
         }
         debug_struct
-            .field(<span class="string">&quot;gates&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.gates)
-            .field(<span class="string">&quot;advice_queries&quot;</span>, <span class="self">self</span>.advice_queries)
-            .field(<span class="string">&quot;instance_queries&quot;</span>, <span class="self">self</span>.instance_queries)
-            .field(<span class="string">&quot;fixed_queries&quot;</span>, <span class="self">self</span>.fixed_queries)
-            .field(<span class="string">&quot;permutation&quot;</span>, <span class="self">self</span>.permutation)
-            .field(<span class="string">&quot;lookups&quot;</span>, <span class="self">self</span>.lookups);
+            .field(<span class="string">"gates"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.gates)
+            .field(<span class="string">"advice_queries"</span>, <span class="self">self</span>.advice_queries)
+            .field(<span class="string">"instance_queries"</span>, <span class="self">self</span>.instance_queries)
+            .field(<span class="string">"fixed_queries"</span>, <span class="self">self</span>.fixed_queries)
+            .field(<span class="string">"permutation"</span>, <span class="self">self</span>.permutation)
+            .field(<span class="string">"lookups"</span>, <span class="self">self</span>.lookups);
         <span class="kw">if </span>!<span class="self">self</span>.shuffles.is_empty() {
-            debug_struct.field(<span class="string">&quot;shuffles&quot;</span>, <span class="self">self</span>.shuffles);
+            debug_struct.field(<span class="string">"shuffles"</span>, <span class="self">self</span>.shuffles);
         }
-        debug_struct.field(<span class="string">&quot;minimum_degree&quot;</span>, <span class="self">self</span>.minimum_degree);
+        debug_struct.field(<span class="string">"minimum_degree"</span>, <span class="self">self</span>.minimum_degree);
         debug_struct.finish()
     }
 }
@@ -693,7 +693,7 @@
 
 </span><span class="doccomment">/// Returns the minimum circuit degree required by the permutation argument.
 /// The argument may use larger degree gates depending on the actual
-/// circuit&#39;s degree and how many columns are involved in the permutation.
+/// circuit's degree and how many columns are involved in the permutation.
 </span><span class="kw">fn </span>permutation_argument_required_degree() -&gt; usize {
     <span class="comment">// degree 2:
     // l_0(X) * (1 - z(X)) = 0
@@ -711,15 +711,15 @@
     // On the first sets of columns, except the first
     // set, we will do
     //
-    // l_0(X) * (z(X) - z&#39;(\omega^(last) X)) = 0
+    // l_0(X) * (z(X) - z'(\omega^(last) X)) = 0
     //
-    // where z&#39;(X) is the permutation for the previous set
+    // where z'(X) is the permutation for the previous set
     // of columns.
     //
     // On the final set of columns, we will do
     //
     // degree 3:
-    // l_last(X) * (z&#39;(X)^2 - z&#39;(X)) = 0
+    // l_last(X) * (z'(X)^2 - z'(X)) = 0
     //
     // which will allow the last value to be zero to
     // ensure the argument is perfectly complete.
@@ -736,7 +736,7 @@
     // degree 2:
     // l_0(X) * (1 - z(X)) = 0
     //
-    // The &quot;last&quot; value in the permutation poly should be a boolean, for
+    // The "last" value in the permutation poly should be a boolean, for
     // completeness and soundness.
     // degree 3:
     // l_last(X) * (z(X)^2 - z(X)) = 0
@@ -744,16 +744,16 @@
     // Enable the permutation argument for only the rows involved.
     // degree (2 + input_degree + table_degree) or 4, whichever is larger:
     // (1 - (l_last(X) + l_blind(X))) * (
-    //   z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
+    //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
     //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
     // ) = 0
     //
-    // The first two values of a&#39; and s&#39; should be the same.
+    // The first two values of a' and s' should be the same.
     // degree 2:
-    // l_0(X) * (a&#39;(X) - s&#39;(X)) = 0
+    // l_0(X) * (a'(X) - s'(X)) = 0
     //
     // Either the two values are the same, or the previous
-    // value of a&#39; is the same as the current value.
+    // value of a' is the same as the current value.
     // degree 3:
     // (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
     </span><span class="kw">let </span><span class="kw-2">mut </span>input_degree = <span class="number">1</span>;
@@ -770,7 +770,7 @@
     // rendering this call pointless except to be explicit in case we change
     // the initialization of input_degree/table_degree in the future.
     </span>std::cmp::max(
-        <span class="comment">// (1 - (l_last + l_blind)) z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
+        <span class="comment">// (1 - (l_last + l_blind)) z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
         </span><span class="number">4</span>,
         <span class="comment">// (1 - (l_last + l_blind)) z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
         </span><span class="number">2 </span>+ input_degree + table_degree,

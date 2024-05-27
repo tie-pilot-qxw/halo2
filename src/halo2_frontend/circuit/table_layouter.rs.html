@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_frontend/src/circuit/table_layouter.rs`."><title>table_layouter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_frontend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (2bbb61989 2023-10-04)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_frontend/src/circuit/table_layouter.rs`."><title>table_layouter.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_frontend" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (8c127df75 2024-05-16)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -14,7 +14,7 @@
     });
 </script>
 
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../halo2_frontend/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -444,12 +444,12 @@
     <span class="doccomment">/// Assigns a fixed value to a table cell.
     ///
     /// Returns an error if the table cell has already been assigned to.
-    </span><span class="kw">fn </span>assign_cell&lt;<span class="lifetime">&#39;v</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
-        annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
+    </span><span class="kw">fn </span>assign_cell&lt;<span class="lifetime">'v</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: <span class="kw-2">&amp;</span><span class="lifetime">'v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">'v</span>),
         column: TableColumn,
         offset: usize,
-        to: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span>(<span class="kw">dyn </span>FnMut() -&gt; Value&lt;Assigned&lt;F&gt;&gt; + <span class="lifetime">&#39;v</span>),
+        to: <span class="kw-2">&amp;</span><span class="lifetime">'v </span><span class="kw-2">mut </span>(<span class="kw">dyn </span>FnMut() -&gt; Value&lt;Assigned&lt;F&gt;&gt; + <span class="lifetime">'v</span>),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 }
 
@@ -463,25 +463,25 @@
 </span><span class="kw">type </span>DefaultTableValue&lt;F&gt; = <span class="prelude-ty">Option</span>&lt;Value&lt;Assigned&lt;F&gt;&gt;&gt;;
 
 <span class="doccomment">/// A table layouter that can be used to assign values to a table.
-</span><span class="kw">pub struct </span>SimpleTableLayouter&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; {
-    cs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>CS,
-    used_columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>[TableColumn],
+</span><span class="kw">pub struct </span>SimpleTableLayouter&lt;<span class="lifetime">'r</span>, <span class="lifetime">'a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">'a</span>&gt; {
+    cs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>CS,
+    used_columns: <span class="kw-2">&amp;</span><span class="lifetime">'r </span>[TableColumn],
     <span class="doccomment">/// maps from a fixed column to a pair (default value, vector saying which rows are assigned)
     </span><span class="kw">pub </span>default_and_assigned: HashMap&lt;TableColumn, (DefaultTableValue&lt;F&gt;, Vec&lt;bool&gt;)&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; fmt::Debug <span class="kw">for </span>SimpleTableLayouter&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        f.debug_struct(<span class="string">&quot;SimpleTableLayouter&quot;</span>)
-            .field(<span class="string">&quot;used_columns&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.used_columns)
-            .field(<span class="string">&quot;default_and_assigned&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.default_and_assigned)
+<span class="kw">impl</span>&lt;<span class="lifetime">'r</span>, <span class="lifetime">'a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">'a</span>&gt; fmt::Debug <span class="kw">for </span>SimpleTableLayouter&lt;<span class="lifetime">'r</span>, <span class="lifetime">'a</span>, F, CS&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        f.debug_struct(<span class="string">"SimpleTableLayouter"</span>)
+            .field(<span class="string">"used_columns"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.used_columns)
+            .field(<span class="string">"default_and_assigned"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.default_and_assigned)
             .finish()
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; SimpleTableLayouter&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'r</span>, <span class="lifetime">'a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">'a</span>&gt; SimpleTableLayouter&lt;<span class="lifetime">'r</span>, <span class="lifetime">'a</span>, F, CS&gt; {
     <span class="doccomment">/// Returns a new SimpleTableLayouter
-    </span><span class="kw">pub fn </span>new(cs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>CS, used_columns: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>[TableColumn]) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(cs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>CS, used_columns: <span class="kw-2">&amp;</span><span class="lifetime">'r </span>[TableColumn]) -&gt; <span class="self">Self </span>{
         SimpleTableLayouter {
             cs,
             used_columns,
@@ -490,15 +490,15 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; TableLayouter&lt;F&gt;
-    <span class="kw">for </span>SimpleTableLayouter&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F, CS&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'r</span>, <span class="lifetime">'a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">'a</span>&gt; TableLayouter&lt;F&gt;
+    <span class="kw">for </span>SimpleTableLayouter&lt;<span class="lifetime">'r</span>, <span class="lifetime">'a</span>, F, CS&gt;
 {
-    <span class="kw">fn </span>assign_cell&lt;<span class="lifetime">&#39;v</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
-        annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
+    <span class="kw">fn </span>assign_cell&lt;<span class="lifetime">'v</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: <span class="kw-2">&amp;</span><span class="lifetime">'v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">'v</span>),
         column: TableColumn,
         offset: usize,
-        to: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span>(<span class="kw">dyn </span>FnMut() -&gt; Value&lt;Assigned&lt;F&gt;&gt; + <span class="lifetime">&#39;v</span>),
+        to: <span class="kw-2">&amp;</span><span class="lifetime">'v </span><span class="kw-2">mut </span>(<span class="kw">dyn </span>FnMut() -&gt; Value&lt;Assigned&lt;F&gt;&gt; + <span class="lifetime">'v</span>),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">if </span><span class="self">self</span>.used_columns.contains(<span class="kw-2">&amp;</span>column) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TableError(TableError::UsedColumn(column)));
@@ -526,8 +526,8 @@
             </span>(<span class="bool-val">false</span>, <span class="number">0</span>) =&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TableError(TableError::OverwriteDefault(
                     column,
-                    <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, entry.<span class="number">0</span>.unwrap()),
-                    <span class="macro">format!</span>(<span class="string">&quot;{value:?}&quot;</span>),
+                    <span class="macro">format!</span>(<span class="string">"{:?}"</span>, entry.<span class="number">0</span>.unwrap()),
+                    <span class="macro">format!</span>(<span class="string">"{value:?}"</span>),
                 )))
             }
             <span class="kw">_ </span>=&gt; (),
@@ -601,7 +601,7 @@
         <span class="kw">impl </span>Circuit&lt;Fp&gt; <span class="kw">for </span>FaultyCircuit {
             <span class="kw">type </span>Config = FaultyCircuitConfig;
             <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
-            <span class="attr">#[cfg(feature = <span class="string">&quot;circuit-params&quot;</span>)]
+            <span class="attr">#[cfg(feature = <span class="string">"circuit-params"</span>)]
             </span><span class="kw">type </span>Params = ();
 
             <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -612,7 +612,7 @@
                 <span class="kw">let </span>a = meta.advice_column();
                 <span class="kw">let </span>table = meta.lookup_table_column();
 
-                meta.lookup(<span class="string">&quot;&quot;</span>, |cells| {
+                meta.lookup(<span class="string">""</span>, |cells| {
                     <span class="kw">let </span>a = cells.query_advice(a, Rotation::cur());
                     <span class="macro">vec!</span>[(a, table)]
                 });
@@ -626,10 +626,10 @@
                 <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;Fp&gt;,
             ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
                 layouter.assign_table(
-                    || <span class="string">&quot;duplicate assignment&quot;</span>,
+                    || <span class="string">"duplicate assignment"</span>,
                     |<span class="kw-2">mut </span>table| {
                         table.assign_cell(
-                            || <span class="string">&quot;default&quot;</span>,
+                            || <span class="string">"default"</span>,
                             config.table,
                             <span class="number">1</span>,
                             || Value::known(Fp::zero()),
@@ -641,8 +641,8 @@
 
         <span class="kw">let </span>prover = MockProver::run(K, <span class="kw-2">&amp;</span>FaultyCircuit, <span class="macro">vec!</span>[]);
         <span class="macro">assert_eq!</span>(
-            <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, prover.unwrap_err()),
-            <span class="string">&quot;TableColumn { inner: Column { index: 0, column_type: Fixed } } not fully assigned. Help: assign a value at offset 0.&quot;
+            <span class="macro">format!</span>(<span class="string">"{}"</span>, prover.unwrap_err()),
+            <span class="string">"TableColumn { inner: Column { index: 0, column_type: Fixed } } not fully assigned. Help: assign a value at offset 0."
         </span>);
     }
 
@@ -660,7 +660,7 @@
         <span class="kw">impl </span>Circuit&lt;Fp&gt; <span class="kw">for </span>FaultyCircuit {
             <span class="kw">type </span>Config = FaultyCircuitConfig;
             <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
-            <span class="attr">#[cfg(feature = <span class="string">&quot;circuit-params&quot;</span>)]
+            <span class="attr">#[cfg(feature = <span class="string">"circuit-params"</span>)]
             </span><span class="kw">type </span>Params = ();
 
             <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -671,7 +671,7 @@
                 <span class="kw">let </span>a = meta.advice_column();
                 <span class="kw">let </span>table = meta.lookup_table_column();
 
-                meta.lookup(<span class="string">&quot;&quot;</span>, |cells| {
+                meta.lookup(<span class="string">""</span>, |cells| {
                     <span class="kw">let </span>a = cells.query_advice(a, Rotation::cur());
                     <span class="macro">vec!</span>[(a, table)]
                 });
@@ -685,16 +685,16 @@
                 <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;Fp&gt;,
             ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
                 layouter.assign_table(
-                    || <span class="string">&quot;duplicate assignment&quot;</span>,
+                    || <span class="string">"duplicate assignment"</span>,
                     |<span class="kw-2">mut </span>table| {
                         table.assign_cell(
-                            || <span class="string">&quot;default&quot;</span>,
+                            || <span class="string">"default"</span>,
                             config.table,
                             <span class="number">0</span>,
                             || Value::known(Fp::zero()),
                         )<span class="question-mark">?</span>;
                         table.assign_cell(
-                            || <span class="string">&quot;duplicate&quot;</span>,
+                            || <span class="string">"duplicate"</span>,
                             config.table,
                             <span class="number">0</span>,
                             || Value::known(Fp::zero()),
@@ -706,8 +706,8 @@
 
         <span class="kw">let </span>prover = MockProver::run(K, <span class="kw-2">&amp;</span>FaultyCircuit, <span class="macro">vec!</span>[]);
         <span class="macro">assert_eq!</span>(
-            <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, prover.unwrap_err()),
-            <span class="string">&quot;Attempted to overwrite default value Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } with Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } in TableColumn { inner: Column { index: 0, column_type: Fixed } }&quot;
+            <span class="macro">format!</span>(<span class="string">"{}"</span>, prover.unwrap_err()),
+            <span class="string">"Attempted to overwrite default value Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } with Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } in TableColumn { inner: Column { index: 0, column_type: Fixed } }"
         </span>);
     }
 
@@ -725,7 +725,7 @@
         <span class="kw">impl </span>Circuit&lt;Fp&gt; <span class="kw">for </span>FaultyCircuit {
             <span class="kw">type </span>Config = FaultyCircuitConfig;
             <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
-            <span class="attr">#[cfg(feature = <span class="string">&quot;circuit-params&quot;</span>)]
+            <span class="attr">#[cfg(feature = <span class="string">"circuit-params"</span>)]
             </span><span class="kw">type </span>Params = ();
 
             <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -736,7 +736,7 @@
                 <span class="kw">let </span>a = meta.advice_column();
                 <span class="kw">let </span>table = meta.lookup_table_column();
 
-                meta.lookup(<span class="string">&quot;&quot;</span>, |cells| {
+                meta.lookup(<span class="string">""</span>, |cells| {
                     <span class="kw">let </span>a = cells.query_advice(a, Rotation::cur());
                     <span class="macro">vec!</span>[(a, table)]
                 });
@@ -750,10 +750,10 @@
                 <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;Fp&gt;,
             ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
                 layouter.assign_table(
-                    || <span class="string">&quot;first assignment&quot;</span>,
+                    || <span class="string">"first assignment"</span>,
                     |<span class="kw-2">mut </span>table| {
                         table.assign_cell(
-                            || <span class="string">&quot;default&quot;</span>,
+                            || <span class="string">"default"</span>,
                             config.table,
                             <span class="number">0</span>,
                             || Value::known(Fp::zero()),
@@ -762,9 +762,9 @@
                 )<span class="question-mark">?</span>;
 
                 layouter.assign_table(
-                    || <span class="string">&quot;reuse&quot;</span>,
+                    || <span class="string">"reuse"</span>,
                     |<span class="kw-2">mut </span>table| {
-                        table.assign_cell(|| <span class="string">&quot;reuse&quot;</span>, config.table, <span class="number">1</span>, || Value::known(Fp::zero()))
+                        table.assign_cell(|| <span class="string">"reuse"</span>, config.table, <span class="number">1</span>, || Value::known(Fp::zero()))
                     },
                 )
             }
@@ -772,8 +772,8 @@
 
         <span class="kw">let </span>prover = MockProver::run(K, <span class="kw-2">&amp;</span>FaultyCircuit, <span class="macro">vec!</span>[]);
         <span class="macro">assert_eq!</span>(
-            <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, prover.unwrap_err()),
-            <span class="string">&quot;TableColumn { inner: Column { index: 0, column_type: Fixed } } has already been used&quot;
+            <span class="macro">format!</span>(<span class="string">"{}"</span>, prover.unwrap_err()),
+            <span class="string">"TableColumn { inner: Column { index: 0, column_type: Fixed } } has already been used"
         </span>);
     }
 
@@ -791,7 +791,7 @@
         <span class="kw">impl </span>Circuit&lt;Fp&gt; <span class="kw">for </span>FaultyCircuit {
             <span class="kw">type </span>Config = FaultyCircuitConfig;
             <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
-            <span class="attr">#[cfg(feature = <span class="string">&quot;circuit-params&quot;</span>)]
+            <span class="attr">#[cfg(feature = <span class="string">"circuit-params"</span>)]
             </span><span class="kw">type </span>Params = ();
 
             <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -801,7 +801,7 @@
             <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;Fp&gt;) -&gt; <span class="self">Self</span>::Config {
                 <span class="kw">let </span>a = meta.advice_column();
                 <span class="kw">let </span>table = (meta.lookup_table_column(), meta.lookup_table_column());
-                meta.lookup(<span class="string">&quot;&quot;</span>, |cells| {
+                meta.lookup(<span class="string">""</span>, |cells| {
                     <span class="kw">let </span>a = cells.query_advice(a, Rotation::cur());
 
                     <span class="macro">vec!</span>[(a.clone(), table.<span class="number">0</span>), (a, table.<span class="number">1</span>)]
@@ -816,12 +816,12 @@
                 <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;Fp&gt;,
             ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
                 layouter.assign_table(
-                    || <span class="string">&quot;table with uneven columns&quot;</span>,
+                    || <span class="string">"table with uneven columns"</span>,
                     |<span class="kw-2">mut </span>table| {
-                        table.assign_cell(|| <span class="string">&quot;&quot;</span>, config.table.<span class="number">0</span>, <span class="number">0</span>, || Value::known(Fp::zero()))<span class="question-mark">?</span>;
-                        table.assign_cell(|| <span class="string">&quot;&quot;</span>, config.table.<span class="number">0</span>, <span class="number">1</span>, || Value::known(Fp::zero()))<span class="question-mark">?</span>;
+                        table.assign_cell(|| <span class="string">""</span>, config.table.<span class="number">0</span>, <span class="number">0</span>, || Value::known(Fp::zero()))<span class="question-mark">?</span>;
+                        table.assign_cell(|| <span class="string">""</span>, config.table.<span class="number">0</span>, <span class="number">1</span>, || Value::known(Fp::zero()))<span class="question-mark">?</span>;
 
-                        table.assign_cell(|| <span class="string">&quot;&quot;</span>, config.table.<span class="number">1</span>, <span class="number">0</span>, || Value::known(Fp::zero()))
+                        table.assign_cell(|| <span class="string">""</span>, config.table.<span class="number">1</span>, <span class="number">0</span>, || Value::known(Fp::zero()))
                     },
                 )
             }
@@ -829,8 +829,8 @@
 
         <span class="kw">let </span>prover = MockProver::run(K, <span class="kw-2">&amp;</span>FaultyCircuit, <span class="macro">vec!</span>[]);
         <span class="macro">assert_eq!</span>(
-            <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, prover.unwrap_err()),
-            <span class="string">&quot;TableColumn { inner: Column { index: 0, column_type: Fixed } } has length 2 while TableColumn { inner: Column { index: 1, column_type: Fixed } } has length 1&quot;
+            <span class="macro">format!</span>(<span class="string">"{}"</span>, prover.unwrap_err()),
+            <span class="string">"TableColumn { inner: Column { index: 0, column_type: Fixed } } has length 2 while TableColumn { inner: Column { index: 1, column_type: Fixed } } has length 1"
         </span>);
     }
 }
