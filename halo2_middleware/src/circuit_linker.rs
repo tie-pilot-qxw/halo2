@@ -10,9 +10,6 @@ use crate::shuffle;
 use std::cmp::max;
 use std::collections::HashMap;
 
-// #[cfg(test)]
-// mod test;
-
 pub struct LinkConfig {
     /// List of shared advice columns.  Each entry corresponds to a shared advice column between
     /// multiple circuit as Vec of pairs of circuit index and column index.
@@ -23,6 +20,10 @@ pub struct LinkConfig {
     /// List of shared challenges.  Each entry corresponds to a shared challenge between
     /// multiple circuit as Vec of pairs of circuit index and challenge index.
     pub shared_challenges: Vec<Vec<(usize, usize)>>,
+    /// Merge strategy for each shared advice column
+    pub witness_merge_strategy: Vec<MergeStrategy>,
+    /// Merge strategy for each shared fixed column
+    pub fixed_merge_strategy: Vec<MergeStrategy>,
 }
 
 pub struct Map {
@@ -90,8 +91,8 @@ fn expr_to_global<F: Field>(
 }
 
 pub fn link_cs<F: Field>(
-    css: &[ConstraintSystemMid<F>],
     cfg: &LinkConfig,
+    css: &[ConstraintSystemMid<F>],
 ) -> (ConstraintSystemMid<F>, Map) {
     let mut num_fixed_columns = 0;
     let mut num_advice_columns = 0;
@@ -334,21 +335,35 @@ pub fn link_cs<F: Field>(
 }
 
 pub fn link_preprocessing<F: Field>(
-    preprocessings: Vec<Preprocessing<F>>,
+    cfg: &LinkConfig,
     cs: &ConstraintSystemMid<F>,
     map: &Map,
+    preprocessings: Vec<Preprocessing<F>>,
 ) -> Preprocessing<F> {
+    let merge_strategy = &cfg.fixed_merge_strategy;
     let mut fixed = vec![Vec::new(); cs.num_fixed_columns];
     let mut permutation = permutation::AssemblyMid { copies: Vec::new() };
     for (circuit_index, preprocessing) in preprocessings.into_iter().enumerate() {
         for (local_index, fixed_column) in preprocessing.fixed.into_iter().enumerate() {
             let global_index = map.fixed_column.get(&(circuit_index, local_index)).unwrap();
-            if fixed[*global_index].len() != 0 {
-                // Check that shared columns are equal
-                assert_eq!(fixed[*global_index], fixed_column);
+            let merge_strategy = merge_strategy.get(*global_index);
+            if let Some(merge_strategy) = merge_strategy {
+                column_merge(
+                    merge_strategy,
+                    circuit_index,
+                    local_index,
+                    &mut fixed[*global_index],
+                    fixed_column,
+                );
             } else {
                 fixed[*global_index] = fixed_column;
             }
+            // if fixed[*global_index].len() != 0 {
+            //     // Check that shared columns are equal
+            //     assert_eq!(fixed[*global_index], fixed_column);
+            // } else {
+            //     fixed[*global_index] = fixed_column;
+            // }
         }
         for (cell_lhs, cell_rhs) in &preprocessing.permutation.copies {
             let cell_lhs = Cell {
@@ -426,16 +441,13 @@ fn column_merge<F: Field>(
 }
 
 pub fn link_witness<F: Field>(
-    witnesses: Vec<Vec<Option<Vec<F>>>>,
+    cfg: &LinkConfig,
     cs: &ConstraintSystemMid<F>,
     map: &Map,
-    cfg: &LinkWitnessConfig,
-    link_cfg: &LinkConfig,
+    witnesses: Vec<Vec<Option<Vec<F>>>>,
 ) -> Vec<Option<Vec<F>>> {
-    assert_eq!(
-        cfg.merge_strategy.len(),
-        link_cfg.shared_advice_columns.len()
-    );
+    let merge_strategy = &cfg.witness_merge_strategy;
+    assert_eq!(merge_strategy.len(), cfg.shared_advice_columns.len());
     let mut witness: Vec<Option<Vec<F>>> = vec![None; cs.num_advice_columns];
     for (circuit_index, witness_columns) in witnesses.into_iter().enumerate() {
         for (local_index, witness_column) in witness_columns.into_iter().enumerate() {
@@ -443,7 +455,7 @@ pub fn link_witness<F: Field>(
                 .advice_column
                 .get(&(circuit_index, local_index))
                 .unwrap();
-            let merge_strategy = cfg.merge_strategy.get(*global_index);
+            let merge_strategy = merge_strategy.get(*global_index);
             if let Some(merge_strategy) = merge_strategy {
                 column_merge(
                     merge_strategy,
