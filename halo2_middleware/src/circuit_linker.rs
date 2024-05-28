@@ -341,6 +341,14 @@ pub fn link_preprocessing<F: Field>(
     preprocessings: Vec<Preprocessing<F>>,
 ) -> Preprocessing<F> {
     let merge_strategy = &cfg.fixed_merge_strategy;
+    assert_eq!(merge_strategy.len(), cfg.shared_fixed_columns.len());
+    for (global_column_index, strategy) in merge_strategy.iter().enumerate() {
+        if let MergeStrategy::Main(circuit_index, column_index) = strategy {
+            assert!(cfg.shared_fixed_columns[global_column_index]
+                .contains(&(*circuit_index, *column_index)));
+        }
+    }
+
     let mut fixed = vec![Vec::new(); cs.num_fixed_columns];
     let mut permutation = permutation::AssemblyMid { copies: Vec::new() };
     for (circuit_index, preprocessing) in preprocessings.into_iter().enumerate() {
@@ -358,12 +366,6 @@ pub fn link_preprocessing<F: Field>(
             } else {
                 fixed[*global_index] = fixed_column;
             }
-            // if fixed[*global_index].len() != 0 {
-            //     // Check that shared columns are equal
-            //     assert_eq!(fixed[*global_index], fixed_column);
-            // } else {
-            //     fixed[*global_index] = fixed_column;
-            // }
         }
         for (cell_lhs, cell_rhs) in &preprocessing.permutation.copies {
             let cell_lhs = Cell {
@@ -402,22 +404,20 @@ fn column_merge<F: Field>(
     strategy: &MergeStrategy,
     src_column_index: usize,
     src_circuit_index: usize,
-    column_dst: &mut Option<Vec<F>>,
-    column_src: Option<Vec<F>>,
+    column_dst: &mut Vec<F>,
+    column_src: Vec<F>,
 ) {
     use MergeStrategy::*;
     match strategy {
         ExpectEqual => {
-            if column_dst.is_some() {
+            if !column_dst.is_empty() {
                 assert_eq!(*column_dst, column_src);
             } else {
                 *column_dst = column_src;
             }
         }
         OverwriteZeros => {
-            if column_dst.is_some() {
-                let column_dst = column_dst.as_mut().unwrap();
-                let column_src = column_src.unwrap();
+            if !column_dst.is_empty() {
                 column_dst
                     .iter_mut()
                     .zip(column_src)
@@ -448,6 +448,13 @@ pub fn link_witness<F: Field>(
 ) -> Vec<Option<Vec<F>>> {
     let merge_strategy = &cfg.witness_merge_strategy;
     assert_eq!(merge_strategy.len(), cfg.shared_advice_columns.len());
+    for (global_column_index, strategy) in merge_strategy.iter().enumerate() {
+        if let MergeStrategy::Main(circuit_index, column_index) = strategy {
+            assert!(cfg.shared_advice_columns[global_column_index]
+                .contains(&(*circuit_index, *column_index)));
+        }
+    }
+
     let mut witness: Vec<Option<Vec<F>>> = vec![None; cs.num_advice_columns];
     for (circuit_index, witness_columns) in witnesses.into_iter().enumerate() {
         for (local_index, witness_column) in witness_columns.into_iter().enumerate() {
@@ -457,13 +464,19 @@ pub fn link_witness<F: Field>(
                 .unwrap();
             let merge_strategy = merge_strategy.get(*global_index);
             if let Some(merge_strategy) = merge_strategy {
-                column_merge(
-                    merge_strategy,
-                    circuit_index,
-                    local_index,
-                    &mut witness[*global_index],
-                    witness_column,
-                );
+                if witness_column.is_some() {
+                    // Allocate an empty column for the first time
+                    if witness[*global_index].is_none() {
+                        witness[*global_index] = Some(Vec::new());
+                    }
+                    column_merge(
+                        merge_strategy,
+                        circuit_index,
+                        local_index,
+                        &mut witness[*global_index].as_mut().unwrap(),
+                        witness_column.unwrap(),
+                    );
+                }
             } else {
                 witness[*global_index] = witness_column;
             }

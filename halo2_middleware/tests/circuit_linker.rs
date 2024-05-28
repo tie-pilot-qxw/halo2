@@ -10,6 +10,9 @@ use halo2_frontend::{
         Instance, SecondPhase, Selector,
     },
 };
+use halo2_middleware::circuit_linker::{
+    link_cs, link_preprocessing, link_witness, LinkConfig, MergeStrategy,
+};
 use halo2_middleware::{ff::Field, poly::Rotation};
 
 #[derive(Clone)]
@@ -218,5 +221,55 @@ impl<F: Field + From<u64>> Circuit<F> for CircuitB<F> {
     }
 }
 
+use halo2_backend::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
+use halo2_backend::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
+use halo2_backend::poly::kzg::strategy::SingleStrategy;
+use halo2curves::bn256::{Bn256, Fr, G1Affine};
+use rand_core::SeedableRng;
+use rand_xorshift::XorShiftRng;
+// use rand_core::block::BlockRng;
+// use rand_core::block::BlockRngCore;
+
+fn f(v: u64) -> Fr {
+    Fr::from(v)
+}
+
 #[test]
-fn test_hello() {}
+fn test_circuit_linker() {
+    let circuit_a: CircuitA<Fr> = CircuitA {
+        inputs: vec![
+            (f(5), f(8), false),
+            (f(3), f(10), true),
+            (f(1), f(3), true),
+            (f(7), f(0), false),
+        ],
+    };
+
+    let circuit_b: CircuitB<Fr> = CircuitB {
+        inputs: vec![f(1), f(2), f(3), f(4), f(5), f(10)],
+    };
+
+    let k = 6;
+    let (compiled_circuit_a, config_a, cs_a) = compile_circuit(k, &circuit_a, false).unwrap();
+    let (compiled_circuit_b, config_b, cs_b) = compile_circuit(k, &circuit_b, false).unwrap();
+
+    let rand = || XorShiftRng::from_seed([1; 16]);
+
+    let cfg = LinkConfig {
+        shared_advice_columns: vec![vec![(0, 3), (1, 0)]],
+        shared_fixed_columns: vec![vec![(0, 1), (1, 0)]],
+        shared_challenges: vec![],
+        witness_merge_strategy: vec![MergeStrategy::Main(1, 0)],
+        fixed_merge_strategy: vec![MergeStrategy::Main(1, 0)],
+    };
+    let (cs, map) = link_cs(&cfg, &[compiled_circuit_a.cs, compiled_circuit_b.cs]);
+    let preprocessing = link_preprocessing(
+        &cfg,
+        &cs,
+        &map,
+        vec![
+            compiled_circuit_a.preprocessing,
+            compiled_circuit_b.preprocessing,
+        ],
+    );
+}
