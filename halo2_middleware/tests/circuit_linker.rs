@@ -1,3 +1,13 @@
+use halo2_backend::{
+    plonk::{
+        keygen::{keygen_pk, keygen_vk},
+        prover::ProverSingle,
+        verifier::{verify_proof, verify_proof_single},
+    },
+    transcript::{
+        Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
+    },
+};
 use halo2_frontend::{
     circuit::{
         compile_circuit, AssignedCell, Layouter, Region, SimpleFloorPlanner, Value,
@@ -13,7 +23,9 @@ use halo2_frontend::{
 use halo2_middleware::circuit_linker::{
     link_cs, link_preprocessing, link_witness, LinkConfig, MergeStrategy,
 };
-use halo2_middleware::{ff::Field, poly::Rotation};
+use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
+use halo2_middleware::{circuit::CompiledCircuit, ff::Field, poly::Rotation};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 struct CircuitAConfig {
@@ -101,6 +113,9 @@ impl<F: Field + From<u64>> Circuit<F> for CircuitA<F> {
                 let mut offset = 0;
                 for (b, c, is_not_zero) in &self.inputs {
                     region
+                        .assign_fixed(|| "", config.s_mul, offset, || Value::known(F::ONE))
+                        .unwrap();
+                    region
                         .assign_advice(|| "", config.a, offset, || Value::known(*b * *c))
                         .unwrap();
                     region
@@ -133,7 +148,7 @@ impl<F: Field + From<u64>> Circuit<F> for CircuitA<F> {
                         region
                             .assign_fixed(
                                 || "",
-                                config.s_c_not_zero,
+                                config.tbl_s_not_zero,
                                 offset,
                                 || Value::known(F::ONE),
                             )
@@ -253,16 +268,42 @@ fn test_circuit_linker() {
     let (compiled_circuit_a, config_a, cs_a) = compile_circuit(k, &circuit_a, false).unwrap();
     let (compiled_circuit_b, config_b, cs_b) = compile_circuit(k, &circuit_b, false).unwrap();
 
-    let rand = || XorShiftRng::from_seed([1; 16]);
+    let mut rng = XorShiftRng::from_seed([1; 16]);
 
     let cfg = LinkConfig {
         shared_advice_columns: vec![vec![(0, 3), (1, 0)]],
-        shared_fixed_columns: vec![vec![(0, 1), (1, 0)]],
+        shared_fixed_columns: vec![vec![(0, 2), (1, 0)]],
         shared_challenges: vec![],
         witness_merge_strategy: vec![MergeStrategy::Main(1, 0)],
         fixed_merge_strategy: vec![MergeStrategy::Main(1, 0)],
     };
     let (cs, map) = link_cs(&cfg, &[compiled_circuit_a.cs, compiled_circuit_b.cs]);
+    let print_vec_f = |v: &Vec<Fr>| {
+        print!("[");
+        for (i, x) in v.iter().enumerate() {
+            if i != 0 {
+                print!(", ");
+            }
+            if *x == Fr::ZERO {
+                print!("0");
+            } else if *x == Fr::ONE {
+                print!("1");
+            } else {
+                print!("{:?}", x);
+            }
+        }
+        println!("]");
+    };
+    let print_fixed = |fixed: &Vec<Vec<Fr>>| {
+        for (i, column) in fixed.iter().enumerate() {
+            print!("f{}: ", i);
+            print_vec_f(column);
+        }
+    };
+    println!("A");
+    print_fixed(&compiled_circuit_a.preprocessing.fixed);
+    println!("B");
+    print_fixed(&compiled_circuit_b.preprocessing.fixed);
     let preprocessing = link_preprocessing(
         &cfg,
         &cs,
@@ -272,4 +313,90 @@ fn test_circuit_linker() {
             compiled_circuit_b.preprocessing,
         ],
     );
+    println!("Comb");
+    print_fixed(&preprocessing.fixed);
+    let compiled_circuit = CompiledCircuit { cs, preprocessing };
+
+    // Setup
+    let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
+    let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
+
+    // Proving
+    println!("Proving...");
+    let instances: Vec<Vec<Fr>> = Vec::new();
+    let instances_slice: &[&[Fr]] = &(instances
+        .iter()
+        .map(|instance| instance.as_slice())
+        .collect::<Vec<_>>());
+
+    let mut witness_calc_a =
+        WitnessCalculator::new(k, &circuit_a, &config_a, &cs_a, instances_slice);
+    let mut witness_calc_b =
+        WitnessCalculator::new(k, &circuit_b, &config_b, &cs_b, instances_slice);
+    let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
+    let engine = PlonkEngineConfig::new()
+        .set_curve::<G1Affine>()
+        .set_msm(H2cEngine::new())
+        .build();
+    let mut prover = ProverSingle::<
+        KZGCommitmentScheme<Bn256>,
+        ProverSHPLONK<'_, Bn256>,
+        _,
+        _,
+        _,
+        _,
+    >::new_with_engine(
+        engine,
+        &params,
+        &pk,
+        instances_slice,
+        &mut rng,
+        &mut transcript,
+    )
+    .unwrap();
+    let mut challenges = HashMap::new();
+    for phase in 0..compiled_circuit.cs.phases() {
+        println!("phase {phase}");
+        let witness_a = witness_calc_a.calc(phase as u8, &challenges).unwrap();
+        let witness_b = witness_calc_b.calc(phase as u8, &challenges).unwrap();
+        // println!(
+        //     "w_a, w_b {:?} {:?}",
+        //     witness_a
+        //         .iter()
+        //         .map(|w| w.as_ref().map(|w| w.len()))
+        //         .collect::<Vec<_>>(),
+        //     witness_b
+        //         .iter()
+        //         .map(|w| w.as_ref().map(|w| w.len()))
+        //         .collect::<Vec<_>>()
+        // );
+        let witness = link_witness(&cfg, &compiled_circuit.cs, &map, vec![witness_a, witness_b]);
+        // println!(
+        //     "w {:?}",
+        //     witness
+        //         .iter()
+        //         .map(|w| w.as_ref().map(|w| w.len()))
+        //         .collect::<Vec<_>>(),
+        // );
+        challenges = prover.commit_phase(phase as u8, witness).unwrap();
+    }
+    prover.create_proof().unwrap();
+    let proof = transcript.finalize();
+
+    // Verify
+    println!("Verifying...");
+    let mut verifier_transcript =
+        Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
+    let verifier_params = params.verifier_params();
+    let strategy = SingleStrategy::new(&verifier_params);
+
+    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
+        &verifier_params,
+        &vk,
+        strategy,
+        instances_slice,
+        &mut verifier_transcript,
+    )
+    .expect("verify succeeds");
 }

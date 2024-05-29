@@ -136,6 +136,19 @@ pub struct ConstraintSystemMid<F: Field> {
     pub minimum_degree: Option<usize>,
 }
 
+impl<F: Field> ConstraintSystemMid<F> {
+    /// Returns the number of phases
+    pub fn phases(&self) -> usize {
+        let max_phase = self
+            .advice_column_phase
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or_default();
+        max_phase as usize + 1
+    }
+}
+
 /// Data that needs to be preprocessed from a circuit
 #[derive(Debug, Clone)]
 pub struct Preprocessing<F: Field> {

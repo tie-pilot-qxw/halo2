@@ -402,8 +402,8 @@ pub struct LinkWitnessConfig {
 
 fn column_merge<F: Field>(
     strategy: &MergeStrategy,
-    src_column_index: usize,
     src_circuit_index: usize,
+    src_column_index: usize,
     column_dst: &mut Vec<F>,
     column_src: Vec<F>,
 ) {
@@ -433,6 +433,10 @@ fn column_merge<F: Field>(
             }
         }
         Main(circuit_index, column_index) => {
+            // println!(
+            //     "merge main ({}, {}) - ({}, {})",
+            //     circuit_index, column_index, src_circuit_index, src_column_index
+            // );
             if *circuit_index == src_circuit_index && *column_index == src_column_index {
                 *column_dst = column_src;
             }
