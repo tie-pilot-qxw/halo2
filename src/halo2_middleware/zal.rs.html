@@ -385,6 +385,8 @@
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! This module provides "ZK Acceleration Layer" traits
 //! to abstract away the execution engine for performance-critical primitives.
 //!
@@ -648,16 +650,17 @@
     <span class="kw">use </span>rand_xorshift::XorShiftRng;
 
     <span class="kw">fn </span>gen_points_scalars&lt;C: CurveAffine&gt;(k: usize) -&gt; (Vec&lt;C&gt;, Vec&lt;C::Scalar&gt;) {
-        <span class="kw">let </span>rand = || XorShiftRng::from_seed([<span class="number">1</span>; <span class="number">16</span>]);
+        <span class="kw">let </span><span class="kw-2">mut </span>rng = XorShiftRng::seed_from_u64(<span class="number">3141592u64</span>);
+
         <span class="kw">let </span>points = (<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; k)
-            .map(|<span class="kw">_</span>| C::Curve::random(rand()))
+            .map(|<span class="kw">_</span>| C::Curve::random(<span class="kw-2">&amp;mut </span>rng))
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
         <span class="kw">let </span><span class="kw-2">mut </span>affine_points = <span class="macro">vec!</span>[C::identity(); <span class="number">1 </span>&lt;&lt; k];
         C::Curve::batch_normalize(<span class="kw-2">&amp;</span>points[..], <span class="kw-2">&amp;mut </span>affine_points[..]);
         <span class="kw">let </span>points = affine_points;
 
         <span class="kw">let </span>scalars = (<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; k)
-            .map(|<span class="kw">_</span>| C::Scalar::random(rand()))
+            .map(|<span class="kw">_</span>| C::Scalar::random(<span class="kw-2">&amp;mut </span>rng))
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
         (points, scalars)
@@ -751,9 +754,10 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_msm_zal() {
-        <span class="kw">let </span>(points, scalars) = gen_points_scalars::&lt;G1Affine&gt;(<span class="number">4</span>);
-        run_msm_zal_default(<span class="kw-2">&amp;</span>points, <span class="kw-2">&amp;</span>scalars, <span class="number">4</span>);
-        run_msm_zal_custom(<span class="kw-2">&amp;</span>points, <span class="kw-2">&amp;</span>scalars, <span class="number">4</span>);
+        <span class="kw">const </span>MSM_SIZE: usize = <span class="number">12</span>;
+        <span class="kw">let </span>(points, scalars) = gen_points_scalars::&lt;G1Affine&gt;(MSM_SIZE);
+        run_msm_zal_default(<span class="kw-2">&amp;</span>points, <span class="kw-2">&amp;</span>scalars, MSM_SIZE);
+        run_msm_zal_custom(<span class="kw-2">&amp;</span>points, <span class="kw-2">&amp;</span>scalars, MSM_SIZE);
     }
 }
 </code></pre></div></section></main></body></html>
