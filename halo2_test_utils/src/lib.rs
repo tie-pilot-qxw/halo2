@@ -20,7 +20,6 @@ pub fn one_rng() -> BlockRng<OneNg> {
     BlockRng::<OneNg>::new(OneNg {})
 }
 
-
 pub fn keccak_hex<D: AsRef<[u8]>>(data: D) -> String {
     let mut hash = [0u8; 32];
     let mut hasher = tiny_keccak::Keccak::v256();

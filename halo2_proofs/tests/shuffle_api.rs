@@ -152,7 +152,6 @@ fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: 
 where
     C::Scalar: FromUniformBytes<64>,
 {
-
     let mut rng = one_rng();
 
     let params = ParamsIPA::<C>::new(k, &mut rng);

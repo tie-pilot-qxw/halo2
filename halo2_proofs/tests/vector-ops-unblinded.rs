@@ -475,7 +475,6 @@ fn test_prover<C: CurveAffine>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
-
     let mut rng = one_rng();
 
     let params = ParamsIPA::<C>::new(k, &mut rng);
@@ -552,7 +551,7 @@ fn test_vector_ops_unbinded() {
         "845349549e3776ba45e5bc03d44fd44f8e65f6338e8b7b8975dcc4f310094bf3",
         keccak_hex(&proof_1)
     );
-    
+
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
     assert_eq!(

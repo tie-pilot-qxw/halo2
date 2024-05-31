@@ -32,6 +32,7 @@ fn plonk_api() {
 
     /// This represents an advice column at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
+    #[allow(dead_code)]
     pub struct Variable(Column<Advice>, usize);
 
     #[derive(Clone)]
@@ -578,7 +579,7 @@ fn plonk_api() {
         use halo2curves::bn256::Bn256;
 
         type Scheme = KZGCommitmentScheme<Bn256>;
-   
+
         bad_keys!(Scheme);
 
         let mut rng = one_rng();
@@ -604,7 +605,6 @@ fn plonk_api() {
             "07382b50df5d591f5f54f99b09577f971986e4c343e8d050fb064432fda4be95",
             keccak_hex(proof)
         );
-
     }
 
     fn test_plonk_api_shplonk() {
@@ -634,12 +634,11 @@ fn plonk_api() {
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
         >(&verifier_params, pk.get_vk(), &proof[..]);
-    
+
         assert_eq!(
             "32bb491e0f52a10f3361fc0aea6ea5aee3128f431e0fb846338e501c810dba49",
             keccak_hex(proof)
         );
-    
     }
 
     fn test_plonk_api_ipa() {

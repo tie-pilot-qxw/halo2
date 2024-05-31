@@ -133,7 +133,7 @@ fn test_serialization() {
     let k = 4;
 
     let mut rng = one_rng();
-    
+
     let circuit = StandardPlonk(Fr::random(&mut rng));
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let compress_selectors = true;
@@ -168,14 +168,7 @@ fn test_serialization() {
         _,
         Blake2bWrite<Vec<u8>, G1Affine, Challenge255<_>>,
         _,
-    >(
-        &params,
-        &pk,
-        &[circuit],
-        &[instances],
-        rng,
-        &mut transcript,
-    )
+    >(&params, &pk, &[circuit], &[instances], rng, &mut transcript)
     .expect("prover should not fail");
     let proof = transcript.finalize();
 
@@ -201,6 +194,4 @@ fn test_serialization() {
         "09e497a9a52d56f23d3f2cf832b5849a1ebbaab2086dec90144b3eb1a38b5331",
         keccak_hex(proof)
     )
-
-
 }

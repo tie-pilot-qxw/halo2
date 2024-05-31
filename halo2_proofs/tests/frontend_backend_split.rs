@@ -547,9 +547,8 @@ fn test_mycircuit_full_legacy() {
 
     assert_eq!(
         "26f0039c26b006146f117d121e74574dc0536894ea3afa9957401911d4e06fe1",
-        keccak_hex(proof)   
+        keccak_hex(proof)
     );
-
 }
 
 #[test]
@@ -633,7 +632,6 @@ fn test_mycircuit_full_split() {
 
     assert_eq!(
         "2d1c9bc9ad669fa0729d91aab50b1fc65c837384ab6460dff14270e377dc76be",
-        keccak_hex(proof)   
+        keccak_hex(proof)
     );
-
 }

@@ -6,11 +6,13 @@ use halo2_proofs::{
     halo2curves::pasta::EqAffine,
     plonk::*,
     poly::{
-        commitment::ParamsProver, ipa::{
+        commitment::ParamsProver,
+        ipa::{
             commitment::{IPACommitmentScheme, ParamsIPA},
             multiopen::{ProverIPA, VerifierIPA},
             strategy::AccumulatorStrategy,
-        }, VerificationStrategy,
+        },
+        VerificationStrategy,
     },
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
@@ -273,7 +275,8 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     k: u32,
     circuit: MyCircuit<C::Scalar, W, H>,
     expected: bool,
-) -> Vec<u8> where
+) -> Vec<u8>
+where
     C::Scalar: FromUniformBytes<64>,
 {
     let mut rng = one_rng();
@@ -316,7 +319,6 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     assert_eq!(accepted, expected);
 
     proof
-
 }
 
 #[test]
@@ -335,7 +337,6 @@ fn test_shuffle() {
             "dba3dbe7a83a719ec028317511e260b8c8e6207dc62b2d1ecd8ba0fa6ddc39ed",
             keccak_hex(proof)
         );
-
     }
 
     #[cfg(not(feature = "sanity-checks"))]
@@ -359,7 +360,7 @@ fn test_shuffle() {
                 },
             )]),
         );
-        let proof = test_prover::<EqAffine, W, H>(K, circuit, false);    
+        let proof = test_prover::<EqAffine, W, H>(K, circuit, false);
         assert_eq!(
             "0b4e97f2d561fae56fe893333eba2df5228c78e80f8bd7c509d4d40d127dff92",
             keccak_hex(proof)

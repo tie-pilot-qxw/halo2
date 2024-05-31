@@ -427,7 +427,7 @@ impl<E: Engine> ParamsProver<E::G1Affine> for ParamsKZG<E>
 where
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
-    E::G2Affine: SerdeCurveAffine
+    E::G2Affine: SerdeCurveAffine,
 {
     fn new(k: u32, rng: impl RngCore) -> Self {
         Self::setup(k, rng)
