@@ -42,6 +42,28 @@ pub enum VarMid {
     Challenge(ChallengeMid),
 }
 
+impl fmt::Display for VarMid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VarMid::Query(query) => {
+                match query.column_type {
+                    Any::Fixed => write!(f, "f")?,
+                    Any::Advice => write!(f, "a")?,
+                    Any::Instance => write!(f, "i")?,
+                };
+                write!(f, "{}", query.column_index)?;
+                if query.rotation.0 != 0 {
+                    write!(f, "[{}]", query.rotation.0)?;
+                }
+                Ok(())
+            }
+            VarMid::Challenge(challenge) => {
+                write!(f, "ch{}", challenge.index())
+            }
+        }
+    }
+}
+
 impl Variable for VarMid {
     fn degree(&self) -> usize {
         match self {
@@ -58,19 +80,7 @@ impl Variable for VarMid {
     }
 
     fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        match self {
-            VarMid::Query(query) => {
-                match query.column_type {
-                    Any::Fixed => write!(writer, "fixed")?,
-                    Any::Advice => write!(writer, "advice")?,
-                    Any::Instance => write!(writer, "instance")?,
-                };
-                write!(writer, "[{}][{}]", query.column_index, query.rotation.0)
-            }
-            VarMid::Challenge(challenge) => {
-                write!(writer, "challenge[{}]", challenge.index())
-            }
-        }
+        write!(writer, "{}", self)
     }
 }
 

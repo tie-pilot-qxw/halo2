@@ -277,33 +277,45 @@ fn test_circuit_linker() {
         witness_merge_strategy: vec![MergeStrategy::Main(1, 0)],
         fixed_merge_strategy: vec![MergeStrategy::Main(1, 0)],
     };
+    println!("== a ==");
+    for gate in &compiled_circuit_a.cs.gates {
+        println!("\"{}\" {}", gate.name, gate.poly.identifier());
+    }
+    println!("== b ==");
+    for gate in &compiled_circuit_b.cs.gates {
+        println!("\"{}\" {}", gate.name, gate.poly.identifier());
+    }
     let (cs, map) = link_cs(&cfg, &[compiled_circuit_a.cs, compiled_circuit_b.cs]);
-    let print_vec_f = |v: &Vec<Fr>| {
-        print!("[");
-        for (i, x) in v.iter().enumerate() {
-            if i != 0 {
-                print!(", ");
-            }
-            if *x == Fr::ZERO {
-                print!("0");
-            } else if *x == Fr::ONE {
-                print!("1");
-            } else {
-                print!("{:?}", x);
-            }
-        }
-        println!("]");
-    };
-    let print_fixed = |fixed: &Vec<Vec<Fr>>| {
-        for (i, column) in fixed.iter().enumerate() {
-            print!("f{}: ", i);
-            print_vec_f(column);
-        }
-    };
-    println!("A");
-    print_fixed(&compiled_circuit_a.preprocessing.fixed);
-    println!("B");
-    print_fixed(&compiled_circuit_b.preprocessing.fixed);
+    println!("== c ==");
+    for gate in &cs.gates {
+        println!("\"{}\" {}", gate.name, gate.poly.identifier());
+    }
+    // let print_vec_f = |v: &Vec<Fr>| {
+    //     print!("[");
+    //     for (i, x) in v.iter().enumerate() {
+    //         if i != 0 {
+    //             print!(", ");
+    //         }
+    //         if *x == Fr::ZERO {
+    //             print!("0");
+    //         } else if *x == Fr::ONE {
+    //             print!("1");
+    //         } else {
+    //             print!("{:?}", x);
+    //         }
+    //     }
+    //     println!("]");
+    // };
+    // let print_fixed = |fixed: &Vec<Vec<Fr>>| {
+    //     for (i, column) in fixed.iter().enumerate() {
+    //         print!("f{}: ", i);
+    //         print_vec_f(column);
+    //     }
+    // };
+    // println!("A");
+    // print_fixed(&compiled_circuit_a.preprocessing.fixed);
+    // println!("B");
+    // print_fixed(&compiled_circuit_b.preprocessing.fixed);
     let preprocessing = link_preprocessing(
         &cfg,
         &cs,
@@ -313,8 +325,8 @@ fn test_circuit_linker() {
             compiled_circuit_b.preprocessing,
         ],
     );
-    println!("Comb");
-    print_fixed(&preprocessing.fixed);
+    // println!("Comb");
+    // print_fixed(&preprocessing.fixed);
     let compiled_circuit = CompiledCircuit { cs, preprocessing };
 
     // Setup
