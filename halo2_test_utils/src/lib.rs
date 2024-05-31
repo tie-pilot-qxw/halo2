@@ -1,5 +1,6 @@
 use rand_core::block::BlockRng;
 use rand_core::block::BlockRngCore;
+use rand_core::OsRng;
 use tiny_keccak::Hasher;
 
 // One number generator, that can be used as a deterministic Rng, outputing fixed values.
@@ -18,6 +19,10 @@ impl BlockRngCore for OneNg {
 
 pub fn one_rng() -> BlockRng<OneNg> {
     BlockRng::<OneNg>::new(OneNg {})
+}
+
+pub fn test_rng() -> OsRng {
+    OsRng
 }
 
 pub fn keccak_hex<D: AsRef<[u8]>>(data: D) -> String {

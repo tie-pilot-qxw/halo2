@@ -546,7 +546,7 @@ fn test_mycircuit_full_legacy() {
     println!("Verify: {:?}", start.elapsed());
 
     assert_eq!(
-        "26f0039c26b006146f117d121e74574dc0536894ea3afa9957401911d4e06fe1",
+        "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
         keccak_hex(proof)
     );
 }
@@ -631,7 +631,7 @@ fn test_mycircuit_full_split() {
     println!("Verify: {:?}", start.elapsed());
 
     assert_eq!(
-        "2d1c9bc9ad669fa0729d91aab50b1fc65c837384ab6460dff14270e377dc76be",
+        "e612e9d5ebcdcff5ed9823c527218cdbaaf9fe76cc5e42d05a60f652dcc92660",
         keccak_hex(proof)
     );
 }

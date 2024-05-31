@@ -25,6 +25,7 @@ use halo2_proofs::transcript::{
 use halo2_test_utils::{keccak_hex, one_rng};
 use rand_core::RngCore;
 use std::marker::PhantomData;
+use halo2_test_utils::test_rng;
 
 #[test]
 fn plonk_api() {
@@ -437,7 +438,7 @@ fn plonk_api() {
 
             // Check that we get an error if we try to initialize the proving key with a value of
             // k that is too small for the minimum required number of rows.
-            let much_too_small_params= <$scheme as CommitmentScheme>::ParamsProver::new(1, rand_core::OsRng);
+            let much_too_small_params= <$scheme as CommitmentScheme>::ParamsProver::new(1, test_rng());
             assert_matches!(
                 keygen_vk(&much_too_small_params, &empty_circuit),
                 Err(Error::Frontend(ErrorFront::NotEnoughRowsAvailable {
@@ -447,7 +448,7 @@ fn plonk_api() {
 
             // Check that we get an error if we try to initialize the proving key with a value of
             // k that is too small for the number of rows the circuit uses.
-            let slightly_too_small_params = <$scheme as CommitmentScheme>::ParamsProver::new(K-1, rand_core::OsRng);
+            let slightly_too_small_params = <$scheme as CommitmentScheme>::ParamsProver::new(K-1, test_rng());
             assert_matches!(
                 keygen_vk(&slightly_too_small_params, &empty_circuit),
                 Err(Error::Frontend(ErrorFront::NotEnoughRowsAvailable {

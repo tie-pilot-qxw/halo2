@@ -17,7 +17,7 @@ mod test {
     use group::Curve;
     use halo2_middleware::ff::WithSmallOrderMulGroup;
     use halo2_middleware::zal::{impls::H2cEngine, traits::MsmAccel};
-    use rand_core::OsRng;
+    use halo2_test_utils::test_rng;
 
     #[test]
     fn test_roundtrip_ipa() {
@@ -29,7 +29,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsIPA::<EqAffine>::new(K, OsRng);
+        let params = ParamsIPA::<EqAffine>::new(K, test_rng());
 
         let proof = create_proof::<
             IPACommitmentScheme<EqAffine>,
@@ -67,7 +67,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsIPA::<EqAffine>::new(K, OsRng);
+        let params = ParamsIPA::<EqAffine>::new(K, test_rng());
 
         let proof = create_proof::<
             IPACommitmentScheme<EqAffine>,
@@ -105,7 +105,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsKZG::<Bn256>::new(K, OsRng);
+        let params = ParamsKZG::<Bn256>::new(K, test_rng());
 
         let proof = create_proof::<_, ProverGWC<_>, _, Blake2bWrite<_, _, Challenge255<_>>>(
             &engine, &params,
@@ -138,7 +138,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsKZG::<Bn256>::new(K, OsRng);
+        let params = ParamsKZG::<Bn256>::new(K, test_rng());
 
         let proof = create_proof::<
             KZGCommitmentScheme<Bn256>,
@@ -256,7 +256,7 @@ mod test {
 
         let mut transcript = T::init(vec![]);
 
-        let blind = Blind::new(&mut OsRng);
+        let blind = Blind::new(&mut test_rng());
         let a = params.commit(engine, &ax, blind).to_affine();
         let b = params.commit(engine, &bx, blind).to_affine();
         let c = params.commit(engine, &cx, blind).to_affine();
@@ -297,7 +297,7 @@ mod test {
 
         let prover = P::new(params);
         prover
-            .create_proof(&mut OsRng, &mut transcript, queries)
+            .create_proof(&mut test_rng(), &mut transcript, queries)
             .unwrap();
 
         transcript.finalize()

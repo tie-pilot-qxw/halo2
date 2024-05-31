@@ -477,13 +477,12 @@ pub struct PinnedEvaluationDomain<'a, F: Field> {
 
 #[test]
 fn test_rotate() {
-    use rand_core::OsRng;
-
     use crate::arithmetic::eval_polynomial;
     use halo2curves::pasta::pallas::Scalar;
+    use halo2_test_utils::test_rng;
 
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
-    let rng = OsRng;
+    let rng = test_rng();
 
     let mut poly = domain.empty_lagrange();
     assert_eq!(poly.len(), 8);
@@ -518,8 +517,7 @@ fn test_rotate() {
 
 #[test]
 fn test_l_i() {
-    use rand_core::OsRng;
-
+    use halo2_test_utils::test_rng;
     use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
     use halo2curves::pasta::pallas::Scalar;
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
@@ -536,7 +534,7 @@ fn test_l_i() {
         l.push(l_i);
     }
 
-    let x = Scalar::random(OsRng);
+    let x = Scalar::random(test_rng());
     let xn = x.pow([8]);
 
     let evaluations = domain.l_i_range(x, xn, -7..=7);

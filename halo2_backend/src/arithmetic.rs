@@ -255,14 +255,12 @@ pub(crate) fn powers<F: Field>(base: F) -> impl Iterator<Item = F> {
 }
 
 #[cfg(test)]
-use rand_core::OsRng;
-
-#[cfg(test)]
 use halo2curves::pasta::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {
-    let rng = OsRng;
+    use halo2_test_utils::test_rng;
+    let rng = test_rng();
 
     let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
     let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();

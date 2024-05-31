@@ -243,18 +243,17 @@ mod test {
     use group::Curve;
     use halo2_middleware::ff::Field;
     use halo2_middleware::zal::impls::H2cEngine;
+    use halo2_test_utils::test_rng;
 
     #[test]
     fn test_commit_lagrange_epaffine() {
         const K: u32 = 6;
 
-        use rand_core::OsRng;
-
         use crate::poly::EvaluationDomain;
         use halo2curves::pasta::{EpAffine, Fq};
 
         let engine = H2cEngine::new();
-        let params = ParamsIPA::<EpAffine>::new(K, OsRng);
+        let params = ParamsIPA::<EpAffine>::new(K, test_rng());
         let domain = EvaluationDomain::new(1, K);
 
         let mut a = domain.empty_lagrange();
@@ -265,7 +264,7 @@ mod test {
 
         let b = domain.lagrange_to_coeff(a.clone());
 
-        let alpha = Blind(Fq::random(OsRng));
+        let alpha = Blind(Fq::random(test_rng()));
 
         assert_eq!(
             params.commit(&engine, &b, alpha),
@@ -277,13 +276,11 @@ mod test {
     fn test_commit_lagrange_eqaffine() {
         const K: u32 = 6;
 
-        use rand_core::OsRng;
-
         use crate::poly::EvaluationDomain;
         use halo2curves::pasta::{EqAffine, Fp};
 
         let engine = H2cEngine::new();
-        let params: ParamsIPA<EqAffine> = ParamsIPA::<EqAffine>::new(K, OsRng);
+        let params: ParamsIPA<EqAffine> = ParamsIPA::<EqAffine>::new(K, test_rng());
         let domain = EvaluationDomain::new(1, K);
 
         let mut a = domain.empty_lagrange();
@@ -294,7 +291,7 @@ mod test {
 
         let b = domain.lagrange_to_coeff(a.clone());
 
-        let alpha = Blind(Fp::random(OsRng));
+        let alpha = Blind(Fp::random(test_rng()));
 
         assert_eq!(
             params.commit(&engine, &b, alpha),
@@ -307,7 +304,6 @@ mod test {
         const K: u32 = 6;
 
         use halo2_middleware::ff::Field;
-        use rand_core::OsRng;
 
         use super::super::commitment::{Blind, Params};
         use crate::arithmetic::eval_polynomial;
@@ -320,10 +316,10 @@ mod test {
         use crate::transcript::TranscriptReadBuffer;
         use crate::transcript::TranscriptWriterBuffer;
 
-        let rng = OsRng;
+        let rng = test_rng();
 
         let engine = H2cEngine::new();
-        let params = ParamsIPA::<EpAffine>::new(K, OsRng);
+        let params = ParamsIPA::<EpAffine>::new(K, test_rng());
         let mut params_buffer = vec![];
         <ParamsIPA<_> as Params<_>>::write(&params, &mut params_buffer).unwrap();
         let params: ParamsIPA<EpAffine> = Params::read::<_>(&mut &params_buffer[..]).unwrap();

@@ -110,7 +110,7 @@ fn test_create_proof() {
     };
     use halo2_middleware::ff::Field;
     use halo2curves::bn256::Bn256;
-    use rand_core::OsRng;
+    use halo2_test_utils::test_rng;
 
     #[derive(Clone, Copy)]
     struct MyCircuit;
@@ -136,7 +136,7 @@ fn test_create_proof() {
         }
     }
 
-    let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, OsRng);
+    let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, test_rng());
     let vk = keygen_vk(&params, &MyCircuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
@@ -147,7 +147,7 @@ fn test_create_proof() {
         &pk,
         &[MyCircuit, MyCircuit],
         &[],
-        OsRng,
+        test_rng(),
         &mut transcript,
     );
     assert!(matches!(
@@ -161,7 +161,7 @@ fn test_create_proof() {
         &pk,
         &[MyCircuit, MyCircuit],
         &[&[], &[]],
-        OsRng,
+        test_rng(),
         &mut transcript,
     )
     .expect("proof generation should not fail");
@@ -180,7 +180,7 @@ fn test_create_proof_custom() {
     };
     use halo2_middleware::ff::Field;
     use halo2curves::bn256::Bn256;
-    use rand_core::OsRng;
+    use halo2_test_utils::test_rng;
 
     #[derive(Clone, Copy)]
     struct MyCircuit;
@@ -206,7 +206,7 @@ fn test_create_proof_custom() {
         }
     }
 
-    let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, OsRng);
+    let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, test_rng());
     let compress_selectors = true;
     let vk = keygen_vk_custom(&params, &MyCircuit, compress_selectors)
         .expect("keygen_vk_custom should not fail");
@@ -221,7 +221,7 @@ fn test_create_proof_custom() {
         &pk,
         &[MyCircuit, MyCircuit],
         &[&[], &[]],
-        OsRng,
+        test_rng(),
         &mut transcript,
     )
     .expect("proof generation should not fail");

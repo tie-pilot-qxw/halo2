@@ -455,19 +455,17 @@ mod test {
     use crate::poly::kzg::commitment::ParamsKZG;
     use halo2_middleware::ff::Field;
     use halo2_middleware::zal::impls::H2cEngine;
-    use rand_core::OsRng;
+    use halo2_test_utils::test_rng;
 
     #[test]
     fn test_commit_lagrange() {
         const K: u32 = 6;
 
-        use rand_core::OsRng;
-
         use crate::poly::EvaluationDomain;
         use halo2curves::bn256::{Bn256, Fr};
 
         let engine = H2cEngine::new();
-        let params = ParamsKZG::<Bn256>::new(K, OsRng);
+        let params = ParamsKZG::<Bn256>::new(K, test_rng());
         let domain = EvaluationDomain::new(1, K);
 
         let mut a = domain.empty_lagrange();
@@ -478,7 +476,7 @@ mod test {
 
         let b = domain.lagrange_to_coeff(a.clone());
 
-        let alpha = Blind(Fr::random(OsRng));
+        let alpha = Blind(Fr::random(test_rng()));
 
         assert_eq!(
             params.commit(&engine, &b, alpha),
@@ -493,7 +491,7 @@ mod test {
         use super::super::commitment::Params;
         use halo2curves::bn256::Bn256;
 
-        let params0 = ParamsKZG::<Bn256>::new(K, OsRng);
+        let params0 = ParamsKZG::<Bn256>::new(K, test_rng());
         let mut data = vec![];
         <ParamsKZG<_> as Params<_>>::write(&params0, &mut data).unwrap();
         let params1: ParamsKZG<Bn256> = Params::read::<_>(&mut &data[..]).unwrap();

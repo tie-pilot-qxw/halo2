@@ -6,8 +6,8 @@ use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
 use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2_test_utils::test_rng;
 use halo2curves::pasta::{EqAffine, Fp};
-use rand_core::OsRng;
 
 use halo2_proofs::{
     poly::{
@@ -268,7 +268,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     fn keygen(k: u32) -> (ParamsIPA<EqAffine>, ProvingKey<EqAffine>) {
-        let params: ParamsIPA<EqAffine> = ParamsIPA::new(k, OsRng);
+        let params: ParamsIPA<EqAffine> = ParamsIPA::new(k, test_rng());
         let empty_circuit: MyCircuit<Fp> = MyCircuit {
             a: Value::unknown(),
             k,
@@ -279,7 +279,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     fn prover(k: u32, params: &ParamsIPA<EqAffine>, pk: &ProvingKey<EqAffine>) -> Vec<u8> {
-        let rng = OsRng;
+        let rng = test_rng();
 
         let circuit: MyCircuit<Fp> = MyCircuit {
             a: Value::known(Fp::random(rng)),

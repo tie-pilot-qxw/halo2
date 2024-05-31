@@ -6,6 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Circuit, Column, ConstraintSystem, ErrorFront, Instance, Selector},
     poly::Rotation,
 };
+use halo2_test_utils::test_rng;
 
 // ANCHOR: field-instructions
 /// A variable representing a number.
@@ -500,7 +501,6 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
 fn main() {
     use halo2_proofs::dev::MockProver;
     use halo2curves::pasta::Fp;
-    use rand_core::OsRng;
 
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example
@@ -508,7 +508,7 @@ fn main() {
     let k = 4;
 
     // Prepare the private and public inputs to the circuit!
-    let rng = OsRng;
+    let rng = test_rng();
     let a = Fp::random(rng);
     let b = Fp::random(rng);
     let c = Fp::random(rng);
