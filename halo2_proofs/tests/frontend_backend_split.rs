@@ -28,6 +28,7 @@ use halo2_frontend::{
     },
 };
 use halo2_middleware::{ff::Field, poly::Rotation};
+use halo2_test_utils::{keccak_hex, one_rng};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -470,22 +471,6 @@ use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::block::BlockRng;
-use rand_core::block::BlockRngCore;
-
-// One number generator, that can be used as a deterministic Rng, outputing fixed values.
-struct OneNg {}
-
-impl BlockRngCore for OneNg {
-    type Item = u32;
-    type Results = [u32; 16];
-
-    fn generate(&mut self, results: &mut Self::Results) {
-        for elem in results.iter_mut() {
-            *elem = 1;
-        }
-    }
-}
 
 #[test]
 fn test_mycircuit_mock() {
@@ -515,7 +500,7 @@ fn test_mycircuit_full_legacy() {
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
 
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
+    let mut rng = one_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let start = Instant::now();
     let vk = keygen_vk_legacy(&params, &circuit).expect("keygen_vk should not fail");
@@ -559,6 +544,12 @@ fn test_mycircuit_full_legacy() {
     )
     .expect("verify succeeds");
     println!("Verify: {:?}", start.elapsed());
+
+    assert_eq!(
+        "26f0039c26b006146f117d121e74574dc0536894ea3afa9957401911d4e06fe1",
+        keccak_hex(proof)   
+    );
+
 }
 
 #[test]
@@ -577,7 +568,7 @@ fn test_mycircuit_full_split() {
     let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, false).unwrap();
 
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
+    let mut rng = one_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let start = Instant::now();
     let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
@@ -639,4 +630,10 @@ fn test_mycircuit_full_split() {
     )
     .expect("verify succeeds");
     println!("Verify: {:?}", start.elapsed());
+
+    assert_eq!(
+        "2d1c9bc9ad669fa0729d91aab50b1fc65c837384ab6460dff14270e377dc76be",
+        keccak_hex(proof)   
+    );
+
 }

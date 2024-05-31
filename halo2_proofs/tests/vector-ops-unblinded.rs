@@ -21,7 +21,7 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use rand_core::OsRng;
+use halo2_test_utils::{keccak_hex, one_rng};
 
 // ANCHOR: instructions
 trait NumericInstructions<F: Field>: Chip<F> {
@@ -475,7 +475,10 @@ fn test_prover<C: CurveAffine>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let params = ParamsIPA::<C>::new(k);
+
+    let mut rng = one_rng();
+
+    let params = ParamsIPA::<C>::new(k, &mut rng);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -487,7 +490,7 @@ where
             &pk,
             &[circuit],
             &[&[&instances]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -545,8 +548,17 @@ fn test_vector_ops_unbinded() {
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
+    assert_eq!(
+        "845349549e3776ba45e5bc03d44fd44f8e65f6338e8b7b8975dcc4f310094bf3",
+        keccak_hex(&proof_1)
+    );
+    
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
+    assert_eq!(
+        "55f4b12e359be5541f539f74ae2b4afd2206160609faa1b902d90e91bfd4a641",
+        keccak_hex(&proof_2)
+    );
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     // here we compare the first 10 bytes of the commitments

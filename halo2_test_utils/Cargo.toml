@@ -1,5 +1,5 @@
 [package]
-name = "halo2_middleware"
+name = "halo2_test_utils"
 version = "0.3.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
@@ -11,7 +11,7 @@ authors = [
 edition = "2021"
 rust-version = "1.66.0"
 description = """
-Halo2 middleware.  This package contains the types and traits required for the frontend-backend interaction.
+Fast PLONK-based zero-knowledge proving system with no trusted setup
 """
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/privacy-scaling-explorations/halo2"
@@ -20,23 +20,7 @@ readme = "README.md"
 categories = ["cryptography"]
 keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
 
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
-
 [dependencies]
-ff = "0.13"
-halo2curves = { version = "0.6.0", default-features = false }
-serde = { version = "1", optional = true, features = ["derive"] }
-serde_derive = { version = "1", optional = true}
-rayon = "1.8"
-
-[dev-dependencies]
-ark-std = { version = "0.3" }
-proptest = "1"
-group = "0.13"
-rand_chacha = "0.3.0"
+tiny-keccak = { version = "2.0.2", features=["keccak"] }
+hex = "0.4.3"
 rand_core = "0.6.4"
-
-[lib]
-bench = false

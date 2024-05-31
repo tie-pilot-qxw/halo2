@@ -22,8 +22,8 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
+use halo2_test_utils::{keccak_hex, one_rng};
 use halo2curves::{pasta::EqAffine, CurveAffine};
-use rand_core::OsRng;
 
 struct ShuffleChip<F: Field> {
     config: ShuffleConfig,
@@ -148,11 +148,14 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
     }
 }
 
-fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: bool)
+fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: bool) -> Vec<u8>
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let params = ParamsIPA::<C>::new(k);
+
+    let mut rng = one_rng();
+
+    let params = ParamsIPA::<C>::new(k, &mut rng);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -164,7 +167,7 @@ where
             &pk,
             &[circuit],
             &[&[]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -188,6 +191,8 @@ where
     };
 
     assert_eq!(accepted, expected);
+
+    proof
 }
 
 #[test]
@@ -213,5 +218,10 @@ fn test_shuffle_api() {
     };
     let prover = MockProver::run(K, &circuit, vec![]).unwrap();
     prover.assert_satisfied();
-    test_prover::<EqAffine>(K, circuit, true);
+    let proof = test_prover::<EqAffine>(K, circuit, true);
+
+    assert_eq!(
+        "10866a2a15d9cf36b36045277cae71057702f61a41ef56b04f813c30a5f8daa0",
+        keccak_hex(proof)
+    );
 }

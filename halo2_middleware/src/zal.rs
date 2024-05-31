@@ -257,20 +257,20 @@ mod test {
     use ark_std::{end_timer, start_timer};
     use ff::Field;
     use group::{Curve, Group};
+    use rand_chacha::ChaCha20Rng;
     use rand_core::SeedableRng;
-    use rand_xorshift::XorShiftRng;
 
     fn gen_points_scalars<C: CurveAffine>(k: usize) -> (Vec<C>, Vec<C::Scalar>) {
-        let rand = || XorShiftRng::from_seed([1; 16]);
+        let mut rand = ChaCha20Rng::seed_from_u64(7);
         let points = (0..1 << k)
-            .map(|_| C::Curve::random(rand()))
+            .map(|_| C::Curve::random(&mut rand))
             .collect::<Vec<_>>();
         let mut affine_points = vec![C::identity(); 1 << k];
         C::Curve::batch_normalize(&points[..], &mut affine_points[..]);
         let points = affine_points;
 
         let scalars = (0..1 << k)
-            .map(|_| C::Scalar::random(rand()))
+            .map(|_| C::Scalar::random(&mut rand))
             .collect::<Vec<_>>();
 
         (points, scalars)

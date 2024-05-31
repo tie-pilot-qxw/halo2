@@ -23,8 +23,8 @@ use halo2_proofs::{
     },
     SerdeFormat,
 };
+use halo2_test_utils::{keccak_hex, one_rng};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::OsRng;
 
 #[derive(Clone, Copy)]
 struct StandardPlonkConfig {
@@ -131,8 +131,11 @@ impl Circuit<Fr> for StandardPlonk {
 #[test]
 fn test_serialization() {
     let k = 4;
-    let circuit = StandardPlonk(Fr::random(OsRng));
-    let params = ParamsKZG::<Bn256>::setup(k, OsRng);
+
+    let mut rng = one_rng();
+    
+    let circuit = StandardPlonk(Fr::random(&mut rng));
+    let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let compress_selectors = true;
     let vk = keygen_vk_custom(&params, &circuit, compress_selectors).expect("vk should not fail");
     let pk = keygen_pk(&params, vk, &circuit).expect("pk should not fail");
@@ -170,7 +173,7 @@ fn test_serialization() {
         &pk,
         &[circuit],
         &[instances],
-        OsRng,
+        rng,
         &mut transcript,
     )
     .expect("prover should not fail");
@@ -193,4 +196,11 @@ fn test_serialization() {
         &mut transcript
     )
     .is_ok());
+
+    assert_eq!(
+        "09e497a9a52d56f23d3f2cf832b5849a1ebbaab2086dec90144b3eb1a38b5331",
+        keccak_hex(proof)
+    )
+
+
 }

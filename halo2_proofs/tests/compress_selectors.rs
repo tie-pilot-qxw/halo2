@@ -19,23 +19,8 @@ use halo2_proofs::plonk::{
 use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
+use halo2_test_utils::{keccak_hex, one_rng};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::block::BlockRng;
-use rand_core::block::BlockRngCore;
-
-// One number generator, that can be used as a deterministic Rng, outputing fixed values.
-pub struct OneNg {}
-
-impl BlockRngCore for OneNg {
-    type Item = u32;
-    type Results = [u32; 16];
-
-    fn generate(&mut self, results: &mut Self::Results) {
-        for elem in results.iter_mut() {
-            *elem = 1;
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 struct MyCircuitConfig {
@@ -342,7 +327,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
 fn test_mycircuit(
     vk_keygen_compress_selectors: bool,
     pk_keygen_compress_selectors: bool,
-) -> Result<(), halo2_proofs::plonk::Error> {
+) -> Result<Vec<u8>, halo2_proofs::plonk::Error> {
     let engine = PlonkEngineConfig::new()
         .set_curve::<G1Affine>()
         .set_msm(H2cEngine::new())
@@ -355,7 +340,7 @@ fn test_mycircuit(
     };
 
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
+    let mut rng = one_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let vk = keygen_vk_custom(&params, &circuit, vk_keygen_compress_selectors)?;
@@ -392,7 +377,10 @@ fn test_mycircuit(
         &[instances_slice],
         &mut verifier_transcript,
     )
-    .map_err(halo2_proofs::plonk::Error::Backend)
+    .map_err(halo2_proofs::plonk::Error::Backend)?;
+
+    Ok(proof)
+
 }
 
 /*
@@ -432,13 +420,24 @@ How the `compress_selectors` works in `MyCircuit` under the hood:
 
 */
 
+
+
 #[test]
-fn test_success() {
+fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
+
     // vk & pk keygen both WITH compress
-    assert!(test_mycircuit(true, true).is_ok());
+    assert_eq!(
+        "8083f3ecb002d25d66682a08581d9dfdf9c621e7d290db62238f8bc7b671eb1b", 
+        test_mycircuit(true, true).map(keccak_hex)?
+    );
 
     // vk & pk keygen both WITHOUT compress
-    assert!(test_mycircuit(false, false).is_ok());
+    assert_eq!(
+        "dbb85c029aa10ad0d5aa3f9711472f39dfe67cd82dc27a66ea403ad0ec499dc9",
+        test_mycircuit(false, false).map(keccak_hex)?
+    );
+
+    Ok(())
 }
 
 #[should_panic]
