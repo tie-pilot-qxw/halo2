@@ -453,9 +453,9 @@ mod test {
     use crate::poly::commitment::ParamsProver;
     use crate::poly::commitment::{Blind, Params};
     use crate::poly::kzg::commitment::ParamsKZG;
+    use halo2_debug::test_rng;
     use halo2_middleware::ff::Field;
     use halo2_middleware::zal::impls::H2cEngine;
-    use halo2_test_utils::test_rng;
 
     #[test]
     fn test_commit_lagrange() {

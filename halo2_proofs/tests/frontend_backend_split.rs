@@ -1,10 +1,6 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::op_ref)]
 
-#[cfg(feature = "heap-profiling")]
-#[global_allocator]
-static ALLOC: dhat::Alloc = dhat::Alloc;
-
 use halo2_backend::{
     plonk::{
         keygen::{keygen_pk, keygen_vk},
@@ -15,6 +11,7 @@ use halo2_backend::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
+use halo2_debug::{assert_test_proof, one_rng};
 use halo2_frontend::{
     circuit::{
         compile_circuit, AssignedCell, Layouter, Region, SimpleFloorPlanner, Value,
@@ -28,7 +25,6 @@ use halo2_frontend::{
     },
 };
 use halo2_middleware::{ff::Field, poly::Rotation};
-use halo2_test_utils::{assert_test_proof, one_rng};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -489,9 +485,6 @@ const WIDTH_FACTOR: usize = 1;
 
 #[test]
 fn test_mycircuit_full_legacy() {
-    #[cfg(all(feature = "heap-profiling", not(coverage)))]
-    let _profiler = dhat::Profiler::new_heap();
-
     use halo2_proofs::plonk::{
         create_proof, keygen_pk as keygen_pk_legacy, keygen_vk as keygen_vk_legacy,
     };
@@ -554,9 +547,6 @@ fn test_mycircuit_full_legacy() {
 #[test]
 fn test_mycircuit_full_split() {
     use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
-
-    #[cfg(all(feature = "heap-profiling", not(coverage)))]
-    let _profiler = dhat::Profiler::new_heap();
 
     let engine = PlonkEngineConfig::new()
         .set_curve::<G1Affine>()

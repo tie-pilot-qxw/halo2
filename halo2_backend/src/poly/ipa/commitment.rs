@@ -241,9 +241,9 @@ mod test {
     use crate::poly::ipa::msm::MSMIPA;
 
     use group::Curve;
+    use halo2_debug::test_rng;
     use halo2_middleware::ff::Field;
     use halo2_middleware::zal::impls::H2cEngine;
-    use halo2_test_utils::test_rng;
 
     #[test]
     fn test_commit_lagrange_epaffine() {

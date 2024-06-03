@@ -295,7 +295,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
 fn main() {
     // Prepare the circuit you want to render.
     // You don't need to include any witness variables.
-    let a = Fp::random(halo2_test_utils::test_rng());
+    let a = Fp::random(halo2_debug::test_rng());
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit<Fp> = MyCircuit {

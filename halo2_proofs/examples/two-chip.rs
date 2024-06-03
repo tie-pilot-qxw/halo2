@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 
+use halo2_debug::test_rng;
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, ErrorFront, Instance, Selector},
     poly::Rotation,
 };
-use halo2_test_utils::test_rng;
 
 // ANCHOR: field-instructions
 /// A variable representing a number.

@@ -15,9 +15,9 @@ mod test {
         TranscriptReadBuffer, TranscriptWriterBuffer,
     };
     use group::Curve;
+    use halo2_debug::test_rng;
     use halo2_middleware::ff::WithSmallOrderMulGroup;
     use halo2_middleware::zal::{impls::H2cEngine, traits::MsmAccel};
-    use halo2_test_utils::test_rng;
 
     #[test]
     fn test_roundtrip_ipa() {

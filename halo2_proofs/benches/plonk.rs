@@ -2,11 +2,11 @@
 extern crate criterion;
 
 use group::ff::Field;
+use halo2_debug::test_rng;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
 use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
-use halo2_test_utils::test_rng;
 use halo2curves::pasta::{EqAffine, Fp};
 
 use halo2_proofs::{

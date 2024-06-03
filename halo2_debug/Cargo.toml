@@ -1,24 +1,24 @@
 [package]
-name = "halo2_test_utils"
+name = "halo2_debug"
 version = "0.3.0"
 authors = [
-    "Sean Bowe <sean@electriccoin.co>",
-    "Ying Tong Lai <yingtong@electriccoin.co>",
-    "Daira Hopwood <daira@electriccoin.co>",
-    "Jack Grigg <jack@electriccoin.co>",
     "Privacy Scaling Explorations team",
 ]
 edition = "2021"
 rust-version = "1.66.0"
 description = """
-Fast PLONK-based zero-knowledge proving system with no trusted setup
+Halo2 Debug.  This package contains utilities for debugging and testing within
+the halo2 ecosystem.
 """
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/privacy-scaling-explorations/halo2"
 documentation = "https://privacy-scaling-explorations.github.io/halo2/"
-readme = "README.md"
 categories = ["cryptography"]
 keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 tiny-keccak = { version = "2.0.2", features=["keccak"] }

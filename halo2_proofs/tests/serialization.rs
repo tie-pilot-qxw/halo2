@@ -4,6 +4,7 @@ use std::{
 };
 
 use ff::Field;
+use halo2_debug::{assert_test_proof, one_rng};
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
@@ -23,7 +24,6 @@ use halo2_proofs::{
     },
     SerdeFormat,
 };
-use halo2_test_utils::{assert_test_proof, one_rng};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 
 #[derive(Clone, Copy)]

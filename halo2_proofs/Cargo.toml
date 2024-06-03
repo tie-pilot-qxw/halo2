@@ -44,7 +44,7 @@ harness = false
 halo2_middleware = { path = "../halo2_middleware" }
 halo2_backend = { path = "../halo2_backend" }
 halo2_frontend = { path = "../halo2_frontend" }
-halo2_test_utils = { path = "../halo2_test_utils" }
+halo2_debug = { path = "../halo2_debug" }
 halo2curves = { version = "0.6.1", default-features = false }
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 plotters = { version = "0.3.0", default-features = false, optional = true }
@@ -60,7 +60,6 @@ assert_matches = "1.5"
 criterion = "0.3"
 gumdrop = "0.8"
 proptest = "1"
-dhat = "0.3.2"
 serde_json = "1"
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
@@ -82,7 +81,6 @@ thread-safe-region = ["halo2_frontend/thread-safe-region"]
 sanity-checks = ["halo2_backend/sanity-checks"]
 batch = ["rand_core/getrandom", "halo2_backend/batch"]
 circuit-params = ["halo2_frontend/circuit-params"]
-heap-profiling = ["halo2_frontend/heap-profiling"]
 cost-estimator = ["halo2_frontend/cost-estimator"]
 derive_serde = ["halo2curves/derive_serde", "halo2_frontend/derive_serde", "halo2_backend/derive_serde"]
 

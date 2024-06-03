@@ -10,6 +10,7 @@ use halo2_proofs::poly::Rotation;
 use halo2_backend::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
 };
+use halo2_debug::{assert_test_proof, one_rng};
 use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::plonk::{
@@ -19,7 +20,6 @@ use halo2_proofs::plonk::{
 use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
-use halo2_test_utils::{assert_test_proof, one_rng};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 
 #[derive(Debug, Clone)]

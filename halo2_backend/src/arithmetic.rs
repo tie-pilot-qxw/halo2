@@ -259,7 +259,7 @@ use halo2curves::pasta::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {
-    use halo2_test_utils::test_rng;
+    use halo2_debug::test_rng;
     let rng = test_rng();
 
     let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();

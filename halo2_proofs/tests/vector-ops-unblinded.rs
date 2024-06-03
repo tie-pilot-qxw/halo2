@@ -4,6 +4,7 @@
 use std::marker::PhantomData;
 
 use ff::FromUniformBytes;
+use halo2_debug::{assert_test_proof, one_rng};
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
@@ -21,7 +22,6 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use halo2_test_utils::{assert_test_proof, one_rng};
 
 // ANCHOR: instructions
 trait NumericInstructions<F: Field>: Chip<F> {

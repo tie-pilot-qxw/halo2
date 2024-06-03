@@ -222,8 +222,8 @@ mod tests {
         commitment::{ParamsProver, MSM},
         ipa::{commitment::ParamsIPA, msm::MSMIPA},
     };
+    use halo2_debug::test_rng;
     use halo2_middleware::zal::impls::H2cEngine;
-    use halo2_test_utils::test_rng;
     use halo2curves::{
         pasta::{Ep, EpAffine, Fp, Fq},
         CurveAffine,

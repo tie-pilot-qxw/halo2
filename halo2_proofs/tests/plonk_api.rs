@@ -3,6 +3,8 @@
 
 use assert_matches::assert_matches;
 use ff::{FromUniformBytes, WithSmallOrderMulGroup};
+use halo2_debug::test_rng;
+use halo2_debug::{assert_test_proof, one_rng};
 use halo2_middleware::zal::{
     impls::{PlonkEngine, PlonkEngineConfig},
     traits::MsmAccel,
@@ -22,8 +24,6 @@ use halo2_proofs::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
     TranscriptWriterBuffer,
 };
-use halo2_test_utils::test_rng;
-use halo2_test_utils::{assert_test_proof, one_rng};
 use rand_core::RngCore;
 use std::marker::PhantomData;
 

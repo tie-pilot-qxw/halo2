@@ -1,4 +1,5 @@
 use ff::{BatchInvert, FromUniformBytes};
+use halo2_debug::{assert_test_proof, one_rng};
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
@@ -18,7 +19,6 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use halo2_test_utils::{assert_test_proof, one_rng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::{RngCore, SeedableRng};
 use std::iter;
