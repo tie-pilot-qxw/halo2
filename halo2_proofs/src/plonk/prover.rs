@@ -109,8 +109,8 @@ fn test_create_proof() {
         transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
     };
     use halo2_middleware::ff::Field;
-    use halo2curves::bn256::Bn256;
     use halo2_test_utils::test_rng;
+    use halo2curves::bn256::Bn256;
 
     #[derive(Clone, Copy)]
     struct MyCircuit;
@@ -179,8 +179,8 @@ fn test_create_proof_custom() {
         transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
     };
     use halo2_middleware::ff::Field;
-    use halo2curves::bn256::Bn256;
     use halo2_test_utils::test_rng;
+    use halo2curves::bn256::Bn256;
 
     #[derive(Clone, Copy)]
     struct MyCircuit;

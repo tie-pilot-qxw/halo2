@@ -228,7 +228,7 @@ mod tests {
         pasta::{Ep, EpAffine, Fp, Fq},
         CurveAffine,
     };
-    
+
     #[test]
     fn msm_arithmetic() {
         let base: Ep = EpAffine::from_xy(-Fp::one(), Fp::from(2)).unwrap().into();

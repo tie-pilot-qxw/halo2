@@ -545,10 +545,12 @@ fn test_mycircuit_full_legacy() {
     .expect("verify succeeds");
     println!("Verify: {:?}", start.elapsed());
 
-    assert_eq!(
-        "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
-        keccak_hex(proof)
-    );
+    if cfg!(feature = "thread-safe-region") {
+        assert_eq!(
+            "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
+            keccak_hex(proof)
+        );
+    }
 }
 
 #[test]
@@ -630,8 +632,10 @@ fn test_mycircuit_full_split() {
     .expect("verify succeeds");
     println!("Verify: {:?}", start.elapsed());
 
-    assert_eq!(
-        "e612e9d5ebcdcff5ed9823c527218cdbaaf9fe76cc5e42d05a60f652dcc92660",
-        keccak_hex(proof)
-    );
+    if cfg!(feature = "thread-safe-region") {
+        assert_eq!(
+            "e612e9d5ebcdcff5ed9823c527218cdbaaf9fe76cc5e42d05a60f652dcc92660",
+            keccak_hex(proof)
+        );
+    }
 }

@@ -478,8 +478,8 @@ pub struct PinnedEvaluationDomain<'a, F: Field> {
 #[test]
 fn test_rotate() {
     use crate::arithmetic::eval_polynomial;
-    use halo2curves::pasta::pallas::Scalar;
     use halo2_test_utils::test_rng;
+    use halo2curves::pasta::pallas::Scalar;
 
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
     let rng = test_rng();
@@ -517,8 +517,8 @@ fn test_rotate() {
 
 #[test]
 fn test_l_i() {
-    use halo2_test_utils::test_rng;
     use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
+    use halo2_test_utils::test_rng;
     use halo2curves::pasta::pallas::Scalar;
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
 

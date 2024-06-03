@@ -22,10 +22,10 @@ use halo2_proofs::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
     TranscriptWriterBuffer,
 };
+use halo2_test_utils::test_rng;
 use halo2_test_utils::{keccak_hex, one_rng};
 use rand_core::RngCore;
 use std::marker::PhantomData;
-use halo2_test_utils::test_rng;
 
 #[test]
 fn plonk_api() {
