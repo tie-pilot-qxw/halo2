@@ -934,8 +934,6 @@
 <a href="#918" id="918">918</a>
 <a href="#919" id="919">919</a>
 <a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Generate a proof
 
 </span><span class="kw">use </span>group::prime::PrimeCurveAffine;
@@ -1742,9 +1740,7 @@
         </span><span class="kw">let </span>permutations_evaluated: Vec&lt;permutation::prover::Evaluated&lt;Scheme::Curve&gt;&gt; =
             permutations_commited
                 .into_iter()
-                .map(|permutation| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; {
-                    permutation.construct().evaluate(pk, x, <span class="self">self</span>.transcript)
-                })
+                .map(|permutation| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; { permutation.evaluate(pk, x, <span class="self">self</span>.transcript) })
                 .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
         <span class="comment">// Evaluate the lookups, if any, at omega^i x.

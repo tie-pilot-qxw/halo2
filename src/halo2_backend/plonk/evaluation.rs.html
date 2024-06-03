@@ -1056,6 +1056,14 @@
 <a href="#1040" id="1040">1040</a>
 <a href="#1041" id="1041">1041</a>
 <a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! This module:
 //! - Evaluates the h polynomial: Evaluator::new(ConstraintSystem).evaluate_h(...)
 //! - Evaluates an Expression using Lagrange basis
@@ -1466,8 +1474,16 @@
                 <span class="kw">let </span>chunk_len = pk.vk.cs.degree() - <span class="number">2</span>;
                 <span class="kw">let </span>delta_start = beta * C::Scalar::ZETA;
 
-                <span class="kw">let </span>first_set = sets.first().unwrap();
-                <span class="kw">let </span>last_set = sets.last().unwrap();
+                <span class="kw">let </span>permutation_product_cosets: Vec&lt;
+                    Polynomial&lt;C::ScalarExt, ExtendedLagrangeCoeff&gt;,
+                &gt; = sets
+                    .iter()
+                    .map(|set| domain.coeff_to_extended(set.permutation_product_poly.clone()))
+                    .collect();
+
+                <span class="kw">let </span>first_set_permutation_product_coset =
+                    permutation_product_cosets.first().unwrap();
+                <span class="kw">let </span>last_set_permutation_product_coset = permutation_product_cosets.last().unwrap();
 
                 <span class="comment">// Permutation constraints
                 </span>parallelize(<span class="kw-2">&amp;mut </span>values, |values, start| {
@@ -1480,22 +1496,21 @@
                         <span class="comment">// Enforce only for the first set.
                         // l_0(X) * (1 - z_0(X)) = 0
                         </span><span class="kw-2">*</span>value = <span class="kw-2">*</span>value * y
-                            + ((one - first_set.permutation_product_coset[idx]) * l0[idx]);
+                            + ((one - first_set_permutation_product_coset[idx]) * l0[idx]);
                         <span class="comment">// Enforce only for the last set.
                         // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
                         </span><span class="kw-2">*</span>value = <span class="kw-2">*</span>value * y
-                            + ((last_set.permutation_product_coset[idx]
-                                * last_set.permutation_product_coset[idx]
-                                - last_set.permutation_product_coset[idx])
+                            + ((last_set_permutation_product_coset[idx]
+                                * last_set_permutation_product_coset[idx]
+                                - last_set_permutation_product_coset[idx])
                                 * l_last[idx]);
                         <span class="comment">// Except for the first set, enforce.
                         // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
-                        </span><span class="kw">for </span>(set_idx, set) <span class="kw">in </span>sets.iter().enumerate() {
+                        </span><span class="kw">for </span>set_idx <span class="kw">in </span><span class="number">0</span>..sets.len() {
                             <span class="kw">if </span>set_idx != <span class="number">0 </span>{
                                 <span class="kw-2">*</span>value = <span class="kw-2">*</span>value * y
-                                    + ((set.permutation_product_coset[idx]
-                                        - permutation.sets[set_idx - <span class="number">1</span>].permutation_product_coset
-                                            [r_last])
+                                    + ((permutation_product_cosets[set_idx][idx]
+                                        - permutation_product_cosets[set_idx - <span class="number">1</span>][r_last])
                                         * l0[idx]);
                             }
                         }
@@ -1505,12 +1520,13 @@
                         // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
                         // )
                         </span><span class="kw">let </span><span class="kw-2">mut </span>current_delta = delta_start * beta_term;
-                        <span class="kw">for </span>((set, columns), cosets) <span class="kw">in </span>sets
-                            .iter()
-                            .zip(p.columns.chunks(chunk_len))
-                            .zip(pk.permutation.cosets.chunks(chunk_len))
+                        <span class="kw">for </span>((permutation_product_coset, columns), cosets) <span class="kw">in
+                            </span>permutation_product_cosets
+                                .iter()
+                                .zip(p.columns.chunks(chunk_len))
+                                .zip(pk.permutation.cosets.chunks(chunk_len))
                         {
-                            <span class="kw">let </span><span class="kw-2">mut </span>left = set.permutation_product_coset[r_next];
+                            <span class="kw">let </span><span class="kw-2">mut </span>left = permutation_product_coset[r_next];
                             <span class="kw">for </span>(values, permutation) <span class="kw">in </span>columns
                                 .iter()
                                 .map(|<span class="kw-2">&amp;</span>column| <span class="kw">match </span>column.column_type {
@@ -1523,7 +1539,7 @@
                                 left <span class="kw-2">*</span>= values[idx] + beta * permutation[idx] + gamma;
                             }
 
-                            <span class="kw">let </span><span class="kw-2">mut </span>right = set.permutation_product_coset[idx];
+                            <span class="kw">let </span><span class="kw-2">mut </span>right = permutation_product_coset[idx];
                             <span class="kw">for </span>values <span class="kw">in </span>columns.iter().map(|<span class="kw-2">&amp;</span>column| <span class="kw">match </span>column.column_type {
                                 Any::Advice =&gt; <span class="kw-2">&amp;</span>advice[column.index],
                                 Any::Fixed =&gt; <span class="kw-2">&amp;</span>fixed[column.index],
