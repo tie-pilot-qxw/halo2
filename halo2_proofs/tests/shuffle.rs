@@ -18,7 +18,7 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use halo2_test_utils::{keccak_hex, one_rng};
+use halo2_test_utils::{assert_test_proof, one_rng};
 use rand_chacha::ChaCha20Rng;
 use rand_core::{RngCore, SeedableRng};
 use std::iter;
@@ -333,9 +333,9 @@ fn test_shuffle() {
     {
         test_mock_prover(K, circuit.clone(), Ok(()));
         let proof = test_prover::<EqAffine, W, H>(K, circuit.clone(), true);
-        assert_eq!(
+        assert_test_proof(
             "dba3dbe7a83a719ec028317511e260b8c8e6207dc62b2d1ecd8ba0fa6ddc39ed",
-            keccak_hex(proof)
+            proof,
         );
     }
 
@@ -361,9 +361,9 @@ fn test_shuffle() {
             )]),
         );
         let proof = test_prover::<EqAffine, W, H>(K, circuit, false);
-        assert_eq!(
+        assert_test_proof(
             "0b4e97f2d561fae56fe893333eba2df5228c78e80f8bd7c509d4d40d127dff92",
-            keccak_hex(proof)
+            proof,
         );
     }
 }

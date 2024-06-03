@@ -23,7 +23,7 @@ use halo2_proofs::{
     },
     SerdeFormat,
 };
-use halo2_test_utils::{keccak_hex, one_rng};
+use halo2_test_utils::{assert_test_proof, one_rng};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 
 #[derive(Clone, Copy)]
@@ -190,8 +190,8 @@ fn test_serialization() {
     )
     .is_ok());
 
-    assert_eq!(
+    assert_test_proof(
         "09e497a9a52d56f23d3f2cf832b5849a1ebbaab2086dec90144b3eb1a38b5331",
-        keccak_hex(proof)
+        proof,
     )
 }

@@ -22,7 +22,7 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use halo2_test_utils::{keccak_hex, one_rng};
+use halo2_test_utils::{assert_test_proof, one_rng};
 use halo2curves::{pasta::EqAffine, CurveAffine};
 
 struct ShuffleChip<F: Field> {
@@ -219,8 +219,8 @@ fn test_shuffle_api() {
     prover.assert_satisfied();
     let proof = test_prover::<EqAffine>(K, circuit, true);
 
-    assert_eq!(
+    assert_test_proof(
         "10866a2a15d9cf36b36045277cae71057702f61a41ef56b04f813c30a5f8daa0",
-        keccak_hex(proof)
+        proof,
     );
 }

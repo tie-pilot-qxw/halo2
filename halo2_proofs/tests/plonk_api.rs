@@ -23,7 +23,7 @@ use halo2_proofs::transcript::{
     TranscriptWriterBuffer,
 };
 use halo2_test_utils::test_rng;
-use halo2_test_utils::{keccak_hex, one_rng};
+use halo2_test_utils::{assert_test_proof, one_rng};
 use rand_core::RngCore;
 use std::marker::PhantomData;
 
@@ -602,9 +602,9 @@ fn plonk_api() {
             AccumulatorStrategy<_>,
         >(&verifier_params, pk.get_vk(), &proof[..]);
 
-        assert_eq!(
+        assert_test_proof(
             "07382b50df5d591f5f54f99b09577f971986e4c343e8d050fb064432fda4be95",
-            keccak_hex(proof)
+            proof,
         );
     }
 
@@ -636,9 +636,9 @@ fn plonk_api() {
             AccumulatorStrategy<_>,
         >(&verifier_params, pk.get_vk(), &proof[..]);
 
-        assert_eq!(
+        assert_test_proof(
             "32bb491e0f52a10f3361fc0aea6ea5aee3128f431e0fb846338e501c810dba49",
-            keccak_hex(proof)
+            proof,
         );
     }
 

@@ -19,7 +19,7 @@ use halo2_proofs::plonk::{
 use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
-use halo2_test_utils::{keccak_hex, one_rng};
+use halo2_test_utils::{assert_test_proof, one_rng};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 
 #[derive(Debug, Clone)]
@@ -425,15 +425,15 @@ How the `compress_selectors` works in `MyCircuit` under the hood:
 #[test]
 fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     // vk & pk keygen both WITH compress
-    assert_eq!(
+    assert_test_proof(
         "8083f3ecb002d25d66682a08581d9dfdf9c621e7d290db62238f8bc7b671eb1b",
-        test_mycircuit(true, true).map(keccak_hex)?
+        test_mycircuit(true, true)?,
     );
 
     // vk & pk keygen both WITHOUT compress
-    assert_eq!(
+    assert_test_proof(
         "dbb85c029aa10ad0d5aa3f9711472f39dfe67cd82dc27a66ea403ad0ec499dc9",
-        test_mycircuit(false, false).map(keccak_hex)?
+        test_mycircuit(false, false)?,
     );
 
     Ok(())
