@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use ff::PrimeField;
-use halo2_debug::expr_disp_names;
+use halo2_debug::display::expr_disp_names;
 use halo2_frontend::circuit::compile_circuit;
 use halo2_frontend::plonk::Error;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
