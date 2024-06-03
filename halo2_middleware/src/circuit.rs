@@ -34,6 +34,16 @@ pub struct QueryMid {
     pub rotation: Rotation,
 }
 
+impl QueryMid {
+    pub fn new(column_type: Any, column_index: usize, rotation: Rotation) -> Self {
+        Self {
+            column_index,
+            column_type,
+            rotation,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VarMid {
     /// This is a generic column query
