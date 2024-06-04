@@ -554,7 +554,7 @@ fn test_mycircuit_full_split() {
         .build();
     let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
-    let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, false).unwrap();
+    let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, true).unwrap();
 
     // Setup
     let mut rng = one_rng();
@@ -621,7 +621,7 @@ fn test_mycircuit_full_split() {
     println!("Verify: {:?}", start.elapsed());
 
     assert_test_proof(
-        "e612e9d5ebcdcff5ed9823c527218cdbaaf9fe76cc5e42d05a60f652dcc92660",
+        "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
         proof,
     );
 }
