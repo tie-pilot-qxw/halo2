@@ -4,7 +4,7 @@
 use std::marker::PhantomData;
 
 use ff::FromUniformBytes;
-use halo2_debug::{assert_test_proof, one_rng};
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
@@ -547,16 +547,16 @@ fn test_vector_ops_unbinded() {
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
-    assert_test_proof(
+    assert_eq!(
         "845349549e3776ba45e5bc03d44fd44f8e65f6338e8b7b8975dcc4f310094bf3",
-        &proof_1,
+        keccak_hex(&proof_1),
     );
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
-    assert_test_proof(
+    assert_eq!(
         "55f4b12e359be5541f539f74ae2b4afd2206160609faa1b902d90e91bfd4a641",
-        &proof_2,
+        keccak_hex(&proof_2),
     );
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily

@@ -4,7 +4,7 @@
 use assert_matches::assert_matches;
 use ff::{FromUniformBytes, WithSmallOrderMulGroup};
 use halo2_debug::test_rng;
-use halo2_debug::{assert_test_proof, one_rng};
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_middleware::zal::{
     impls::{PlonkEngine, PlonkEngineConfig},
     traits::MsmAccel,
@@ -602,9 +602,9 @@ fn plonk_api() {
             AccumulatorStrategy<_>,
         >(&verifier_params, pk.get_vk(), &proof[..]);
 
-        assert_test_proof(
+        assert_eq!(
             "07382b50df5d591f5f54f99b09577f971986e4c343e8d050fb064432fda4be95",
-            proof,
+            keccak_hex(proof),
         );
     }
 
@@ -636,9 +636,9 @@ fn plonk_api() {
             AccumulatorStrategy<_>,
         >(&verifier_params, pk.get_vk(), &proof[..]);
 
-        assert_test_proof(
+        assert_eq!(
             "32bb491e0f52a10f3361fc0aea6ea5aee3128f431e0fb846338e501c810dba49",
-            proof,
+            keccak_hex(proof),
         );
     }
 

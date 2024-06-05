@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, vec};
 
 use ff::FromUniformBytes;
-use halo2_debug::{assert_test_proof, one_rng};
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter, SimpleFloorPlanner, Value},
@@ -219,8 +219,8 @@ fn test_shuffle_api() {
     prover.assert_satisfied();
     let proof = test_prover::<EqAffine>(K, circuit, true);
 
-    assert_test_proof(
+    assert_eq!(
         "10866a2a15d9cf36b36045277cae71057702f61a41ef56b04f813c30a5f8daa0",
-        proof,
+        keccak_hex(proof),
     );
 }

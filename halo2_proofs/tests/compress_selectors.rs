@@ -10,7 +10,7 @@ use halo2_proofs::poly::Rotation;
 use halo2_backend::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
 };
-use halo2_debug::{assert_test_proof, one_rng};
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::plonk::{
@@ -423,17 +423,22 @@ How the `compress_selectors` works in `MyCircuit` under the hood:
 */
 
 #[test]
+#[allow(unused_variables)]
 fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     // vk & pk keygen both WITH compress
-    assert_test_proof(
+    let proof = test_mycircuit(true, true)?;
+    #[cfg(not(coverage))]
+    assert_eq!(
         "8083f3ecb002d25d66682a08581d9dfdf9c621e7d290db62238f8bc7b671eb1b",
-        test_mycircuit(true, true)?,
+        keccak_hex(proof),
     );
 
     // vk & pk keygen both WITHOUT compress
-    assert_test_proof(
+    let proof = test_mycircuit(false, false)?;
+    #[cfg(not(coverage))]
+    assert_eq!(
         "dbb85c029aa10ad0d5aa3f9711472f39dfe67cd82dc27a66ea403ad0ec499dc9",
-        test_mycircuit(false, false)?,
+        keccak_hex(proof),
     );
 
     Ok(())

@@ -4,7 +4,7 @@ use std::{
 };
 
 use ff::Field;
-use halo2_debug::{assert_test_proof, one_rng};
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
@@ -190,8 +190,8 @@ fn test_serialization() {
     )
     .is_ok());
 
-    assert_test_proof(
+    assert_eq!(
         "09e497a9a52d56f23d3f2cf832b5849a1ebbaab2086dec90144b3eb1a38b5331",
-        proof,
+        keccak_hex(proof),
     )
 }

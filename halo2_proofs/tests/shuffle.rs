@@ -1,5 +1,5 @@
 use ff::{BatchInvert, FromUniformBytes};
-use halo2_debug::{assert_test_proof, one_rng};
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
@@ -333,9 +333,9 @@ fn test_shuffle() {
     {
         test_mock_prover(K, circuit.clone(), Ok(()));
         let proof = test_prover::<EqAffine, W, H>(K, circuit.clone(), true);
-        assert_test_proof(
+        assert_eq!(
             "dba3dbe7a83a719ec028317511e260b8c8e6207dc62b2d1ecd8ba0fa6ddc39ed",
-            proof,
+            keccak_hex(proof),
         );
     }
 
@@ -361,9 +361,9 @@ fn test_shuffle() {
             )]),
         );
         let proof = test_prover::<EqAffine, W, H>(K, circuit, false);
-        assert_test_proof(
+        assert_eq!(
             "0b4e97f2d561fae56fe893333eba2df5228c78e80f8bd7c509d4d40d127dff92",
-            proof,
+            keccak_hex(proof),
         );
     }
 }
