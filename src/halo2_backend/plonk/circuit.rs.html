@@ -401,8 +401,6 @@
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
 <a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>group::ff::Field;
 <span class="kw">use </span>halo2_middleware::circuit::{Any, ChallengeMid, ColumnMid, Gate};
 <span class="kw">use </span>halo2_middleware::expression::{Expression, Variable};
@@ -680,11 +678,9 @@
             .field(<span class="string">"instance_queries"</span>, <span class="self">self</span>.instance_queries)
             .field(<span class="string">"fixed_queries"</span>, <span class="self">self</span>.fixed_queries)
             .field(<span class="string">"permutation"</span>, <span class="self">self</span>.permutation)
-            .field(<span class="string">"lookups"</span>, <span class="self">self</span>.lookups);
-        <span class="kw">if </span>!<span class="self">self</span>.shuffles.is_empty() {
-            debug_struct.field(<span class="string">"shuffles"</span>, <span class="self">self</span>.shuffles);
-        }
-        debug_struct.field(<span class="string">"minimum_degree"</span>, <span class="self">self</span>.minimum_degree);
+            .field(<span class="string">"lookups"</span>, <span class="self">self</span>.lookups)
+            .field(<span class="string">"shuffles"</span>, <span class="self">self</span>.shuffles)
+            .field(<span class="string">"minimum_degree"</span>, <span class="self">self</span>.minimum_degree);
         debug_struct.finish()
     }
 }
