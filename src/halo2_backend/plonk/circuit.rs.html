@@ -376,31 +376,6 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>group::ff::Field;
 <span class="kw">use </span>halo2_middleware::circuit::{Any, ChallengeMid, ColumnMid, Gate};
 <span class="kw">use </span>halo2_middleware::expression::{Expression, Variable};
@@ -641,6 +616,8 @@
 }
 
 <span class="doccomment">/// Represents the minimal parameters that determine a `ConstraintSystem`.
+</span><span class="attr">#[allow(dead_code)]
+#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PinnedConstraintSystem&lt;<span class="lifetime">'a</span>, F: Field&gt; {
     num_fixed_columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>usize,
     num_advice_columns: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>usize,
@@ -656,33 +633,6 @@
     lookups: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;LookupArgumentBack&lt;F&gt;&gt;,
     shuffles: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;ShuffleArgumentBack&lt;F&gt;&gt;,
     minimum_degree: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="prelude-ty">Option</span>&lt;usize&gt;,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, F: Field&gt; std::fmt::Debug <span class="kw">for </span>PinnedConstraintSystem&lt;<span class="lifetime">'a</span>, F&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
-        <span class="kw">let </span><span class="kw-2">mut </span>debug_struct = f.debug_struct(<span class="string">"PinnedConstraintSystem"</span>);
-        debug_struct
-            .field(<span class="string">"num_fixed_columns"</span>, <span class="self">self</span>.num_fixed_columns)
-            .field(<span class="string">"num_advice_columns"</span>, <span class="self">self</span>.num_advice_columns)
-            .field(<span class="string">"num_instance_columns"</span>, <span class="self">self</span>.num_instance_columns);
-        <span class="comment">// Only show multi-phase related fields if it's used.
-        </span><span class="kw">if </span><span class="kw-2">*</span><span class="self">self</span>.num_challenges &gt; <span class="number">0 </span>{
-            debug_struct
-                .field(<span class="string">"num_challenges"</span>, <span class="self">self</span>.num_challenges)
-                .field(<span class="string">"advice_column_phase"</span>, <span class="self">self</span>.advice_column_phase)
-                .field(<span class="string">"challenge_phase"</span>, <span class="self">self</span>.challenge_phase);
-        }
-        debug_struct
-            .field(<span class="string">"gates"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.gates)
-            .field(<span class="string">"advice_queries"</span>, <span class="self">self</span>.advice_queries)
-            .field(<span class="string">"instance_queries"</span>, <span class="self">self</span>.instance_queries)
-            .field(<span class="string">"fixed_queries"</span>, <span class="self">self</span>.fixed_queries)
-            .field(<span class="string">"permutation"</span>, <span class="self">self</span>.permutation)
-            .field(<span class="string">"lookups"</span>, <span class="self">self</span>.lookups)
-            .field(<span class="string">"shuffles"</span>, <span class="self">self</span>.shuffles)
-            .field(<span class="string">"minimum_degree"</span>, <span class="self">self</span>.minimum_degree);
-        debug_struct.finish()
-    }
 }
 
 <span class="comment">// Cost functions: arguments required degree
