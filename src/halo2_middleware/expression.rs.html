@@ -193,7 +193,7 @@
 <span class="kw">use </span>ff::Field;
 <span class="kw">use </span>std::iter::{Product, Sum};
 
-<span class="kw">pub trait </span>Variable: Clone + Copy + std::fmt::Debug + Eq + PartialEq {
+<span class="kw">pub trait </span>Variable: Clone + Copy + std::fmt::Debug + std::fmt::Display + Eq + PartialEq {
     <span class="doccomment">/// Degree that an expression would have if it was only this variable.
     </span><span class="kw">fn </span>degree(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 
