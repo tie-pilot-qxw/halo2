@@ -20,7 +20,7 @@
     circuit: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a ConcreteCircuit</a>,
     config: &amp;'a ConcreteCircuit::<a class="associatedtype" href="../plonk/circuit/trait.Circuit.html#associatedtype.Config" title="type halo2_frontend::plonk::circuit::Circuit::Config">Config</a>,
     cs: &amp;'a <a class="struct" href="../plonk/circuit/constraint_system/struct.ConstraintSystem.html" title="struct halo2_frontend::plonk::circuit::constraint_system::ConstraintSystem">ConstraintSystem</a>&lt;F&gt;,
-    instances: &amp;'a [&amp;'a <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[F]</a>]
+    instances: &amp;'a [<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;F&gt;]
 ) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a new WitnessCalculator</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.calc" class="method"><a class="src rightside" href="../../src/halo2_frontend/circuit.rs.html#290-358">source</a><h4 class="code-header">pub fn <a href="#method.calc" class="fn">calc</a>(
     &amp;mut self,

@@ -242,6 +242,8 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::plonk::{Error, ErrorBack};
 <span class="kw">use </span><span class="kw">crate</span>::poly::commitment::{<span class="self">self</span>, CommitmentScheme, Params};
 <span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptWrite};
@@ -274,7 +276,7 @@
     params: <span class="kw-2">&amp;</span><span class="lifetime">'params </span>Scheme::ParamsProver,
     pk: <span class="kw-2">&amp;</span>ProvingKey&lt;Scheme::Curve&gt;,
     circuits: <span class="kw-2">&amp;</span>[ConcreteCircuit],
-    instances: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[Scheme::Scalar]]],
+    instances: <span class="kw-2">&amp;</span>[Vec&lt;Vec&lt;Scheme::Scalar&gt;&gt;],
     rng: R,
     transcript: <span class="kw-2">&amp;mut </span>T,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
@@ -295,7 +297,9 @@
     <span class="kw">let </span><span class="kw-2">mut </span>witness_calcs: Vec&lt;<span class="kw">_</span>&gt; = circuits
         .iter()
         .enumerate()
-        .map(|(i, circuit)| WitnessCalculator::new(params.k(), circuit, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>cs, instances[i]))
+        .map(|(i, circuit)| {
+            WitnessCalculator::new(params.k(), circuit, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>cs, instances[i].as_slice())
+        })
         .collect();
     <span class="kw">let </span><span class="kw-2">mut </span>prover = Prover::&lt;Scheme, P, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new_with_engine(
         engine, params, pk, instances, rng, transcript,
@@ -328,7 +332,7 @@
     params: <span class="kw-2">&amp;</span><span class="lifetime">'params </span>Scheme::ParamsProver,
     pk: <span class="kw-2">&amp;</span>ProvingKey&lt;Scheme::Curve&gt;,
     circuits: <span class="kw-2">&amp;</span>[ConcreteCircuit],
-    instances: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[Scheme::Scalar]]],
+    instances: <span class="kw-2">&amp;</span>[Vec&lt;Vec&lt;Scheme::Scalar&gt;&gt;],
     rng: R,
     transcript: <span class="kw-2">&amp;mut </span>T,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
@@ -404,7 +408,7 @@
         <span class="kw-2">&amp;</span>params,
         <span class="kw-2">&amp;</span>pk,
         <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
-        <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]],
+        <span class="kw-2">&amp;</span>[<span class="macro">vec!</span>[], <span class="macro">vec!</span>[]],
         OsRng,
         <span class="kw-2">&amp;mut </span>transcript,
     )
@@ -464,7 +468,7 @@
         <span class="kw-2">&amp;</span>params,
         <span class="kw-2">&amp;</span>pk,
         <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
-        <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]],
+        <span class="kw-2">&amp;</span>[<span class="macro">vec!</span>[], <span class="macro">vec!</span>[]],
         OsRng,
         <span class="kw-2">&amp;mut </span>transcript,
     )

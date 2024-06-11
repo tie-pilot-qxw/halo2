@@ -1112,7 +1112,7 @@
     advice_column_phase: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;sealed::Phase&gt;,
     advice: Vec&lt;Vec&lt;Assigned&lt;F&gt;&gt;&gt;,
     challenges: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HashMap&lt;usize, F&gt;,
-    instances: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[F]],
+    instances: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Vec&lt;F&gt;],
     usable_rows: RangeTo&lt;usize&gt;,
 }
 
@@ -1254,7 +1254,7 @@
     circuit: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ConcreteCircuit,
     config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ConcreteCircuit::Config,
     cs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ConstraintSystem&lt;F&gt;,
-    instances: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[F]],
+    instances: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Vec&lt;F&gt;],
     next_phase: u8,
 }
 
@@ -1265,7 +1265,7 @@
         circuit: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ConcreteCircuit,
         config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ConcreteCircuit::Config,
         cs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ConstraintSystem&lt;F&gt;,
-        instances: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[F]],
+        instances: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Vec&lt;F&gt;],
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>n = <span class="number">2usize</span>.pow(k);
         <span class="kw">let </span>unusable_rows_start = n - (cs.blinding_factors() + <span class="number">1</span>);

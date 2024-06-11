@@ -926,14 +926,6 @@
 <a href="#910" id="910">910</a>
 <a href="#911" id="911">911</a>
 <a href="#912" id="912">912</a>
-<a href="#913" id="913">913</a>
-<a href="#914" id="914">914</a>
-<a href="#915" id="915">915</a>
-<a href="#916" id="916">916</a>
-<a href="#917" id="917">917</a>
-<a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Generate a proof
 
 </span><span class="kw">use </span>group::prime::PrimeCurveAffine;
@@ -1004,9 +996,7 @@
         engine: PlonkEngine&lt;Scheme::Curve, M&gt;,
         params: <span class="kw-2">&amp;</span><span class="lifetime">'params </span>Scheme::ParamsProver,
         pk: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProvingKey&lt;Scheme::Curve&gt;,
-        <span class="comment">// TODO: If this was a vector the usage would be simpler
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        </span>instance: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[Scheme::Scalar]],
+        instance: Vec&lt;Vec&lt;Scheme::Scalar&gt;&gt;,
         rng: R,
         transcript: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
@@ -1026,9 +1016,7 @@
     <span class="kw">pub fn </span>new(
         params: <span class="kw-2">&amp;</span><span class="lifetime">'params </span>Scheme::ParamsProver,
         pk: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProvingKey&lt;Scheme::Curve&gt;,
-        <span class="comment">// TODO: If this was a vector the usage would be simpler
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        </span>instance: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[Scheme::Scalar]],
+        instance: Vec&lt;Vec&lt;Scheme::Scalar&gt;&gt;,
         rng: R,
         transcript: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ProverSingle&lt;<span class="lifetime">'a</span>, <span class="lifetime">'params</span>, Scheme, P, E, R, T, H2cEngine&gt;, Error&gt;
@@ -1111,9 +1099,7 @@
         engine: PlonkEngine&lt;Scheme::Curve, M&gt;,
         params: <span class="kw-2">&amp;</span><span class="lifetime">'params </span>Scheme::ParamsProver,
         pk: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProvingKey&lt;Scheme::Curve&gt;,
-        <span class="comment">// TODO: If this was a vector the usage would be simpler.
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        </span>circuits_instances: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[Scheme::Scalar]]],
+        circuits_instances: <span class="kw-2">&amp;</span>[Vec&lt;Vec&lt;Scheme::Scalar&gt;&gt;],
         rng: R,
         transcript: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
@@ -1137,7 +1123,7 @@
         <span class="comment">// commit_instance_fn is a helper function to return the polynomials (and its commitments) of
         // instance columns while updating the transcript.
         </span><span class="kw">let </span><span class="kw-2">mut </span>commit_instance_fn =
-            |instance: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[Scheme::Scalar]]| -&gt; <span class="prelude-ty">Result</span>&lt;InstanceSingle&lt;Scheme::Curve&gt;, Error&gt; {
+            |instance: <span class="kw-2">&amp;</span>[Vec&lt;Scheme::Scalar&gt;]| -&gt; <span class="prelude-ty">Result</span>&lt;InstanceSingle&lt;Scheme::Curve&gt;, Error&gt; {
                 <span class="comment">// Create a lagrange polynomial for each instance column
 
                 </span><span class="kw">let </span>instance_values = instance
@@ -1841,9 +1827,7 @@
     </span><span class="kw">pub fn </span>new(
         params: <span class="kw-2">&amp;</span><span class="lifetime">'params </span>Scheme::ParamsProver,
         pk: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProvingKey&lt;Scheme::Curve&gt;,
-        <span class="comment">// TODO: If this was a vector the usage would be simpler.
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        </span>circuits_instances: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[Scheme::Scalar]]],
+        circuits_instances: <span class="kw-2">&amp;</span>[Vec&lt;Vec&lt;Scheme::Scalar&gt;&gt;],
         rng: R,
         transcript: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Prover&lt;<span class="lifetime">'a</span>, <span class="lifetime">'params</span>, Scheme, P, E, R, T, H2cEngine&gt;, Error&gt;
