@@ -199,7 +199,7 @@ fn test_serialization() {
 
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "42d69881fc453fc9eac7cb51487cf98ac049db97bae0ce05338917d18d99ef21",
+        "431a9b8a8e289cc85655576965f443da657e88a6cdc200179d8916c23bd8bda7",
         halo2_debug::keccak_hex(proof),
     )
 }

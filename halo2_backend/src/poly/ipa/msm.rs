@@ -227,7 +227,6 @@ mod tests {
         pasta::{Ep, EpAffine, Fp, Fq},
         CurveAffine,
     };
-    use rand_core::OsRng;
 
     #[test]
     fn msm_arithmetic() {
@@ -235,7 +234,7 @@ mod tests {
         let base_viol = base + base;
 
         let engine = H2cEngine::new();
-        let params = ParamsIPA::new(4, OsRng);
+        let params = ParamsIPA::new(4);
         let mut a: MSMIPA<EpAffine> = MSMIPA::new(&params);
         a.append_term(Fq::one(), base);
         // a = [1] P

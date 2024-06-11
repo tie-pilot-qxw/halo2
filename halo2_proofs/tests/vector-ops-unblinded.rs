@@ -475,9 +475,9 @@ fn test_prover<C: CurveAffine>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let mut rng = one_rng();
+    let rng = one_rng();
 
-    let params = ParamsIPA::<C>::new(k, &mut rng);
+    let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -550,7 +550,7 @@ fn test_vector_ops_unbinded() {
     let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "99d6cadd2596dce8dc8918907ba9cb051a5d9775f9fb7ed6ac51cc75e41e6da4",
+        "3c24612b31ee894b843867429d0ba99bbe9ce3f3ea40dd86041239566651dba8",
         halo2_debug::keccak_hex(&proof_1),
     );
 
@@ -558,7 +558,7 @@ fn test_vector_ops_unbinded() {
     let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "159fe77867a8ee7e1cac1da22d375e864816bbbbb0b8b1d6f2ace241b35c115a",
+        "5863afa234a433b2b7e198f51e81ba286b0db89d0794dbab4aca73e03fcd9b0e",
         halo2_debug::keccak_hex(&proof_2),
     );
 

@@ -536,7 +536,7 @@ fn test_mycircuit_full_legacy() {
 
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "abd4d6d18640def2cb3e3b4de0afe61ec2c5e64705f4386e8f96468d110e9df9",
+        "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
         halo2_debug::keccak_hex(proof),
     );
 }
@@ -614,7 +614,7 @@ instances.clone(),
 
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "abd4d6d18640def2cb3e3b4de0afe61ec2c5e64705f4386e8f96468d110e9df9",
+        "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
         halo2_debug::keccak_hex(proof),
     );
 }

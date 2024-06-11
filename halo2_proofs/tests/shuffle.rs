@@ -279,9 +279,9 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let mut rng = one_rng();
+    let rng = one_rng();
 
-    let params = ParamsIPA::<C>::new(k, &mut rng);
+    let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -336,7 +336,7 @@ fn test_shuffle() {
 
         #[cfg(all(feature = "vector-tests", not(coverage)))]
         assert_eq!(
-            "deeffa8f048fedfaf412b39484899714e46d08ed349c767341c8d6373ba25edc",
+            "7a0cfc86f1f37b7c425a441abbe7a04a37c593c4b08c8d620c6615250d690020",
             halo2_debug::keccak_hex(_proof),
         );
     }

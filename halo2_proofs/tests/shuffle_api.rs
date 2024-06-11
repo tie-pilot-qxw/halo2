@@ -2,6 +2,7 @@ use std::{marker::PhantomData, vec};
 
 use ff::FromUniformBytes;
 use halo2_debug::one_rng;
+use halo2_proofs::poly::commitment::ParamsProver;
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter, SimpleFloorPlanner, Value},
@@ -11,7 +12,6 @@ use halo2_proofs::{
     },
     poly::Rotation,
     poly::{
-        commitment::ParamsProver,
         ipa::{
             commitment::{IPACommitmentScheme, ParamsIPA},
             multiopen::{ProverIPA, VerifierIPA},
@@ -152,9 +152,9 @@ fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: 
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let mut rng = one_rng();
+    let rng = one_rng();
 
-    let params = ParamsIPA::<C>::new(k, &mut rng);
+    let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -221,7 +221,7 @@ fn test_shuffle_api() {
 
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "6f9141496227a467b91395cbc601c69764660ce6aac5624e319119887ce0453c",
+        "b1409b3ae49babc56f0ba6279f7f577a657082f03371740196cf00c7b259a02d",
         halo2_debug::keccak_hex(_proof),
     );
 }
