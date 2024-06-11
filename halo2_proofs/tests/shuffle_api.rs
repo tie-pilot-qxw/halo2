@@ -165,7 +165,7 @@ where
             &params,
             &pk,
             &[circuit],
-            &[&[]],
+            &[vec![]],
             rng,
             &mut transcript,
         )
@@ -182,7 +182,7 @@ where
             &params,
             pk.get_vk(),
             strategy,
-            &[&[]],
+            &[vec![]],
             &mut transcript,
         )
         .map(|strategy| strategy.finalize())

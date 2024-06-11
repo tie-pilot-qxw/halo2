@@ -3,6 +3,9 @@
 use std::marker::PhantomData;
 
 use ff::PrimeField;
+use halo2_debug::display::expr_disp_names;
+use halo2_debug::one_rng;
+use halo2_frontend::circuit::compile_circuit;
 use halo2_frontend::plonk::Error;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::poly::Rotation;
@@ -10,7 +13,7 @@ use halo2_proofs::poly::Rotation;
 use halo2_backend::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
 };
-use halo2_debug::one_rng;
+use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::plonk::{
@@ -86,12 +89,16 @@ impl<F: Field> MyCircuitChip<F> {
         let l = meta.advice_column();
         let r = meta.advice_column();
         let o = meta.advice_column();
+        meta.annotate_column(l, || "l");
+        meta.annotate_column(r, || "r");
+        meta.annotate_column(o, || "o");
 
         let s_add = meta.selector();
         let s_mul = meta.selector();
         let s_cubed = meta.selector();
 
         let PI = meta.instance_column();
+        meta.annotate_column(PI, || "pi");
 
         meta.enable_equality(l);
         meta.enable_equality(r);
@@ -341,8 +348,9 @@ fn test_mycircuit(
         constant: Fr::one(),
     };
 
-    // Setup
     let mut rng = one_rng();
+
+    // Setup
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let vk = keygen_vk_custom(&params, &circuit, vk_keygen_compress_selectors)?;
@@ -350,11 +358,7 @@ fn test_mycircuit(
 
     // Proving
     #[allow(clippy::useless_vec)]
-    let instances = vec![vec![Fr::one(), Fr::from_u128(3)]];
-    let instances_slice: &[&[Fr]] = &(instances
-        .iter()
-        .map(|instance| instance.as_slice())
-        .collect::<Vec<_>>());
+    let instances = vec![vec![vec![Fr::one(), Fr::from_u128(3)]]];
 
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     create_proof_with_engine::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _, _>(
@@ -362,7 +366,7 @@ fn test_mycircuit(
         &params,
         &pk,
         &[circuit],
-        &[instances_slice],
+        instances.as_slice(),
         &mut rng,
         &mut transcript,
     )?;
@@ -377,7 +381,7 @@ fn test_mycircuit(
         &verifier_params,
         &vk,
         strategy,
-        &[instances_slice],
+        instances.as_slice(),
         &mut verifier_transcript,
     )
     .map_err(halo2_proofs::plonk::Error::Backend)?;
@@ -423,12 +427,69 @@ How the `compress_selectors` works in `MyCircuit` under the hood:
 */
 
 #[test]
+fn test_compress_gates() {
+    let k = 4;
+    let circuit: MyCircuit<Fr> = MyCircuit {
+        x: Value::known(Fr::one()),
+        y: Value::known(Fr::one()),
+        constant: Fr::one(),
+    };
+
+    // Without compression
+
+    let (mut compress_false, _, _) = compile_circuit(k, &circuit, false).unwrap();
+
+    let names = &mut compress_false.cs.general_column_annotations;
+    names.insert(ColumnMid::new(Any::Fixed, 0), "s_add".to_string());
+    names.insert(ColumnMid::new(Any::Fixed, 1), "s_mul".to_string());
+    names.insert(ColumnMid::new(Any::Fixed, 2), "s_cubed".to_string());
+    let cs = &compress_false.cs;
+    let names = &cs.general_column_annotations;
+    assert_eq!(3, cs.gates.len());
+    assert_eq!(
+        "s_add * (l + r - o)",
+        format!("{}", expr_disp_names(&cs.gates[0].poly, names))
+    );
+    assert_eq!(
+        "s_mul * (l * r - o)",
+        format!("{}", expr_disp_names(&cs.gates[1].poly, names))
+    );
+    assert_eq!(
+        "s_cubed * (l * l * l - o)",
+        format!("{}", expr_disp_names(&cs.gates[2].poly, names))
+    );
+
+    // With compression
+
+    let (mut compress_true, _, _) = compile_circuit(k, &circuit, true).unwrap();
+
+    let names = &mut compress_true.cs.general_column_annotations;
+    names.insert(ColumnMid::new(Any::Fixed, 0), "s_add_mul".to_string());
+    names.insert(ColumnMid::new(Any::Fixed, 1), "s_cubed".to_string());
+    let cs = &compress_true.cs;
+    let names = &cs.general_column_annotations;
+    assert_eq!(3, cs.gates.len());
+    assert_eq!(
+        "s_add_mul * (2 - s_add_mul) * (l + r - o)",
+        format!("{}", expr_disp_names(&cs.gates[0].poly, names))
+    );
+    assert_eq!(
+        "s_add_mul * (1 - s_add_mul) * (l * r - o)",
+        format!("{}", expr_disp_names(&cs.gates[1].poly, names))
+    );
+    assert_eq!(
+        "s_cubed * (l * l * l - o)",
+        format!("{}", expr_disp_names(&cs.gates[2].poly, names))
+    );
+}
+
+#[test]
 fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     // vk & pk keygen both WITH compress
     let _proof = test_mycircuit(true, true)?;
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "088a7a9782efb2b9518e3c181ab126c9d621feb83b61dc21c93aaf4acf1c818c",
+        "d0f9083017f4ef79cb2b2c4efef297572177ea59a0290eecc5ada2a594d2e32a",
         halo2_debug::keccak_hex(_proof),
     );
 
@@ -436,7 +497,7 @@ fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     let _proof = test_mycircuit(false, false)?;
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "b799363093b85f956c9f68d001e99bd68901147dc4059eaf70f9cacbf02b6886",
+        "705caf13656b7ee48c69fb8f64499d341514f302c3c781c5b6f1391d7790a5d6",
         halo2_debug::keccak_hex(_proof),
     );
 

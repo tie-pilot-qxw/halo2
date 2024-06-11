@@ -28,3 +28,4 @@ pub fn keccak_hex<D: AsRef<[u8]>>(data: D) -> String {
     hasher.finalize(&mut hash);
     hex::encode(hash)
 }
+pub mod display;

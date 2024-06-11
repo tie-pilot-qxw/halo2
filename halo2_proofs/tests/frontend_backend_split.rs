@@ -501,11 +501,7 @@ fn test_mycircuit_full_legacy() {
     println!("Keygen: {:?}", start.elapsed());
 
     // Proving
-    let instances = circuit.instances();
-    let instances_slice: &[&[Fr]] = &(instances
-        .iter()
-        .map(|instance| instance.as_slice())
-        .collect::<Vec<_>>());
+    let instances = vec![circuit.instances()];
 
     let start = Instant::now();
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
@@ -513,7 +509,7 @@ fn test_mycircuit_full_legacy() {
         &params,
         &pk,
         &[circuit],
-        &[instances_slice],
+        instances.as_slice(),
         &mut rng,
         &mut transcript,
     )
@@ -532,7 +528,7 @@ fn test_mycircuit_full_legacy() {
         &verifier_params,
         &vk,
         strategy,
-        &[instances_slice],
+        instances.as_slice(),
         &mut verifier_transcript,
     )
     .expect("verify succeeds");
@@ -566,16 +562,11 @@ fn test_mycircuit_full_split() {
     println!("Keygen: {:?}", start.elapsed());
     drop(compiled_circuit);
 
+    let instances = circuit.instances();
     // Proving
     println!("Proving...");
-    let instances = circuit.instances();
-    let instances_slice: &[&[Fr]] = &(instances
-        .iter()
-        .map(|instance| instance.as_slice())
-        .collect::<Vec<_>>());
-
     let start = Instant::now();
-    let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, instances_slice);
+    let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, &instances);
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     let mut prover = ProverSingle::<
         KZGCommitmentScheme<Bn256>,
@@ -588,7 +579,7 @@ fn test_mycircuit_full_split() {
         engine,
         &params,
         &pk,
-        instances_slice,
+instances.clone(),
         &mut rng,
         &mut transcript,
     )
@@ -615,7 +606,7 @@ fn test_mycircuit_full_split() {
         &verifier_params,
         &vk,
         strategy,
-        instances_slice,
+        instances,
         &mut verifier_transcript,
     )
     .expect("verify succeeds");
