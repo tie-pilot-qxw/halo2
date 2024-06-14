@@ -54,7 +54,7 @@ struct MyConfig<const W: usize> {
 }
 
 impl<const W: usize> MyConfig<W> {
-    fn configure<F: Field>(meta: &mut ConstraintSystem<F>) -> Self {
+    fn configure<F: FieldFr>(meta: &mut ConstraintSystem<F>) -> Self {
         let [q_shuffle, q_first, q_last] = [(); 3].map(|_| meta.selector());
         // First phase
         let original = [(); W].map(|_| meta.advice_column_in(FirstPhase));

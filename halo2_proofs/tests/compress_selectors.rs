@@ -55,12 +55,12 @@ struct MyCircuitConfig {
 }
 
 #[derive(Debug)]
-struct MyCircuitChip<F: Field> {
+struct MyCircuitChip<F: FieldFr> {
     config: MyCircuitConfig,
     marker: PhantomData<F>,
 }
 
-trait MyCircuitComposer<F: Field> {
+trait MyCircuitComposer<F: FieldFr> {
     fn raw_multiply<FM>(
         &self,
         layouter: &mut impl Layouter<F>,
@@ -92,7 +92,7 @@ trait MyCircuitComposer<F: Field> {
         FM: FnMut() -> Value<(Assigned<F>, Assigned<F>)>;
 }
 
-impl<F: Field> MyCircuitChip<F> {
+impl<F: FieldFr> MyCircuitChip<F> {
     fn construct(config: MyCircuitConfig) -> Self {
         Self {
             config,
@@ -163,7 +163,7 @@ impl<F: Field> MyCircuitChip<F> {
     }
 }
 
-impl<F: Field> MyCircuitComposer<F> for MyCircuitChip<F> {
+impl<F: FieldFr> MyCircuitComposer<F> for MyCircuitChip<F> {
     fn raw_multiply<FM>(
         &self,
         layouter: &mut impl Layouter<F>,
@@ -292,13 +292,13 @@ impl<F: Field> MyCircuitComposer<F> for MyCircuitChip<F> {
 }
 
 #[derive(Debug, Clone, Default)]
-struct MyCircuit<F: Field> {
+struct MyCircuit<F: FieldFr> {
     x: Value<F>,
     y: Value<F>,
     constant: F,
 }
 
-impl<F: Field> Circuit<F> for MyCircuit<F> {
+impl<F: FieldFr> Circuit<F> for MyCircuit<F> {
     type Config = MyCircuitConfig;
     type FloorPlanner = SimpleFloorPlanner;
     #[cfg(feature = "circuit-params")]

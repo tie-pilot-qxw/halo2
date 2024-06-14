@@ -1,4 +1,4 @@
-use super::Expression;
+use super::{Expression, FieldFr};
 use halo2_middleware::ff::Field;
 
 /// This describes a selector and where it is activated.
@@ -20,7 +20,7 @@ pub(crate) struct SelectorDescription {
 /// This describes the assigned combination of a particular selector as well as
 /// the expression it should be substituted with.
 #[derive(Debug, Clone)]
-pub(crate) struct SelectorAssignment<F> {
+pub(crate) struct SelectorAssignment<F: FieldFr> {
     /// The selector that this structure references, by index.
     pub selector: usize,
 
@@ -48,7 +48,7 @@ pub(crate) struct SelectorAssignment<F> {
 /// substitutions to the constraint system.
 ///
 /// This function is completely deterministic.
-pub(crate) fn process<F: Field, E>(
+pub(crate) fn process<F: FieldFr, E>(
     mut selectors: Vec<SelectorDescription>,
     max_degree: usize,
     mut allocate_fixed_column: E,

@@ -3,9 +3,7 @@ use std::{
     fmt::{self, Write},
 };
 
-use halo2_middleware::ff::PrimeField;
-
-use crate::dev::util;
+use crate::{dev::util, plonk::FieldFr};
 use crate::plonk::{sealed::SealedPhase, Circuit, ConstraintSystem, FirstPhase};
 
 #[derive(Debug)]
@@ -41,7 +39,7 @@ struct Gate {
 /// #[derive(Clone, Default)]
 /// struct MyCircuit {}
 ///
-/// impl<F: Field> Circuit<F> for MyCircuit {
+/// impl<F: FieldFr> Circuit<F> for MyCircuit {
 ///     type Config = MyConfig;
 ///     type FloorPlanner = SimpleFloorPlanner;
 ///     #[cfg(feature = "circuit-params")]
@@ -103,7 +101,7 @@ pub struct CircuitGates {
 
 impl CircuitGates {
     /// Collects the gates from within the circuit.
-    pub fn collect<F: PrimeField, C: Circuit<F>>(
+    pub fn collect<F: FieldFr, C: Circuit<F>>(
         #[cfg(feature = "circuit-params")] params: C::Params,
     ) -> Self {
         // Collect the graph details.

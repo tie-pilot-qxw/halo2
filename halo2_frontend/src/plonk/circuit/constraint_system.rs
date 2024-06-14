@@ -11,6 +11,7 @@ use halo2_middleware::poly::Rotation;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+use crate::plonk::FieldFr;
 
 /// Represents an index into a vector where each entry corresponds to a distinct
 /// point that polynomials are queried at.
@@ -39,12 +40,12 @@ impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
 ///
 /// These are returned by the closures passed to `ConstraintSystem::create_gate`.
 #[derive(Debug)]
-pub struct Constraint<F: Field> {
+pub struct Constraint<F: FieldFr> {
     name: String,
     poly: Expression<F>,
 }
 
-impl<F: Field> From<Expression<F>> for Constraint<F> {
+impl<F: FieldFr> From<Expression<F>> for Constraint<F> {
     fn from(poly: Expression<F>) -> Self {
         Constraint {
             name: "".to_string(),
@@ -53,7 +54,7 @@ impl<F: Field> From<Expression<F>> for Constraint<F> {
     }
 }
 
-impl<F: Field, S: AsRef<str>> From<(S, Expression<F>)> for Constraint<F> {
+impl<F: FieldFr, S: AsRef<str>> From<(S, Expression<F>)> for Constraint<F> {
     fn from((name, poly): (S, Expression<F>)) -> Self {
         Constraint {
             name: name.as_ref().to_string(),
@@ -62,7 +63,7 @@ impl<F: Field, S: AsRef<str>> From<(S, Expression<F>)> for Constraint<F> {
     }
 }
 
-impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
+impl<F: FieldFr> From<Expression<F>> for Vec<Constraint<F>> {
     fn from(poly: Expression<F>) -> Self {
         vec![Constraint {
             name: "".to_string(),
@@ -107,12 +108,12 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
 /// support Rust 1.51 or 1.52. If your minimum supported Rust version is 1.53 or greater,
 /// you can pass an array directly.
 #[derive(Debug)]
-pub struct Constraints<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> {
+pub struct Constraints<F: FieldFr, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> {
     selector: Expression<F>,
     constraints: Iter,
 }
 
-impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> Constraints<F, C, Iter> {
+impl<F: FieldFr, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> Constraints<F, C, Iter> {
     /// Constructs a set of constraints that are controlled by the given selector.
     ///
     /// Each constraint `c` in `iterator` will be converted into the constraint
@@ -125,7 +126,7 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> Constraints
     }
 }
 
-fn apply_selector_to_constraint<F: Field, C: Into<Constraint<F>>>(
+fn apply_selector_to_constraint<F: FieldFr, C: Into<Constraint<F>>>(
     (selector, c): (Expression<F>, C),
 ) -> Constraint<F> {
     let constraint: Constraint<F> = c.into();
@@ -141,7 +142,7 @@ type ConstraintsIterator<F, C, I> = std::iter::Map<
     ApplySelectorToConstraint<F, C>,
 >;
 
-impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterator
+impl<F: FieldFr, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterator
     for Constraints<F, C, Iter>
 {
     type Item = Constraint<F>;
@@ -156,7 +157,7 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterato
 
 /// Gate
 #[derive(Clone, Debug)]
-pub struct Gate<F: Field> {
+pub struct Gate<F: FieldFr> {
     pub(crate) name: String,
     pub(crate) constraint_names: Vec<String>,
     pub(crate) polys: Vec<Expression<F>>,
@@ -166,7 +167,7 @@ pub struct Gate<F: Field> {
     pub(crate) queried_cells: Vec<VirtualCell>,
 }
 
-impl<F: Field> Gate<F> {
+impl<F: FieldFr> Gate<F> {
     /// Returns the gate name.
     pub fn name(&self) -> &str {
         self.name.as_str()
@@ -191,7 +192,7 @@ impl<F: Field> Gate<F> {
     }
 }
 
-impl<F: Field> From<ConstraintSystem<F>> for ConstraintSystemMid<F> {
+impl<F: FieldFr<Field=IF>, IF: Field> From<ConstraintSystem<F>> for ConstraintSystemMid<IF> {
     fn from(cs: ConstraintSystem<F>) -> Self {
         ConstraintSystemMid {
             num_fixed_columns: cs.num_fixed_columns,
@@ -258,7 +259,7 @@ impl<F: Field> From<ConstraintSystem<F>> for ConstraintSystemMid<F> {
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct ConstraintSystem<F: Field> {
+pub struct ConstraintSystem<F: FieldFr> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
@@ -308,7 +309,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) minimum_degree: Option<usize>,
 }
 
-impl<F: Field> Default for ConstraintSystem<F> {
+impl<F: FieldFr> Default for ConstraintSystem<F> {
     fn default() -> ConstraintSystem<F> {
         ConstraintSystem {
             num_fixed_columns: 0,
@@ -335,7 +336,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
     }
 }
 
-impl<F: Field> ConstraintSystem<F> {
+impl<F: FieldFr> ConstraintSystem<F> {
     /// Enables this fixed column to be used for global constant assignments.
     ///
     /// # Side-effects
@@ -693,7 +694,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     fn replace_selectors_with_fixed(&mut self, selector_replacements: &[Expression<F>]) {
-        fn replace_selectors<F: Field>(
+        fn replace_selectors<F: FieldFr>(
             expr: &mut Expression<F>,
             selector_replacements: &[Expression<F>],
             must_be_nonsimple: bool,
@@ -1109,13 +1110,13 @@ impl<F: Field> ConstraintSystem<F> {
 /// Exposes the "virtual cells" that can be queried while creating a custom gate or lookup
 /// table.
 #[derive(Debug)]
-pub struct VirtualCells<'a, F: Field> {
+pub struct VirtualCells<'a, F: FieldFr> {
     pub(super) meta: &'a mut ConstraintSystem<F>,
     pub(super) queried_selectors: Vec<Selector>,
     pub(super) queried_cells: Vec<VirtualCell>,
 }
 
-impl<'a, F: Field> VirtualCells<'a, F> {
+impl<'a, F: FieldFr> VirtualCells<'a, F> {
     fn new(meta: &'a mut ConstraintSystem<F>) -> Self {
         VirtualCells {
             meta,

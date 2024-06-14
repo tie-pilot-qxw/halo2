@@ -1,16 +1,17 @@
 use crate::plonk::Expression;
 use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
+use crate::plonk::FieldFr;
 
 /// Expressions involved in a shuffle argument, with a name as metadata.
 #[derive(Clone)]
-pub struct Argument<F: Field> {
+pub struct Argument<F: FieldFr> {
     pub(crate) name: String,
     pub(crate) input_expressions: Vec<Expression<F>>,
     pub(crate) shuffle_expressions: Vec<Expression<F>>,
 }
 
-impl<F: Field> Debug for Argument<F> {
+impl<F: FieldFr> Debug for Argument<F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Argument")
             .field("input_expressions", &self.input_expressions)
@@ -19,7 +20,7 @@ impl<F: Field> Debug for Argument<F> {
     }
 }
 
-impl<F: Field> Argument<F> {
+impl<F: FieldFr> Argument<F> {
     /// Constructs a new shuffle argument.
     ///
     /// `shuffle` is a sequence of `(input, shuffle)` tuples.

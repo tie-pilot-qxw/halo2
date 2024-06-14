@@ -67,12 +67,12 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     #[derive(Clone)]
-    struct MyCircuit<F: Field> {
+    struct MyCircuit<F: FieldFr> {
         a: Value<F>,
         k: u32,
     }
 
-    struct StandardPlonk<F: Field> {
+    struct StandardPlonk<F: FieldFr> {
         config: PlonkConfig,
         _marker: PhantomData<F>,
     }
@@ -186,7 +186,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         }
     }
 
-    impl<F: Field> Circuit<F> for MyCircuit<F> {
+    impl<F: FieldFr> Circuit<F> for MyCircuit<F> {
         type Config = PlonkConfig;
         type FloorPlanner = SimpleFloorPlanner;
         #[cfg(feature = "circuit-params")]

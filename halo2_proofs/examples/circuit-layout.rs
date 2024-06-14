@@ -47,12 +47,12 @@ trait StandardCs<FF: Field> {
     ) -> Result<(), ErrorFront>;
 }
 
-struct MyCircuit<F: Field> {
+struct MyCircuit<F: FieldFr> {
     a: Value<F>,
     lookup_table: Vec<F>,
 }
 
-struct StandardPlonk<F: Field> {
+struct StandardPlonk<F: FieldFr> {
     config: PlonkConfig,
     _marker: PhantomData<F>,
 }
@@ -175,7 +175,7 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
     }
 }
 
-impl<F: Field> Circuit<F> for MyCircuit<F> {
+impl<F: FieldFr> Circuit<F> for MyCircuit<F> {
     type Config = PlonkConfig;
     type FloorPlanner = SimpleFloorPlanner;
     #[cfg(feature = "circuit-params")]

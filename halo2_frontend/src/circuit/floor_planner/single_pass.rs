@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
 
-use crate::plonk::Assigned;
+use crate::plonk::{Assigned, FieldFr};
 use crate::{
     circuit::{
         layouter::{RegionColumn, RegionLayouter, RegionShape, SyncDeps, TableLayouter},
@@ -28,7 +28,7 @@ use crate::{
 pub struct SimpleFloorPlanner;
 
 impl FloorPlanner for SimpleFloorPlanner {
-    fn synthesize<F: Field, CS: Assignment<F> + SyncDeps, C: Circuit<F>>(
+    fn synthesize<F: FieldFr, CS: Assignment<F> + SyncDeps, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
@@ -40,7 +40,7 @@ impl FloorPlanner for SimpleFloorPlanner {
 }
 
 /// A [`Layouter`] for a single-chip circuit.
-pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
+pub struct SingleChipLayouter<'a, F: FieldFr, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     constants: Vec<Column<Fixed>>,
     /// Stores the starting row for each region.
@@ -52,7 +52,7 @@ pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
     _marker: PhantomData<F>,
 }
 
-impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a, F, CS> {
+impl<'a, F: FieldFr, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SingleChipLayouter")
             .field("regions", &self.regions)
@@ -61,7 +61,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a,
     }
 }
 
-impl<'a, F: Field, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
+impl<'a, F: FieldFr, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
     /// Creates a new single-chip layouter.
     pub fn new(cs: &'a mut CS, constants: Vec<Column<Fixed>>) -> Result<Self, Error> {
         let ret = SingleChipLayouter {
@@ -76,7 +76,7 @@ impl<'a, F: Field, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
     }
 }
 
-impl<'a, F: Field, CS: Assignment<F> + 'a + SyncDeps> Layouter<F>
+impl<'a, F: FieldFr, CS: Assignment<F> + 'a + SyncDeps> Layouter<F>
     for SingleChipLayouter<'a, F, CS>
 {
     type Root = Self;
@@ -223,14 +223,14 @@ impl<'a, F: Field, CS: Assignment<F> + 'a + SyncDeps> Layouter<F>
     }
 }
 
-struct SingleChipLayouterRegion<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
+struct SingleChipLayouterRegion<'r, 'a, F: FieldFr, CS: Assignment<F> + 'a> {
     layouter: &'r mut SingleChipLayouter<'a, F, CS>,
     region_index: RegionIndex,
     /// Stores the constants to be assigned, and the cells to which they are copied.
     constants: Vec<(Assigned<F>, Cell)>,
 }
 
-impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug
+impl<'r, 'a, F: FieldFr, CS: Assignment<F> + 'a> fmt::Debug
     for SingleChipLayouterRegion<'r, 'a, F, CS>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -241,7 +241,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug
     }
 }
 
-impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, F, CS> {
+impl<'r, 'a, F: FieldFr, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, F, CS> {
     fn new(layouter: &'r mut SingleChipLayouter<'a, F, CS>, region_index: RegionIndex) -> Self {
         SingleChipLayouterRegion {
             layouter,
@@ -251,7 +251,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, 
     }
 }
 
-impl<'r, 'a, F: Field, CS: Assignment<F> + 'a + SyncDeps> RegionLayouter<F>
+impl<'r, 'a, F: FieldFr, CS: Assignment<F> + 'a + SyncDeps> RegionLayouter<F>
     for SingleChipLayouterRegion<'r, 'a, F, CS>
 {
     fn enable_selector<'v>(

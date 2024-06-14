@@ -38,6 +38,8 @@ halo2_middleware = { path = "../halo2_middleware" }
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }
 tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+once_cell = "1.19.0"
+parking_lot = "0.12.3"
 
 [dev-dependencies]
 proptest = "1"

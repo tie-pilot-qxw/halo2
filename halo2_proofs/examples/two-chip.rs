@@ -10,9 +10,9 @@ use halo2_proofs::{
 // ANCHOR: field-instructions
 /// A variable representing a number.
 #[derive(Clone)]
-struct Number<F: Field>(AssignedCell<F, F>);
+struct Number<F: FieldFr>(AssignedCell<F, F>);
 
-trait FieldInstructions<F: Field>: AddInstructions<F> + MulInstructions<F> {
+trait FieldInstructions<F: FieldFr>: AddInstructions<F> + MulInstructions<F> {
     /// Variable representing a number.
     type Num;
 
@@ -43,7 +43,7 @@ trait FieldInstructions<F: Field>: AddInstructions<F> + MulInstructions<F> {
 // ANCHOR_END: field-instructions
 
 // ANCHOR: add-instructions
-trait AddInstructions<F: Field>: Chip<F> {
+trait AddInstructions<F: FieldFr>: Chip<F> {
     /// Variable representing a number.
     type Num;
 
@@ -58,7 +58,7 @@ trait AddInstructions<F: Field>: Chip<F> {
 // ANCHOR_END: add-instructions
 
 // ANCHOR: mul-instructions
-trait MulInstructions<F: Field>: Chip<F> {
+trait MulInstructions<F: FieldFr>: Chip<F> {
     /// Variable representing a number.
     type Num;
 
@@ -108,28 +108,28 @@ struct MulConfig {
 
 // ANCHOR: field-chip
 /// The top-level chip that will implement the `FieldInstructions`.
-struct FieldChip<F: Field> {
+struct FieldChip<F: FieldFr> {
     config: FieldConfig,
     _marker: PhantomData<F>,
 }
 // ANCHOR_END: field-chip
 
 // ANCHOR: add-chip
-struct AddChip<F: Field> {
+struct AddChip<F: FieldFr> {
     config: AddConfig,
     _marker: PhantomData<F>,
 }
 // ANCHOR END: add-chip
 
 // ANCHOR: mul-chip
-struct MulChip<F: Field> {
+struct MulChip<F: FieldFr> {
     config: MulConfig,
     _marker: PhantomData<F>,
 }
 // ANCHOR_END: mul-chip
 
 // ANCHOR: add-chip-trait-impl
-impl<F: Field> Chip<F> for AddChip<F> {
+impl<F: FieldFr> Chip<F> for AddChip<F> {
     type Config = AddConfig;
     type Loaded = ();
 
@@ -144,7 +144,7 @@ impl<F: Field> Chip<F> for AddChip<F> {
 // ANCHOR END: add-chip-trait-impl
 
 // ANCHOR: add-chip-impl
-impl<F: Field> AddChip<F> {
+impl<F: FieldFr> AddChip<F> {
     fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
@@ -174,7 +174,7 @@ impl<F: Field> AddChip<F> {
 // ANCHOR END: add-chip-impl
 
 // ANCHOR: add-instructions-impl
-impl<F: Field> AddInstructions<F> for FieldChip<F> {
+impl<F: FieldFr> AddInstructions<F> for FieldChip<F> {
     type Num = Number<F>;
     fn add(
         &self,
@@ -189,7 +189,7 @@ impl<F: Field> AddInstructions<F> for FieldChip<F> {
     }
 }
 
-impl<F: Field> AddInstructions<F> for AddChip<F> {
+impl<F: FieldFr> AddInstructions<F> for AddChip<F> {
     type Num = Number<F>;
 
     fn add(
@@ -231,7 +231,7 @@ impl<F: Field> AddInstructions<F> for AddChip<F> {
 // ANCHOR END: add-instructions-impl
 
 // ANCHOR: mul-chip-trait-impl
-impl<F: Field> Chip<F> for MulChip<F> {
+impl<F: FieldFr> Chip<F> for MulChip<F> {
     type Config = MulConfig;
     type Loaded = ();
 
@@ -246,7 +246,7 @@ impl<F: Field> Chip<F> for MulChip<F> {
 // ANCHOR END: mul-chip-trait-impl
 
 // ANCHOR: mul-chip-impl
-impl<F: Field> MulChip<F> {
+impl<F: FieldFr> MulChip<F> {
     fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
@@ -296,7 +296,7 @@ impl<F: Field> MulChip<F> {
 // ANCHOR_END: mul-chip-impl
 
 // ANCHOR: mul-instructions-impl
-impl<F: Field> MulInstructions<F> for FieldChip<F> {
+impl<F: FieldFr> MulInstructions<F> for FieldChip<F> {
     type Num = Number<F>;
     fn mul(
         &self,
@@ -310,7 +310,7 @@ impl<F: Field> MulInstructions<F> for FieldChip<F> {
     }
 }
 
-impl<F: Field> MulInstructions<F> for MulChip<F> {
+impl<F: FieldFr> MulInstructions<F> for MulChip<F> {
     type Num = Number<F>;
 
     fn mul(
@@ -352,7 +352,7 @@ impl<F: Field> MulInstructions<F> for MulChip<F> {
 // ANCHOR END: mul-instructions-impl
 
 // ANCHOR: field-chip-trait-impl
-impl<F: Field> Chip<F> for FieldChip<F> {
+impl<F: FieldFr> Chip<F> for FieldChip<F> {
     type Config = FieldConfig;
     type Loaded = ();
 
@@ -367,7 +367,7 @@ impl<F: Field> Chip<F> for FieldChip<F> {
 // ANCHOR_END: field-chip-trait-impl
 
 // ANCHOR: field-chip-impl
-impl<F: Field> FieldChip<F> {
+impl<F: FieldFr> FieldChip<F> {
     fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
@@ -396,7 +396,7 @@ impl<F: Field> FieldChip<F> {
 // ANCHOR_END: field-chip-impl
 
 // ANCHOR: field-instructions-impl
-impl<F: Field> FieldInstructions<F> for FieldChip<F> {
+impl<F: FieldFr> FieldInstructions<F> for FieldChip<F> {
     type Num = Number<F>;
 
     fn load_private(
@@ -448,13 +448,13 @@ impl<F: Field> FieldInstructions<F> for FieldChip<F> {
 /// they won't have any value during key generation. During proving, if any of these
 /// were `Value::unknown()` we would get an error.
 #[derive(Default)]
-struct MyCircuit<F: Field> {
+struct MyCircuit<F: FieldFr> {
     a: Value<F>,
     b: Value<F>,
     c: Value<F>,
 }
 
-impl<F: Field> Circuit<F> for MyCircuit<F> {
+impl<F: FieldFr> Circuit<F> for MyCircuit<F> {
     // Since we are using a single chip for everything, we can just reuse its config.
     type Config = FieldConfig;
     type FloorPlanner = SimpleFloorPlanner;

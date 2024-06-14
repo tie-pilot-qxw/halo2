@@ -17,7 +17,7 @@ use crate::{
     },
 };
 use halo2_middleware::circuit::{Any, ColumnMid};
-use halo2_middleware::ff::{Field, FromUniformBytes};
+use halo2_middleware::ff::FromUniformBytes;
 use halo2_middleware::multicore::{
     IntoParallelIterator, IntoParallelRefIterator, ParallelIterator, ParallelSliceMut,
 };
@@ -29,8 +29,8 @@ mod util;
 mod failure;
 pub use failure::{FailureLocation, VerifyFailure};
 
-pub mod cost;
-pub use cost::CircuitCost;
+// pub mod cost;
+// pub use cost::CircuitCost;
 
 #[cfg(feature = "cost-estimator")]
 pub mod cost_model;
@@ -40,6 +40,8 @@ pub use gates::CircuitGates;
 
 mod tfp;
 pub use tfp::TracingFloorPlanner;
+
+use crate::plonk::FieldFr;
 
 #[cfg(feature = "dev-graph")]
 mod graph;
@@ -87,7 +89,7 @@ impl Region {
 
 /// The value of a particular cell within the circuit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CellValue<F: Field> {
+pub enum CellValue<F: FieldFr> {
     /// An unassigned cell.
     Unassigned,
     /// A cell that has been assigned a value.
@@ -98,12 +100,12 @@ pub enum CellValue<F: Field> {
 
 /// A value within an expression.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
-enum Value<F: Field> {
+enum Value<F: FieldFr> {
     Real(F),
     Poison,
 }
 
-impl<F: Field> From<CellValue<F>> for Value<F> {
+impl<F: FieldFr> From<CellValue<F>> for Value<F> {
     fn from(value: CellValue<F>) -> Self {
         match value {
             // Cells that haven't been explicitly assigned to, default to zero.
@@ -114,7 +116,7 @@ impl<F: Field> From<CellValue<F>> for Value<F> {
     }
 }
 
-impl<F: Field> Neg for Value<F> {
+impl<F: FieldFr> Neg for Value<F> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -125,7 +127,7 @@ impl<F: Field> Neg for Value<F> {
     }
 }
 
-impl<F: Field> Add for Value<F> {
+impl<F: FieldFr> Add for Value<F> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -136,7 +138,7 @@ impl<F: Field> Add for Value<F> {
     }
 }
 
-impl<F: Field> Mul for Value<F> {
+impl<F: FieldFr> Mul for Value<F> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -154,7 +156,7 @@ impl<F: Field> Mul for Value<F> {
     }
 }
 
-impl<F: Field> Mul<F> for Value<F> {
+impl<F: FieldFr> Mul<F> for Value<F> {
     type Output = Self;
 
     fn mul(self, rhs: F) -> Self::Output {
@@ -287,7 +289,7 @@ impl<F: Field> Mul<F> for Value<F> {
 /// );
 /// ```
 #[derive(Debug)]
-pub struct MockProver<F: Field> {
+pub struct MockProver<F: FieldFr> {
     k: u32,
     n: u32,
     cs: ConstraintSystem<F>,
@@ -319,14 +321,14 @@ pub struct MockProver<F: Field> {
 
 /// Instance Value
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InstanceValue<F: Field> {
+pub enum InstanceValue<F: FieldFr> {
     /// Assigned instance value
     Assigned(F),
     /// Padding
     Padding,
 }
 
-impl<F: Field> InstanceValue<F> {
+impl<F: FieldFr> InstanceValue<F> {
     /// Field value on the instance cell
     pub fn value(&self) -> F {
         match self {
@@ -336,13 +338,13 @@ impl<F: Field> InstanceValue<F> {
     }
 }
 
-impl<F: Field> MockProver<F> {
+impl<F: FieldFr> MockProver<F> {
     fn in_phase<P: Phase>(&self, phase: P) -> bool {
         self.current_phase == phase.to_sealed()
     }
 }
 
-impl<F: Field> Assignment<F> for MockProver<F> {
+impl<F: FieldFr> Assignment<F> for MockProver<F> {
     fn enter_region<NR, N>(&mut self, name: N)
     where
         NR: Into<String>,
@@ -606,7 +608,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
     }
 }
 
-impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
+impl<F: FieldFr + FromUniformBytes<64> + Ord> MockProver<F> {
     /// Runs a synthetic keygen-and-prove operation on the given circuit, collecting data
     /// about the constraints and their assignments.
     pub fn run<ConcreteCircuit: Circuit<F>>(

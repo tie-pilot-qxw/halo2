@@ -3,7 +3,7 @@ use crate::poly::commitment::{self, CommitmentScheme, Params};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 use halo2_backend::plonk::{prover::Prover, ProvingKey};
 use halo2_frontend::circuit::WitnessCalculator;
-use halo2_frontend::plonk::{Circuit, ConstraintSystem};
+use halo2_frontend::plonk::{Circuit, ConstraintSystem, FieldFr};
 use halo2_middleware::ff::{FromUniformBytes, WithSmallOrderMulGroup};
 use halo2_middleware::zal::{
     impls::{PlonkEngine, PlonkEngineConfig},
@@ -23,7 +23,8 @@ pub fn create_proof_with_engine<
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
-    ConcreteCircuit: Circuit<Scheme::Scalar>,
+    EF: FieldFr<Field=Scheme::Scalar>,
+    ConcreteCircuit: Circuit<EF>,
     M: MsmAccel<Scheme::Curve>,
 >(
     engine: PlonkEngine<Scheme::Curve, M>,
@@ -117,7 +118,7 @@ fn test_create_proof() {
     #[derive(Clone, Copy)]
     struct MyCircuit;
 
-    impl<F: Field> Circuit<F> for MyCircuit {
+    impl<F: FieldFr> Circuit<F> for MyCircuit {
         type Config = ();
         type FloorPlanner = SimpleFloorPlanner;
         #[cfg(feature = "circuit-params")]
@@ -187,7 +188,7 @@ fn test_create_proof_custom() {
     #[derive(Clone, Copy)]
     struct MyCircuit;
 
-    impl<F: Field> Circuit<F> for MyCircuit {
+    impl<F: FieldFr> Circuit<F> for MyCircuit {
         type Config = ();
         type FloorPlanner = SimpleFloorPlanner;
         #[cfg(feature = "circuit-params")]

@@ -16,7 +16,7 @@ pub mod layout;
 /// inside the gadgets and chips that it uses.
 ///
 /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
-pub fn circuit_dot_graph<F: Field, ConcreteCircuit: Circuit<F>>(
+pub fn circuit_dot_graph<F: FieldFr, ConcreteCircuit: Circuit<F>>(
     circuit: &ConcreteCircuit,
 ) -> String {
     // Collect the graph details.
@@ -79,7 +79,7 @@ struct Graph {
     current_namespace: Vec<usize>,
 }
 
-impl<F: Field> Assignment<F> for Graph {
+impl<F: FieldFr> Assignment<F> for Graph {
     fn enter_region<NR, N>(&mut self, _: N)
     where
         NR: Into<String>,

@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt::{self, Debug};
 
 use group::ff::Field;
+use crate::plonk::FieldFr;
 
 use super::metadata::{DebugColumn, DebugVirtualCell};
 use super::MockProver;
@@ -63,7 +64,7 @@ impl FailureLocation {
         }
     }
 
-    pub(super) fn find_expressions<'a, F: Field>(
+    pub(super) fn find_expressions<'a, F: FieldFr>(
         cs: &ConstraintSystem<F>,
         regions: &[Region],
         failure_row: usize,
@@ -370,7 +371,7 @@ impl Debug for VerifyFailure {
 ///
 ///   Gate 'Equality check' (applied at offset 1) queries these cells.
 /// ```
-fn render_cell_not_assigned<F: Field>(
+fn render_cell_not_assigned<F: FieldFr>(
     gates: &[Gate<F>],
     gate: &metadata::Gate,
     region: &metadata::Region,
@@ -439,7 +440,7 @@ fn render_cell_not_assigned<F: Field>(
 ///     x0 = 0x5
 ///     x1 = 0x5
 /// ```
-fn render_constraint_not_satisfied<F: Field>(
+fn render_constraint_not_satisfied<F: FieldFr>(
     gates: &[Gate<F>],
     constraint: &metadata::Constraint,
     location: &FailureLocation,
@@ -504,7 +505,7 @@ fn render_constraint_not_satisfied<F: Field>(
 ///     |   x0 = 0x5
 ///     |   x1 = 1
 /// ```
-fn render_lookup<F: Field>(
+fn render_lookup<F: FieldFr>(
     prover: &MockProver<F>,
     name: &str,
     lookup_index: usize,
@@ -570,7 +571,7 @@ fn render_lookup<F: Field>(
         )
     });
 
-    fn cell_value<'a, F: Field, Q: Into<AnyQuery> + Copy>(
+    fn cell_value<'a, F: FieldFr, Q: Into<AnyQuery> + Copy>(
         load: impl Fn(Q) -> Value<F> + 'a,
     ) -> impl Fn(Q) -> BTreeMap<metadata::VirtualCell, String> + 'a {
         move |query| {
@@ -672,7 +673,7 @@ fn render_lookup<F: Field>(
     }
 }
 
-fn render_shuffle<F: Field>(
+fn render_shuffle<F: FieldFr>(
     prover: &MockProver<F>,
     name: &str,
     shuffle_index: usize,
@@ -736,7 +737,7 @@ fn render_shuffle<F: Field>(
         )
     });
 
-    fn cell_value<'a, F: Field, Q: Into<AnyQuery> + Copy>(
+    fn cell_value<'a, F: FieldFr, Q: Into<AnyQuery> + Copy>(
         load: impl Fn(Q) -> Value<F> + 'a,
     ) -> impl Fn(Q) -> BTreeMap<metadata::VirtualCell, String> + 'a {
         move |query| {
@@ -839,7 +840,7 @@ fn render_shuffle<F: Field>(
 
 impl VerifyFailure {
     /// Emits this failure in pretty-printed format to stderr.
-    pub fn emit<F: Field>(&self, prover: &MockProver<F>) {
+    pub fn emit<F: FieldFr>(&self, prover: &MockProver<F>) {
         match self {
             Self::CellNotAssigned {
                 gate,

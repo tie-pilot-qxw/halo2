@@ -14,7 +14,7 @@ use criterion::{BenchmarkId, Criterion};
 
 fn criterion_benchmark(c: &mut Criterion) {
     #[derive(Clone, Default)]
-    struct MyCircuit<F: Field> {
+    struct MyCircuit<F: FieldFr> {
         _marker: PhantomData<F>,
     }
 
