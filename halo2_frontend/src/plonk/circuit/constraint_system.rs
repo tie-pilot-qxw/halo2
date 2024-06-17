@@ -709,7 +709,7 @@ impl<F: FieldFront> ConstraintSystem<F> {
                         assert!(!selector.is_simple());
                     }
 
-                    selector_replacements[selector.0].clone()
+                    selector_replacements[selector.0]
                 },
                 &|query| Expression::Fixed(query),
                 &|query| Expression::Advice(query),

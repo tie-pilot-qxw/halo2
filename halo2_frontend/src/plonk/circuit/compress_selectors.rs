@@ -190,11 +190,11 @@ where
             // which is non-zero only on rows where `combination_assignment` is set to
             // `assigned_root`. In particular, rows set to 0 correspond to all selectors
             // being disabled.
-            let mut expression = query.clone();
+            let mut expression = query;
             let mut root = F::ONE;
             for _ in 0..combination_len {
                 if root != assigned_root {
-                    expression = expression * (Expression::Constant(root) - query.clone());
+                    expression = expression * (Expression::Constant(root) - query);
                 }
                 root += F::ONE;
             }

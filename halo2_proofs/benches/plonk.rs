@@ -226,7 +226,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 let sc = meta.query_fixed(sc, Rotation::cur());
                 let sm = meta.query_fixed(sm, Rotation::cur());
 
-                vec![a.clone() * sa + b.clone() * sb + a * b * sm - (c * sc)]
+                vec![a * sa + b * sb + a * b * sm - (c * sc)]
             });
 
             PlonkConfig {
@@ -311,7 +311,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     fn verifier(params: &ParamsIPA<EqAffine>, vk: &VerifyingKey<EqAffine>, proof: &[u8]) {
         let strategy = SingleStrategy::new(params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(proof);
-        assert!(verify_proof(params, vk, strategy, &[vec![vec![]]], &mut transcript).is_ok());
+        assert!(verify_proof::<_, _, _, _, _, halo2curves::pasta::Fp>(
+            params,
+            vk,
+            strategy,
+            &[vec![vec![]]],
+            &mut transcript
+        )
+        .is_ok());
     }
 
     let k_range = 8..=16;

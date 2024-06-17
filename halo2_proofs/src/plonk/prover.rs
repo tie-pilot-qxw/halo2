@@ -1,7 +1,11 @@
 use crate::plonk::{Error, ErrorBack};
 use crate::poly::commitment::{self, CommitmentScheme, Params};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
+use halo2_backend::plonk::VerifyingKey;
 use halo2_backend::plonk::{prover::Prover, ProvingKey};
+use halo2_backend::poly::commitment::Verifier;
+use halo2_backend::poly::VerificationStrategy;
+use halo2_backend::transcript::TranscriptRead;
 use halo2_frontend::circuit::WitnessCalculator;
 use halo2_frontend::plonk::{Circuit, ConstraintSystem, FieldFront};
 use halo2_middleware::ff::{FromUniformBytes, WithSmallOrderMulGroup};
@@ -11,6 +15,35 @@ use halo2_middleware::zal::{
 };
 use rand_core::RngCore;
 use std::collections::HashMap;
+
+fn instances_frontfield_to_field<F: FieldFront>(
+    instances: &[Vec<Vec<F>>],
+) -> Vec<Vec<Vec<F::Field>>> {
+    instances
+        .iter()
+        .map(|v| {
+            v.iter()
+                .map(|v| v.iter().map(|f| f.into_field()).collect())
+                .collect()
+        })
+        .collect()
+}
+
+fn witnesses_frontfield_to_field<F: FieldFront>(
+    witnesses: Vec<Vec<Option<Vec<F>>>>,
+) -> Vec<Vec<Option<Vec<F::Field>>>> {
+    witnesses
+        .iter()
+        .map(|v| {
+            v.iter()
+                .map(|v| {
+                    v.as_ref()
+                        .map(|v| v.iter().map(|f| f.into_field()).collect())
+                })
+                .collect()
+        })
+        .collect()
+}
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
@@ -57,14 +90,7 @@ where
         })
         .collect();
 
-    let instances: Vec<Vec<Vec<Scheme::Scalar>>> = instances
-        .iter()
-        .map(|v| {
-            v.into_iter()
-                .map(|v| v.into_iter().map(|f| f.into_field()).collect())
-                .collect()
-        })
-        .collect();
+    let instances = instances_frontfield_to_field(instances);
 
     let mut prover = Prover::<Scheme, P, _, _, _, _>::new_with_engine(
         engine, params, pk, &instances, rng, transcript,
@@ -77,23 +103,13 @@ where
             witnesses.push(witness_calc.calc(*phase, &challenges)?);
         }
 
-        let witnesses: Vec<Vec<Option<Vec<Scheme::Scalar>>>> = witnesses
-            .iter()
-            .map(|v| {
-                v.into_iter()
-                    .map(|v| {
-                        v.as_ref()
-                            .map(|v| v.into_iter().map(|f| f.into_field()).collect())
-                    })
-                    .collect()
-            })
-            .collect();
+        let witnesses = witnesses_frontfield_to_field(witnesses);
 
         challenges = prover
             .commit_phase(*phase, witnesses)
             .unwrap()
             .into_iter()
-            .map(|(k, v)| (k, F::into_field_fr(v)))
+            .map(|(k, v)| (k, F::into_fieldfront(v)))
             .collect();
     }
     Ok(prover.create_proof()?)
@@ -126,8 +142,33 @@ where
     let engine = PlonkEngineConfig::build_default();
 
     create_proof_with_engine::<Scheme, P, _, _, _, _, _, _>(
-        engine, params, pk, circuits, &instances, rng, transcript,
+        engine, params, pk, circuits, instances, rng, transcript,
     )
+}
+
+/// Returns a boolean indicating whether or not the proof is valid
+pub fn verify_proof<
+    'params,
+    Scheme: CommitmentScheme,
+    V: Verifier<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    T: TranscriptRead<Scheme::Curve, E>,
+    Strategy: VerificationStrategy<'params, Scheme, V>,
+    F: FieldFront<Field = Scheme::Scalar>,
+>(
+    params: &'params Scheme::ParamsVerifier,
+    vk: &VerifyingKey<Scheme::Curve>,
+    strategy: Strategy,
+    instances: &[Vec<Vec<F>>],
+    transcript: &mut T,
+) -> Result<Strategy::Output, Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    let instances = instances_frontfield_to_field(instances);
+    Ok(halo2_backend::plonk::verifier::verify_proof(
+        params, vk, strategy, &instances, transcript,
+    )?)
 }
 
 #[cfg(test)]

@@ -380,7 +380,7 @@ mod tests {
                 meta.lookup("", |cells| {
                     let a = cells.query_advice(a, Rotation::cur());
 
-                    vec![(a.clone(), table.0), (a, table.1)]
+                    vec![(a, table.0), (a, table.1)]
                 });
 
                 Self::Config { table }

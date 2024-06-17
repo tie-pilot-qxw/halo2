@@ -1,7 +1,10 @@
 use ff::Field;
 use halo2_proofs::{
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner, Value},
-    plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, ErrorFront, Fixed, TableColumn},
+    plonk::{
+        Advice, Assigned, Circuit, Column, ConstraintSystem, ErrorFront, FieldFront, Fixed,
+        TableColumn,
+    },
     poly::Rotation,
 };
 use halo2curves::pasta::Fp;
@@ -28,7 +31,7 @@ struct PlonkConfig {
     sl: TableColumn,
 }
 
-trait StandardCs<FF: Field> {
+trait StandardCs<FF: FieldFront> {
     fn raw_multiply<F>(
         &self,
         region: &mut Region<FF>,
@@ -57,7 +60,7 @@ struct StandardPlonk<F: FieldFront> {
     _marker: PhantomData<F>,
 }
 
-impl<FF: Field> StandardPlonk<FF> {
+impl<FF: FieldFront> StandardPlonk<FF> {
     fn new(config: PlonkConfig) -> Self {
         StandardPlonk {
             config,
@@ -66,7 +69,7 @@ impl<FF: Field> StandardPlonk<FF> {
     }
 }
 
-impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
+impl<FF: FieldFront> StandardCs<FF> for StandardPlonk<FF> {
     fn raw_multiply<F>(
         &self,
         region: &mut Region<FF>,

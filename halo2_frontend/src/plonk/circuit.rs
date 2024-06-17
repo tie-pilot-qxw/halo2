@@ -3,9 +3,12 @@ use crate::plonk::{Assigned, Error};
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
+pub mod arena;
 pub mod compress_selectors;
 pub mod constraint_system;
 pub mod expression;
+
+pub use arena::FieldFront;
 
 pub use constraint_system::*;
 pub use expression::*;

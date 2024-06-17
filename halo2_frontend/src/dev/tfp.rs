@@ -35,7 +35,7 @@ use crate::{
 /// use halo2_frontend::{
 ///     circuit::{floor_planner, Layouter, Value},
 ///     dev::TracingFloorPlanner,
-///     plonk::{Circuit, ConstraintSystem, Error},
+///     plonk::{Circuit, ConstraintSystem, Error, FieldFront},
 /// };
 ///
 /// # struct MyCircuit<F: FieldFront> {

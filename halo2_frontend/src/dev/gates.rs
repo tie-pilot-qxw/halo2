@@ -29,7 +29,7 @@ struct Gate {
 /// use halo2_frontend::{
 ///     circuit::{Layouter, SimpleFloorPlanner},
 ///     dev::CircuitGates,
-///     plonk::{Circuit, ConstraintSystem, Error},
+///     plonk::{Circuit, ConstraintSystem, Error, FieldFront},
 /// };
 /// use halo2curves::pasta::pallas;
 ///

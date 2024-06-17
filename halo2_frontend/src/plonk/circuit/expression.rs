@@ -1,3 +1,4 @@
+use super::arena::FieldFront;
 use crate::circuit::Region;
 use crate::plonk::circuit::{Advice, ColumnType, Fixed, Instance, VirtualCells};
 use crate::plonk::Error;
@@ -253,7 +254,7 @@ impl SealedPhase for ThirdPhase {
 /// row when required:
 /// ```
 /// use halo2_frontend::circuit::{Chip, Layouter, Value};
-/// use halo2_frontend::plonk::{Advice, Fixed, Error, Column, Selector};
+/// use halo2_frontend::plonk::{Advice, Fixed, Error, Column, Selector, FieldFront};
 /// use halo2_middleware::ff::Field;
 ///
 /// struct Config {
@@ -470,47 +471,16 @@ pub enum Expression<F: FieldFront> {
     Ref(ExprRef<F>),
 }
 
-// Arena context
-pub trait FieldFront: Field {
-    type Field: Field;
-    fn alloc(expr: Expression<Self>) -> ExprRef<Self>;
-    fn get(ref_: &ExprRef<Self>) -> Expression<Self>;
-    fn into_field(self) -> Self::Field;
-    fn into_field_fr(f: Self::Field) -> Self;
-}
-
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub struct ExprRef<F>(usize, std::marker::PhantomData<F>);
-impl<F: FieldFront> Into<ExprRef<F>> for Expression<F> {
-    fn into(self) -> ExprRef<F> {
-        F::alloc(self)
-    }
-}
-
-#[allow(unused)]
-struct ArenaPool<F: FieldFront> {
-    expressions: Vec<Expression<F>>,
-}
-
-#[allow(unused)]
-impl<F: FieldFront> ArenaPool<F> {
-    fn new() -> Self {
-        Self {
-            expressions: Vec::new(),
-        }
-    }
-    fn push(&mut self, expr: Expression<F>) -> ExprRef<F> {
-        let index = self.expressions.len();
-        self.expressions.push(expr);
-        ExprRef(index, std::marker::PhantomData)
-    }
-    fn get(&self, ref_: ExprRef<F>) -> &Expression<F> {
-        &self.expressions[ref_.0]
-    }
-}
-
-impl<F: FieldFront<Field = IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF> {
+pub struct ExprRef<F>(pub(crate) usize, pub(crate) std::marker::PhantomData<F>);
+impl<F: FieldFront> From<Expression<F>> for ExprRef<F> {
     fn from(val: Expression<F>) -> Self {
+        F::alloc(val)
+    }
+}
+
+impl<FF: FieldFront<Field = F>, F: Field> From<Expression<FF>> for ExpressionMid<F> {
+    fn from(val: Expression<FF>) -> Self {
         match val {
             Expression::Constant(c) => ExpressionMid::Constant(c.into_field()),
             Expression::Selector(_) => unreachable!(),
@@ -542,18 +512,20 @@ impl<F: FieldFront<Field = IF>, IF: Field> From<Expression<F>> for ExpressionMid
                 rotation,
             })),
             Expression::Challenge(c) => ExpressionMid::Var(VarMid::Challenge(c.into())),
-            Expression::Negated(e) => ExpressionMid::Negated(Box::new((F::get(&e)).into())),
-            Expression::Sum(lhs, rhs) => {
-                ExpressionMid::Sum(Box::new(F::get(&lhs).into()), Box::new(F::get(&rhs).into()))
-            }
-            Expression::Product(lhs, rhs) => {
-                ExpressionMid::Product(Box::new(F::get(&lhs).into()), Box::new(F::get(&rhs).into()))
-            }
+            Expression::Negated(e) => ExpressionMid::Negated(Box::new((FF::get(&e)).into())),
+            Expression::Sum(lhs, rhs) => ExpressionMid::Sum(
+                Box::new(FF::get(&lhs).into()),
+                Box::new(FF::get(&rhs).into()),
+            ),
+            Expression::Product(lhs, rhs) => ExpressionMid::Product(
+                Box::new(FF::get(&lhs).into()),
+                Box::new(FF::get(&rhs).into()),
+            ),
             Expression::Scaled(e, c) => ExpressionMid::Product(
-                Box::new(F::get(&e).into()),
+                Box::new(FF::get(&e).into()),
                 Box::new(ExpressionMid::Constant(c.into_field())),
             ),
-            Expression::Ref(ref_) => F::get(&ref_).into(),
+            Expression::Ref(ref_) => FF::get(&ref_).into(),
         }
     }
 }
@@ -1181,61 +1153,6 @@ impl<F: FieldFront> Product<Self> for Expression<F> {
             .unwrap_or(Expression::Constant(F::ONE))
     }
 }
-
-#[allow(non_camel_case_types)]
-pub struct ExprArena<F: FieldFront>(Vec<Expression<F>>);
-
-impl<F: FieldFront> ExprArena<F> {
-    pub fn new() -> Self {
-        Self(Vec::new())
-    }
-    pub fn push(&mut self, expr: Expression<F>) -> crate::plonk::ExprRef<F> {
-        let index = self.0.len();
-        self.0.push(expr);
-        ExprRef(index, std::marker::PhantomData)
-    }
-    pub fn get(&self, ref_: crate::plonk::ExprRef<F>) -> &Expression<F> {
-        &self.0[ref_.0]
-    }
-}
-
-#[macro_export]
-macro_rules! expression_arena {
-    ($arena:ident, $field:ty) => {
-        fn $arena() -> &'static std::sync::RwLock<ExprArena<$field>> {
-            static LINES: std::sync::OnceLock<std::sync::RwLock<ExprArena<$field>>> =
-                std::sync::OnceLock::new();
-            LINES.get_or_init(|| std::sync::RwLock::new(ExprArena::new()))
-        }
-
-        impl crate::plonk::FieldFront for $field {
-            type Field = $field;
-            fn into_field(self) -> Self::Field {
-                self
-            }
-            fn into_field_fr(f: Self::Field) -> Self {
-                f
-            }
-            fn alloc(expr: crate::plonk::Expression<Self>) -> crate::plonk::ExprRef<Self> {
-                $arena().write().unwrap().push(expr)
-            }
-            fn get(ref_: &crate::plonk::ExprRef<Self>) -> crate::plonk::Expression<Self> {
-                *$arena().read().unwrap().get(*ref_)
-            }
-        }
-
-        impl Into<crate::plonk::ExprRef<$field>> for $field {
-            fn into(self) -> crate::plonk::ExprRef<$field> {
-                crate::plonk::FieldFront::alloc(crate::plonk::Expression::Constant(self))
-            }
-        }
-    };
-}
-
-//#[cfg(test)]
-expression_arena!(arena_bn256_fr, halo2curves::bn256::Fr);
-expression_arena!(arena_bn256_fq, halo2curves::bn256::Fq);
-expression_arena!(arena_pasta_fp, halo2curves::pasta::Fp);
 
 #[cfg(test)]
 mod tests {

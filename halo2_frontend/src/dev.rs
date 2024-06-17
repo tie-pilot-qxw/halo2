@@ -184,7 +184,7 @@ impl<F: FieldFront> Mul<F> for Value<F> {
 /// use halo2_frontend::{
 ///     circuit::{Layouter, SimpleFloorPlanner, Value},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
-///     plonk::{circuit::Column, Circuit, ConstraintSystem, Error, Advice, Selector},
+///     plonk::{circuit::Column, Circuit, ConstraintSystem, Error, Advice, Selector, FieldFront},
 /// };
 /// use halo2_middleware::circuit::{Any, ColumnMid};
 /// use halo2_middleware::poly::Rotation;
@@ -206,7 +206,7 @@ impl<F: FieldFront> Mul<F> for Value<F> {
 ///     b: Value<u64>,
 /// }
 ///
-/// impl<F: PrimeField> Circuit<F> for MyCircuit {
+/// impl<F: FieldFront + From<u64>> Circuit<F> for MyCircuit {
 ///     type Config = MyConfig;
 ///     type FloorPlanner = SimpleFloorPlanner;
 ///     #[cfg(feature = "circuit-params")]
@@ -284,7 +284,7 @@ impl<F: FieldFront> Mul<F> for Value<F> {
 ///     MockProver::<Fp>::run(2, &circuit, vec![]).unwrap_err()
 /// });
 /// assert_eq!(
-///     result.unwrap_err().downcast_rF::<String>().unwrap(),
+///     result.unwrap_err().downcast_ref::<String>().unwrap(),
 ///     "n=4, minimum_rows=8, k=2"
 /// );
 /// ```
@@ -1376,13 +1376,10 @@ mod tests {
 
                     // If q is enabled, a must be in the table.
                     // When q is not enabled, lookup the default value instead.
-                    let not_q = Expression::Constant(Fp::one()) - q.clone();
+                    let not_q = Expression::Constant(Fp::one()) - q;
                     let default = Expression::Constant(Fp::from(2));
                     vec![
-                        (
-                            q.clone() * a.clone() + not_q.clone() * default.clone(),
-                            table,
-                        ),
+                        (q * a + not_q * default, table),
                         (q * a + not_q * default, advice_table),
                     ]
                 });
@@ -1540,7 +1537,7 @@ mod tests {
 
                     // If q is enabled, a must be in the table.
                     // When q is not enabled, lookup the default value instead.
-                    let not_q = Expression::Constant(Fp::one()) - q.clone();
+                    let not_q = Expression::Constant(Fp::one()) - q;
                     let default = Expression::Constant(Fp::from(2));
                     vec![(q * a + not_q * default, table)]
                 });

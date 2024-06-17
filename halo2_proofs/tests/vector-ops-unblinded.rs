@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use ff::FromUniformBytes;
 use halo2_frontend::plonk::FieldFront;
 use halo2_proofs::{
-    arithmetic::{CurveAffine, Field},
+    arithmetic::CurveAffine,
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
     plonk::*,
     poly::{
@@ -467,11 +467,11 @@ impl<F: FieldFront> Circuit<F> for AddCircuit<F> {
 }
 // ANCHOR_END: circuit
 
-fn test_prover<C: CurveAffine, FE: FieldFront<Field=C::Scalar>>(
+fn test_prover<C: CurveAffine, F: FieldFront<Field = C::Scalar>>(
     k: u32,
-    circuit: impl Circuit<FE>,
+    circuit: impl Circuit<F>,
     expected: bool,
-    instances: Vec<C::Scalar>,
+    instances: Vec<F>,
 ) -> Vec<u8>
 where
     C::Scalar: FromUniformBytes<64>,
@@ -484,7 +484,7 @@ where
     let proof = {
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
-        create_proof::<IPACommitmentScheme<C>, ProverIPA<C>, _, _, _, _, C::ScalarExt>(
+        create_proof::<IPACommitmentScheme<C>, ProverIPA<C>, _, _, _, _, F>(
             &params,
             &pk,
             &[circuit],
@@ -501,7 +501,7 @@ where
         let strategy = AccumulatorStrategy::new(&params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
 
-        verify_proof::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, _>(
+        verify_proof::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, _, F>(
             &params,
             pk.get_vk(),
             strategy,
@@ -546,9 +546,9 @@ fn test_vector_ops_unbinded() {
     };
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
-    let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
+    let proof_1 = test_prover::<halo2curves::pasta::EqAffine, _>(k, mul_circuit, true, c_mul);
     // the commitments will be the first columns of the proof transcript so we can compare them easily
-    let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
+    let proof_2 = test_prover::<halo2curves::pasta::EqAffine, _>(k, add_circuit, true, c_add);
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     // here we compare the first 10 bytes of the commitments
