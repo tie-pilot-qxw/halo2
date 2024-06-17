@@ -4,7 +4,7 @@
 use std::marker::PhantomData;
 
 use ff::FromUniformBytes;
-use halo2_frontend::plonk::FieldFr;
+use halo2_frontend::plonk::FieldFront;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
@@ -25,7 +25,7 @@ use halo2_proofs::{
 use rand_core::OsRng;
 
 // ANCHOR: instructions
-trait NumericInstructions<F: FieldFr>: Chip<F> {
+trait NumericInstructions<F: FieldFront>: Chip<F> {
     /// Variable representing a number.
     type Num;
 
@@ -65,7 +65,7 @@ trait NumericInstructions<F: FieldFr>: Chip<F> {
 // ANCHOR: chip
 /// The chip that will implement our instructions! Chips store their own
 /// config, as well as type markers if necessary.
-struct MultChip<F: FieldFr> {
+struct MultChip<F: FieldFront> {
     config: FieldConfig,
     _marker: PhantomData<F>,
 }
@@ -73,7 +73,7 @@ struct MultChip<F: FieldFr> {
 // ANCHOR: chip
 /// The chip that will implement our instructions! Chips store their own
 /// config, as well as type markers if necessary.
-struct AddChip<F: FieldFr> {
+struct AddChip<F: FieldFront> {
     config: FieldConfig,
     _marker: PhantomData<F>,
 }
@@ -89,7 +89,7 @@ struct FieldConfig {
     s: Selector,
 }
 
-impl<F: FieldFr> MultChip<F> {
+impl<F: FieldFront> MultChip<F> {
     fn construct(config: <Self as Chip<F>>::Config) -> Self {
         Self {
             config,
@@ -126,7 +126,7 @@ impl<F: FieldFr> MultChip<F> {
     }
 }
 
-impl<F: FieldFr> AddChip<F> {
+impl<F: FieldFront> AddChip<F> {
     fn construct(config: <Self as Chip<F>>::Config) -> Self {
         Self {
             config,
@@ -165,7 +165,7 @@ impl<F: FieldFr> AddChip<F> {
 // ANCHOR_END: chip-config
 
 // ANCHOR: chip-impl
-impl<F: FieldFr> Chip<F> for MultChip<F> {
+impl<F: FieldFront> Chip<F> for MultChip<F> {
     type Config = FieldConfig;
     type Loaded = ();
 
@@ -180,7 +180,7 @@ impl<F: FieldFr> Chip<F> for MultChip<F> {
 // ANCHOR_END: chip-impl
 
 // ANCHOR: chip-impl
-impl<F: FieldFr> Chip<F> for AddChip<F> {
+impl<F: FieldFront> Chip<F> for AddChip<F> {
     type Config = FieldConfig;
     type Loaded = ();
 
@@ -196,9 +196,9 @@ impl<F: FieldFr> Chip<F> for AddChip<F> {
 // ANCHOR: instructions-impl
 /// A variable representing a number.
 #[derive(Clone, Debug)]
-struct Number<F: FieldFr>(AssignedCell<F, F>);
+struct Number<F: FieldFront>(AssignedCell<F, F>);
 
-impl<F: FieldFr> NumericInstructions<F> for MultChip<F> {
+impl<F: FieldFront> NumericInstructions<F> for MultChip<F> {
     type Num = Number<F>;
 
     fn load_unblinded(
@@ -280,7 +280,7 @@ impl<F: FieldFr> NumericInstructions<F> for MultChip<F> {
 }
 // ANCHOR_END: instructions-impl
 
-impl<F: FieldFr> NumericInstructions<F> for AddChip<F> {
+impl<F: FieldFront> NumericInstructions<F> for AddChip<F> {
     type Num = Number<F>;
 
     fn load_unblinded(
@@ -362,12 +362,12 @@ impl<F: FieldFr> NumericInstructions<F> for AddChip<F> {
 }
 
 #[derive(Default)]
-struct MulCircuit<F: FieldFr> {
+struct MulCircuit<F: FieldFront> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
 }
 
-impl<F: FieldFr> Circuit<F> for MulCircuit<F> {
+impl<F: FieldFront> Circuit<F> for MulCircuit<F> {
     // Since we are using a single chip for everything, we can just reuse its config.
     type Config = FieldConfig;
     type FloorPlanner = SimpleFloorPlanner;
@@ -415,12 +415,12 @@ impl<F: FieldFr> Circuit<F> for MulCircuit<F> {
 // ANCHOR_END: circuit
 
 #[derive(Default)]
-struct AddCircuit<F: FieldFr> {
+struct AddCircuit<F: FieldFront> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
 }
 
-impl<F: FieldFr> Circuit<F> for AddCircuit<F> {
+impl<F: FieldFront> Circuit<F> for AddCircuit<F> {
     // Since we are using a single chip for everything, we can just reuse its config.
     type Config = FieldConfig;
     type FloorPlanner = SimpleFloorPlanner;
@@ -467,7 +467,7 @@ impl<F: FieldFr> Circuit<F> for AddCircuit<F> {
 }
 // ANCHOR_END: circuit
 
-fn test_prover<C: CurveAffine, FE: FieldFr<Field=C::Scalar>>(
+fn test_prover<C: CurveAffine, FE: FieldFront<Field=C::Scalar>>(
     k: u32,
     circuit: impl Circuit<FE>,
     expected: bool,

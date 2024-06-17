@@ -46,27 +46,27 @@ impl<C: ColumnType> Column<C> {
     }
 
     /// Return expression from column at a relative position
-    pub fn query_cell<F: FieldFr>(&self, at: Rotation) -> Expression<F> {
+    pub fn query_cell<F: FieldFront>(&self, at: Rotation) -> Expression<F> {
         self.column_type.query_cell(self.index, at)
     }
 
     /// Return expression from column at the current row
-    pub fn cur<F: FieldFr>(&self) -> Expression<F> {
+    pub fn cur<F: FieldFront>(&self) -> Expression<F> {
         self.query_cell(Rotation::cur())
     }
 
     /// Return expression from column at the next row
-    pub fn next<F: FieldFr>(&self) -> Expression<F> {
+    pub fn next<F: FieldFront>(&self) -> Expression<F> {
         self.query_cell(Rotation::next())
     }
 
     /// Return expression from column at the previous row
-    pub fn prev<F: FieldFr>(&self) -> Expression<F> {
+    pub fn prev<F: FieldFront>(&self) -> Expression<F> {
         self.query_cell(Rotation::prev())
     }
 
     /// Return expression from column at the specified rotation
-    pub fn rot<F: FieldFr>(&self, rotation: i32) -> Expression<F> {
+    pub fn rot<F: FieldFront>(&self, rotation: i32) -> Expression<F> {
         self.query_cell(Rotation(rotation))
     }
 }
@@ -262,7 +262,7 @@ impl SealedPhase for ThirdPhase {
 ///     s: Selector,
 /// }
 ///
-/// fn circuit_logic<F: FieldFr, C: Chip<F>>(chip: C, mut layouter: impl Layouter<F>) -> Result<(), Error> {
+/// fn circuit_logic<F: FieldFront, C: Chip<F>>(chip: C, mut layouter: impl Layouter<F>) -> Result<(), Error> {
 ///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
@@ -278,7 +278,11 @@ pub struct Selector(pub usize, pub(crate) bool);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
-    pub fn enable<F: FieldFr>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
+    pub fn enable<F: FieldFront>(
+        &self,
+        region: &mut Region<F>,
+        offset: usize,
+    ) -> Result<(), Error> {
         region.enable_selector(|| "", self, offset)
     }
 
@@ -294,7 +298,7 @@ impl Selector {
     }
 
     /// Return expression from selector
-    pub fn expr<F: FieldFr>(&self) -> Expression<F> {
+    pub fn expr<F: FieldFront>(&self) -> Expression<F> {
         Expression::Selector(*self)
     }
 }
@@ -416,7 +420,7 @@ impl Challenge {
     }
 
     /// Return Expression
-    pub fn expr<F: FieldFr>(&self) -> Expression<F> {
+    pub fn expr<F: FieldFront>(&self) -> Expression<F> {
         Expression::Challenge(*self)
     }
 }
@@ -441,7 +445,7 @@ impl From<ChallengeMid> for Challenge {
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub enum Expression<F: FieldFr> {
+pub enum Expression<F: FieldFront> {
     /// This is a constant polynomial
     Constant(F),
     /// This is a virtual selector
@@ -467,7 +471,7 @@ pub enum Expression<F: FieldFr> {
 }
 
 // Arena context
-pub trait FieldFr: Field {
+pub trait FieldFront: Field {
     type Field: Field;
     fn alloc(expr: Expression<Self>) -> ExprRef<Self>;
     fn get(ref_: &ExprRef<Self>) -> Expression<Self>;
@@ -477,19 +481,19 @@ pub trait FieldFr: Field {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct ExprRef<F>(usize, std::marker::PhantomData<F>);
-impl<F: FieldFr> Into<ExprRef<F>> for Expression<F> {
+impl<F: FieldFront> Into<ExprRef<F>> for Expression<F> {
     fn into(self) -> ExprRef<F> {
         F::alloc(self)
     }
 }
 
 #[allow(unused)]
-struct ArenaPool<F: FieldFr> {
+struct ArenaPool<F: FieldFront> {
     expressions: Vec<Expression<F>>,
 }
 
 #[allow(unused)]
-impl<F: FieldFr> ArenaPool<F> {
+impl<F: FieldFront> ArenaPool<F> {
     fn new() -> Self {
         Self {
             expressions: Vec::new(),
@@ -505,7 +509,7 @@ impl<F: FieldFr> ArenaPool<F> {
     }
 }
 
-impl<F: FieldFr<Field = IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF> {
+impl<F: FieldFront<Field = IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF> {
     fn from(val: Expression<F>) -> Self {
         match val {
             Expression::Constant(c) => ExpressionMid::Constant(c.into_field()),
@@ -554,7 +558,7 @@ impl<F: FieldFr<Field = IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF
     }
 }
 
-impl<F: FieldFr> Expression<F> {
+impl<F: FieldFront> Expression<F> {
     /// Make side effects
     pub fn query_cells(&mut self, cells: &mut VirtualCells<'_, F>) {
         match self {
@@ -1021,7 +1025,7 @@ impl<F: FieldFr> Expression<F> {
     }
 }
 
-impl<F: FieldFr> std::fmt::Debug for Expression<F> {
+impl<F: FieldFront> std::fmt::Debug for Expression<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expression::Constant(scalar) => f.debug_tuple("Constant").field(scalar).finish(),
@@ -1084,7 +1088,7 @@ impl<F: FieldFr> std::fmt::Debug for Expression<F> {
     }
 }
 
-impl<F: FieldFr> Neg for Expression<F> {
+impl<F: FieldFront> Neg for Expression<F> {
     type Output = Expression<F>;
     fn neg(self) -> Self::Output {
         let ref_ = match self {
@@ -1096,7 +1100,7 @@ impl<F: FieldFr> Neg for Expression<F> {
     }
 }
 
-impl<F: FieldFr> Add for Expression<F> {
+impl<F: FieldFront> Add for Expression<F> {
     type Output = Expression<F>;
     fn add(self, rhs: Expression<F>) -> Expression<F> {
         if self.contains_simple_selector() || rhs.contains_simple_selector() {
@@ -1115,7 +1119,7 @@ impl<F: FieldFr> Add for Expression<F> {
     }
 }
 
-impl<F: FieldFr> Sub for Expression<F> {
+impl<F: FieldFront> Sub for Expression<F> {
     type Output = Expression<F>;
     fn sub(self, rhs: Expression<F>) -> Expression<F> {
         if self.contains_simple_selector() || rhs.contains_simple_selector() {
@@ -1135,7 +1139,7 @@ impl<F: FieldFr> Sub for Expression<F> {
     }
 }
 
-impl<F: FieldFr> Mul for Expression<F> {
+impl<F: FieldFront> Mul for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: Expression<F>) -> Expression<F> {
         if self.contains_simple_selector() && rhs.contains_simple_selector() {
@@ -1153,7 +1157,7 @@ impl<F: FieldFr> Mul for Expression<F> {
     }
 }
 
-impl<F: FieldFr> Mul<F> for Expression<F> {
+impl<F: FieldFront> Mul<F> for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: F) -> Expression<F> {
         let self_ = match self {
@@ -1164,14 +1168,14 @@ impl<F: FieldFr> Mul<F> for Expression<F> {
     }
 }
 
-impl<F: FieldFr> Sum<Self> for Expression<F> {
+impl<F: FieldFront> Sum<Self> for Expression<F> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|acc, x| acc + x)
             .unwrap_or(Expression::Constant(F::ZERO))
     }
 }
 
-impl<F: FieldFr> Product<Self> for Expression<F> {
+impl<F: FieldFront> Product<Self> for Expression<F> {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|acc, x| acc * x)
             .unwrap_or(Expression::Constant(F::ONE))
@@ -1179,9 +1183,9 @@ impl<F: FieldFr> Product<Self> for Expression<F> {
 }
 
 #[allow(non_camel_case_types)]
-pub struct ExprArena<F: FieldFr>(Vec<Expression<F>>);
+pub struct ExprArena<F: FieldFront>(Vec<Expression<F>>);
 
-impl<F: FieldFr> ExprArena<F> {
+impl<F: FieldFront> ExprArena<F> {
     pub fn new() -> Self {
         Self(Vec::new())
     }
@@ -1199,11 +1203,12 @@ impl<F: FieldFr> ExprArena<F> {
 macro_rules! expression_arena {
     ($arena:ident, $field:ty) => {
         fn $arena() -> &'static std::sync::RwLock<ExprArena<$field>> {
-            static LINES: std::sync::OnceLock<std::sync::RwLock<ExprArena<$field>>> = std::sync::OnceLock::new();
+            static LINES: std::sync::OnceLock<std::sync::RwLock<ExprArena<$field>>> =
+                std::sync::OnceLock::new();
             LINES.get_or_init(|| std::sync::RwLock::new(ExprArena::new()))
         }
 
-        impl crate::plonk::FieldFr for $field {
+        impl crate::plonk::FieldFront for $field {
             type Field = $field;
             fn into_field(self) -> Self::Field {
                 self
@@ -1221,7 +1226,7 @@ macro_rules! expression_arena {
 
         impl Into<crate::plonk::ExprRef<$field>> for $field {
             fn into(self) -> crate::plonk::ExprRef<$field> {
-                crate::plonk::FieldFr::alloc(crate::plonk::Expression::Constant(self))
+                crate::plonk::FieldFront::alloc(crate::plonk::Expression::Constant(self))
             }
         }
     };
@@ -1234,7 +1239,6 @@ expression_arena!(arena_pasta_fp, halo2curves::pasta::Fp);
 
 #[cfg(test)]
 mod tests {
-    use super::Expression;
     use super::*;
     use halo2curves::bn256::Fr;
 

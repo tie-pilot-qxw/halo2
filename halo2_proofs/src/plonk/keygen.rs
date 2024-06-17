@@ -4,8 +4,8 @@ use halo2_backend::plonk::{
     ProvingKey, VerifyingKey,
 };
 use halo2_backend::{arithmetic::CurveAffine, poly::commitment::Params};
-use halo2_frontend::{circuit::compile_circuit, plonk::FieldFr};
 use halo2_frontend::plonk::Circuit;
+use halo2_frontend::{circuit::compile_circuit, plonk::FieldFront};
 use halo2_middleware::ff::FromUniformBytes;
 
 /// Generate a `VerifyingKey` from an instance of `Circuit`.
@@ -21,7 +21,7 @@ pub fn keygen_vk<C, P, ConcreteCircuit, F>(
 where
     C: CurveAffine,
     P: Params<C>,
-    F: FieldFr<Field = C::Scalar>,
+    F: FieldFront<Field = C::Scalar>,
     ConcreteCircuit: Circuit<F>,
     C::Scalar: FromUniformBytes<64>,
 {
@@ -44,7 +44,7 @@ pub fn keygen_vk_custom<C, P, ConcreteCircuit, F>(
 where
     C: CurveAffine,
     P: Params<C>,
-    F: FieldFr<Field = C::Scalar>,
+    F: FieldFront<Field = C::Scalar>,
     ConcreteCircuit: Circuit<F>,
     C::Scalar: FromUniformBytes<64>,
 {
@@ -66,7 +66,7 @@ pub fn keygen_pk<C, P, ConcreteCircuit, F>(
 where
     C: CurveAffine,
     P: Params<C>,
-    F: FieldFr<Field = C::Scalar>,    
+    F: FieldFront<Field = C::Scalar>,
     ConcreteCircuit: Circuit<F>,
 {
     keygen_pk_custom(params, vk, circuit, true)
@@ -89,7 +89,7 @@ pub fn keygen_pk_custom<C, P, ConcreteCircuit, F>(
 where
     C: CurveAffine,
     P: Params<C>,
-    F: FieldFr<Field = C::Scalar>,
+    F: FieldFront<Field = C::Scalar>,
     ConcreteCircuit: Circuit<F>,
 {
     let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, compress_selectors)?;

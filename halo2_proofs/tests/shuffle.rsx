@@ -1,5 +1,5 @@
 use ff::{BatchInvert, FromUniformBytes};
-use halo2_frontend::plonk::FieldFr;
+use halo2_frontend::plonk::FieldFront;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
@@ -22,11 +22,11 @@ use halo2_proofs::{
 use rand_core::{OsRng, RngCore};
 use std::iter;
 
-fn rand_2d_array<F: FieldFr, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
+fn rand_2d_array<F: FieldFront, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
     [(); W].map(|_| [(); H].map(|_| F::random(&mut *rng)))
 }
 
-fn shuffled<F: FieldFr, R: RngCore, const W: usize, const H: usize>(
+fn shuffled<F: FieldFront, R: RngCore, const W: usize, const H: usize>(
     original: [[F; H]; W],
     rng: &mut R,
 ) -> [[F; H]; W] {
@@ -55,7 +55,7 @@ struct MyConfig<const W: usize> {
 }
 
 impl<const W: usize> MyConfig<W> {
-    fn configure<F: FieldFr>(meta: &mut ConstraintSystem<F>) -> Self {
+    fn configure<F: FieldFront>(meta: &mut ConstraintSystem<F>) -> Self {
         let [q_shuffle, q_first, q_last] = [(); 3].map(|_| meta.selector());
         // First phase
         let original = [(); W].map(|_| meta.advice_column_in(FirstPhase));
@@ -111,12 +111,12 @@ impl<const W: usize> MyConfig<W> {
 }
 
 #[derive(Clone, Default)]
-struct MyCircuit<F: FieldFr, const W: usize, const H: usize> {
+struct MyCircuit<F: FieldFront, const W: usize, const H: usize> {
     original: Value<[[F; H]; W]>,
     shuffled: Value<[[F; H]; W]>,
 }
 
-impl<F: FieldFr, const W: usize, const H: usize> MyCircuit<F, W, H> {
+impl<F: FieldFront, const W: usize, const H: usize> MyCircuit<F, W, H> {
     fn rand<R: RngCore>(rng: &mut R) -> Self {
         let original = rand_2d_array::<F, _, W, H>(rng);
         let shuffled = shuffled(original, rng);
@@ -128,7 +128,7 @@ impl<F: FieldFr, const W: usize, const H: usize> MyCircuit<F, W, H> {
     }
 }
 
-impl<F: FieldFr, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H> {
+impl<F: FieldFront, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H> {
     type Config = MyConfig<W>;
     type FloorPlanner = V1;
     #[cfg(feature = "circuit-params")]

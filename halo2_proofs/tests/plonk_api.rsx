@@ -87,12 +87,12 @@ fn plonk_api() {
     }
 
     #[derive(Clone)]
-    struct MyCircuit<F: FieldFr> {
+    struct MyCircuit<F: FieldFront> {
         a: Value<F>,
         lookup_table: Vec<F>,
     }
 
-    struct StandardPlonk<F: FieldFr> {
+    struct StandardPlonk<F: FieldFront> {
         config: PlonkConfig,
         _marker: PhantomData<F>,
     }
@@ -280,7 +280,7 @@ fn plonk_api() {
         }
     }
 
-    impl<F: FieldFr> Circuit<F> for MyCircuit<F> {
+    impl<F: FieldFront> Circuit<F> for MyCircuit<F> {
         type Config = PlonkConfig;
         type FloorPlanner = SimpleFloorPlanner;
         #[cfg(feature = "circuit-params")]

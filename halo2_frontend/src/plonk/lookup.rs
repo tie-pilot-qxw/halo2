@@ -1,16 +1,16 @@
 use crate::plonk::Expression;
+use crate::plonk::FieldFront;
 use std::fmt::{self, Debug};
-use crate::plonk::FieldFr;
 
 /// Expressions involved in a lookup argument, with a name as metadata.
 #[derive(Clone)]
-pub struct Argument<F: FieldFr> {
+pub struct Argument<F: FieldFront> {
     pub(crate) name: String,
     pub(crate) input_expressions: Vec<Expression<F>>,
     pub(crate) table_expressions: Vec<Expression<F>>,
 }
 
-impl<F: FieldFr> Debug for Argument<F> {
+impl<F: FieldFront> Debug for Argument<F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Argument")
             .field("input_expressions", &self.input_expressions)
@@ -19,7 +19,7 @@ impl<F: FieldFr> Debug for Argument<F> {
     }
 }
 
-impl<F: FieldFr> Argument<F> {
+impl<F: FieldFront> Argument<F> {
     /// Constructs a new lookup argument.
     ///
     /// `table_map` is a sequence of `(input, table)` tuples.

@@ -41,7 +41,7 @@ pub use gates::CircuitGates;
 mod tfp;
 pub use tfp::TracingFloorPlanner;
 
-use crate::plonk::FieldFr;
+use crate::plonk::FieldFront;
 
 #[cfg(feature = "dev-graph")]
 mod graph;
@@ -89,7 +89,7 @@ impl Region {
 
 /// The value of a particular cell within the circuit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CellValue<F: FieldFr> {
+pub enum CellValue<F: FieldFront> {
     /// An unassigned cell.
     Unassigned,
     /// A cell that has been assigned a value.
@@ -100,12 +100,12 @@ pub enum CellValue<F: FieldFr> {
 
 /// A value within an expression.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
-enum Value<F: FieldFr> {
+enum Value<F: FieldFront> {
     Real(F),
     Poison,
 }
 
-impl<F: FieldFr> From<CellValue<F>> for Value<F> {
+impl<F: FieldFront> From<CellValue<F>> for Value<F> {
     fn from(value: CellValue<F>) -> Self {
         match value {
             // Cells that haven't been explicitly assigned to, default to zero.
@@ -116,7 +116,7 @@ impl<F: FieldFr> From<CellValue<F>> for Value<F> {
     }
 }
 
-impl<F: FieldFr> Neg for Value<F> {
+impl<F: FieldFront> Neg for Value<F> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -127,7 +127,7 @@ impl<F: FieldFr> Neg for Value<F> {
     }
 }
 
-impl<F: FieldFr> Add for Value<F> {
+impl<F: FieldFront> Add for Value<F> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -138,7 +138,7 @@ impl<F: FieldFr> Add for Value<F> {
     }
 }
 
-impl<F: FieldFr> Mul for Value<F> {
+impl<F: FieldFront> Mul for Value<F> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -156,7 +156,7 @@ impl<F: FieldFr> Mul for Value<F> {
     }
 }
 
-impl<F: FieldFr> Mul<F> for Value<F> {
+impl<F: FieldFront> Mul<F> for Value<F> {
     type Output = Self;
 
     fn mul(self, rhs: F) -> Self::Output {
@@ -289,7 +289,7 @@ impl<F: FieldFr> Mul<F> for Value<F> {
 /// );
 /// ```
 #[derive(Debug)]
-pub struct MockProver<F: FieldFr> {
+pub struct MockProver<F: FieldFront> {
     k: u32,
     n: u32,
     cs: ConstraintSystem<F>,
@@ -321,14 +321,14 @@ pub struct MockProver<F: FieldFr> {
 
 /// Instance Value
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InstanceValue<F: FieldFr> {
+pub enum InstanceValue<F: FieldFront> {
     /// Assigned instance value
     Assigned(F),
     /// Padding
     Padding,
 }
 
-impl<F: FieldFr> InstanceValue<F> {
+impl<F: FieldFront> InstanceValue<F> {
     /// Field value on the instance cell
     pub fn value(&self) -> F {
         match self {
@@ -338,13 +338,13 @@ impl<F: FieldFr> InstanceValue<F> {
     }
 }
 
-impl<F: FieldFr> MockProver<F> {
+impl<F: FieldFront> MockProver<F> {
     fn in_phase<P: Phase>(&self, phase: P) -> bool {
         self.current_phase == phase.to_sealed()
     }
 }
 
-impl<F: FieldFr> Assignment<F> for MockProver<F> {
+impl<F: FieldFront> Assignment<F> for MockProver<F> {
     fn enter_region<NR, N>(&mut self, name: N)
     where
         NR: Into<String>,
@@ -608,7 +608,7 @@ impl<F: FieldFr> Assignment<F> for MockProver<F> {
     }
 }
 
-impl<F: FieldFr + FromUniformBytes<64> + Ord> MockProver<F> {
+impl<F: FieldFront + FromUniformBytes<64> + Ord> MockProver<F> {
     /// Runs a synthetic keygen-and-prove operation on the given circuit, collecting data
     /// about the constraints and their assignments.
     pub fn run<ConcreteCircuit: Circuit<F>>(

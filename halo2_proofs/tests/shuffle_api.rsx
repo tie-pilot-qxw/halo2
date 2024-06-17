@@ -25,7 +25,7 @@ use halo2_proofs::{
 use halo2curves::{pasta::EqAffine, CurveAffine};
 use rand_core::OsRng;
 
-struct ShuffleChip<F: FieldFr> {
+struct ShuffleChip<F: FieldFront> {
     config: ShuffleConfig,
     _marker: PhantomData<F>,
 }
@@ -40,7 +40,7 @@ struct ShuffleConfig {
     s_shuffle: Selector,
 }
 
-impl<F: FieldFr> ShuffleChip<F> {
+impl<F: FieldFront> ShuffleChip<F> {
     fn construct(config: ShuffleConfig) -> Self {
         Self {
             config,
@@ -81,14 +81,14 @@ impl<F: FieldFr> ShuffleChip<F> {
 }
 
 #[derive(Default)]
-struct MyCircuit<F: FieldFr> {
+struct MyCircuit<F: FieldFront> {
     input_0: Vec<Value<F>>,
     input_1: Vec<F>,
     shuffle_0: Vec<Value<F>>,
     shuffle_1: Vec<Value<F>>,
 }
 
-impl<F: FieldFr> Circuit<F> for MyCircuit<F> {
+impl<F: FieldFront> Circuit<F> for MyCircuit<F> {
     // Since we are using a single chip for everything, we can just reuse its config.
     type Config = ShuffleConfig;
     type FloorPlanner = SimpleFloorPlanner;

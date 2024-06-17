@@ -1,4 +1,4 @@
-use super::{Expression, FieldFr};
+use super::{Expression, FieldFront};
 
 /// This describes a selector and where it is activated.
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ pub(crate) struct SelectorDescription {
 /// This describes the assigned combination of a particular selector as well as
 /// the expression it should be substituted with.
 #[derive(Debug, Clone)]
-pub(crate) struct SelectorAssignment<F: FieldFr> {
+pub(crate) struct SelectorAssignment<F: FieldFront> {
     /// The selector that this structure references, by index.
     pub selector: usize,
 
@@ -47,7 +47,7 @@ pub(crate) struct SelectorAssignment<F: FieldFr> {
 /// substitutions to the constraint system.
 ///
 /// This function is completely deterministic.
-pub(crate) fn process<F: FieldFr, E>(
+pub(crate) fn process<F: FieldFront, E>(
     mut selectors: Vec<SelectorDescription>,
     max_degree: usize,
     mut allocate_fixed_column: E,
@@ -229,11 +229,11 @@ where
 mod tests {
     use super::*;
     use crate::plonk::FixedQuery;
+    use halo2_middleware::ff::Field;
     use halo2_middleware::poly::Rotation;
     use halo2curves::pasta::Fp;
     use proptest::collection::{vec, SizeRange};
     use proptest::prelude::*;
-    use halo2_middleware::ff::Field;
 
     prop_compose! {
         fn arb_selector(assignment_size: usize, max_degree: usize)

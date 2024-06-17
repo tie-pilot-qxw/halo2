@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use ff::PrimeField;
 use halo2_debug::display::expr_disp_names;
 use halo2_frontend::circuit::compile_circuit;
-use halo2_frontend::plonk::{Error, FieldFr};
+use halo2_frontend::plonk::{Error, FieldFront};
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::poly::Rotation;
 
@@ -24,8 +24,6 @@ use halo2_proofs::poly::kzg::strategy::SingleStrategy;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 use rand_core::block::BlockRng;
 use rand_core::block::BlockRngCore;
-use halo2_frontend::expression_arena;
-use halo2_frontend::plonk;
 
 // One number generator, that can be used as a deterministic Rng, outputing fixed values.
 pub struct OneNg {}
@@ -56,12 +54,12 @@ struct MyCircuitConfig {
 }
 
 #[derive(Debug)]
-struct MyCircuitChip<F: FieldFr> {
+struct MyCircuitChip<F: FieldFront> {
     config: MyCircuitConfig,
     marker: PhantomData<F>,
 }
 
-trait MyCircuitComposer<F: FieldFr> {
+trait MyCircuitComposer<F: FieldFront> {
     fn raw_multiply<FM>(
         &self,
         layouter: &mut impl Layouter<F>,
@@ -93,7 +91,7 @@ trait MyCircuitComposer<F: FieldFr> {
         FM: FnMut() -> Value<(Assigned<F>, Assigned<F>)>;
 }
 
-impl<F: FieldFr> MyCircuitChip<F> {
+impl<F: FieldFront> MyCircuitChip<F> {
     fn construct(config: MyCircuitConfig) -> Self {
         Self {
             config,
@@ -164,7 +162,7 @@ impl<F: FieldFr> MyCircuitChip<F> {
     }
 }
 
-impl<F: FieldFr> MyCircuitComposer<F> for MyCircuitChip<F> {
+impl<F: FieldFront> MyCircuitComposer<F> for MyCircuitChip<F> {
     fn raw_multiply<FM>(
         &self,
         layouter: &mut impl Layouter<F>,
@@ -293,13 +291,13 @@ impl<F: FieldFr> MyCircuitComposer<F> for MyCircuitChip<F> {
 }
 
 #[derive(Debug, Clone, Default)]
-struct MyCircuit<F: FieldFr> {
+struct MyCircuit<F: FieldFront> {
     x: Value<F>,
     y: Value<F>,
     constant: F,
 }
 
-impl<F: FieldFr> Circuit<F> for MyCircuit<F> {
+impl<F: FieldFront> Circuit<F> for MyCircuit<F> {
     type Config = MyCircuitConfig;
     type FloorPlanner = SimpleFloorPlanner;
     #[cfg(feature = "circuit-params")]
@@ -376,7 +374,16 @@ fn test_mycircuit(
     let instances = vec![vec![vec![Fr::one(), Fr::from_u128(3)]]];
 
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
-    create_proof_with_engine::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _, _, halo2curves::bn256::Fr>(
+    create_proof_with_engine::<
+        KZGCommitmentScheme<Bn256>,
+        ProverSHPLONK<'_, Bn256>,
+        _,
+        _,
+        _,
+        _,
+        _,
+        halo2curves::bn256::Fr,
+    >(
         engine,
         &params,
         &pk,

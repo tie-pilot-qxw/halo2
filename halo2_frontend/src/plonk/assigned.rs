@@ -1,5 +1,5 @@
+use crate::plonk::FieldFront;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use crate::plonk::FieldFr;
 
 /// A value assigned to a cell within a circuit.
 ///
@@ -16,31 +16,31 @@ pub enum Assigned<F> {
     Rational(F, F),
 }
 
-impl<F: FieldFr> From<&Assigned<F>> for Assigned<F> {
+impl<F: FieldFront> From<&Assigned<F>> for Assigned<F> {
     fn from(val: &Assigned<F>) -> Self {
         *val
     }
 }
 
-impl<F: FieldFr> From<&F> for Assigned<F> {
+impl<F: FieldFront> From<&F> for Assigned<F> {
     fn from(numerator: &F) -> Self {
         Assigned::Trivial(*numerator)
     }
 }
 
-impl<F: FieldFr> From<F> for Assigned<F> {
+impl<F: FieldFront> From<F> for Assigned<F> {
     fn from(numerator: F) -> Self {
         Assigned::Trivial(numerator)
     }
 }
 
-impl<F: FieldFr> From<(F, F)> for Assigned<F> {
+impl<F: FieldFront> From<(F, F)> for Assigned<F> {
     fn from((numerator, denominator): (F, F)) -> Self {
         Assigned::Rational(numerator, denominator)
     }
 }
 
-impl<F: FieldFr> PartialEq for Assigned<F> {
+impl<F: FieldFront> PartialEq for Assigned<F> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             // At least one side is directly zero.
@@ -68,9 +68,9 @@ impl<F: FieldFr> PartialEq for Assigned<F> {
     }
 }
 
-impl<F: FieldFr> Eq for Assigned<F> {}
+impl<F: FieldFront> Eq for Assigned<F> {}
 
-impl<F: FieldFr> Neg for Assigned<F> {
+impl<F: FieldFront> Neg for Assigned<F> {
     type Output = Assigned<F>;
     fn neg(self) -> Self::Output {
         match self {
@@ -81,14 +81,14 @@ impl<F: FieldFr> Neg for Assigned<F> {
     }
 }
 
-impl<F: FieldFr> Neg for &Assigned<F> {
+impl<F: FieldFront> Neg for &Assigned<F> {
     type Output = Assigned<F>;
     fn neg(self) -> Self::Output {
         -*self
     }
 }
 
-impl<F: FieldFr> Add for Assigned<F> {
+impl<F: FieldFront> Add for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: Assigned<F>) -> Assigned<F> {
         match (self, rhs) {
@@ -120,108 +120,108 @@ impl<F: FieldFr> Add for Assigned<F> {
     }
 }
 
-impl<F: FieldFr> Add<F> for Assigned<F> {
+impl<F: FieldFront> Add<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: F) -> Assigned<F> {
         self + Self::Trivial(rhs)
     }
 }
 
-impl<F: FieldFr> Add<F> for &Assigned<F> {
+impl<F: FieldFront> Add<F> for &Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: F) -> Assigned<F> {
         *self + rhs
     }
 }
 
-impl<F: FieldFr> Add<&Assigned<F>> for Assigned<F> {
+impl<F: FieldFront> Add<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: &Self) -> Assigned<F> {
         self + *rhs
     }
 }
 
-impl<F: FieldFr> Add<Assigned<F>> for &Assigned<F> {
+impl<F: FieldFront> Add<Assigned<F>> for &Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: Assigned<F>) -> Assigned<F> {
         *self + rhs
     }
 }
 
-impl<F: FieldFr> Add<&Assigned<F>> for &Assigned<F> {
+impl<F: FieldFront> Add<&Assigned<F>> for &Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: &Assigned<F>) -> Assigned<F> {
         *self + *rhs
     }
 }
 
-impl<F: FieldFr> AddAssign for Assigned<F> {
+impl<F: FieldFront> AddAssign for Assigned<F> {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl<F: FieldFr> AddAssign<&Assigned<F>> for Assigned<F> {
+impl<F: FieldFront> AddAssign<&Assigned<F>> for Assigned<F> {
     fn add_assign(&mut self, rhs: &Self) {
         *self = *self + rhs;
     }
 }
 
-impl<F: FieldFr> Sub for Assigned<F> {
+impl<F: FieldFront> Sub for Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: Assigned<F>) -> Assigned<F> {
         self + (-rhs)
     }
 }
 
-impl<F: FieldFr> Sub<F> for Assigned<F> {
+impl<F: FieldFront> Sub<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: F) -> Assigned<F> {
         self + (-rhs)
     }
 }
 
-impl<F: FieldFr> Sub<F> for &Assigned<F> {
+impl<F: FieldFront> Sub<F> for &Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: F) -> Assigned<F> {
         *self - rhs
     }
 }
 
-impl<F: FieldFr> Sub<&Assigned<F>> for Assigned<F> {
+impl<F: FieldFront> Sub<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: &Self) -> Assigned<F> {
         self - *rhs
     }
 }
 
-impl<F: FieldFr> Sub<Assigned<F>> for &Assigned<F> {
+impl<F: FieldFront> Sub<Assigned<F>> for &Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: Assigned<F>) -> Assigned<F> {
         *self - rhs
     }
 }
 
-impl<F: FieldFr> Sub<&Assigned<F>> for &Assigned<F> {
+impl<F: FieldFront> Sub<&Assigned<F>> for &Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: &Assigned<F>) -> Assigned<F> {
         *self - *rhs
     }
 }
 
-impl<F: FieldFr> SubAssign for Assigned<F> {
+impl<F: FieldFront> SubAssign for Assigned<F> {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl<F: FieldFr> SubAssign<&Assigned<F>> for Assigned<F> {
+impl<F: FieldFront> SubAssign<&Assigned<F>> for Assigned<F> {
     fn sub_assign(&mut self, rhs: &Self) {
         *self = *self - rhs;
     }
 }
 
-impl<F: FieldFr> Mul for Assigned<F> {
+impl<F: FieldFront> Mul for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: Assigned<F>) -> Assigned<F> {
         match (self, rhs) {
@@ -242,40 +242,40 @@ impl<F: FieldFr> Mul for Assigned<F> {
     }
 }
 
-impl<F: FieldFr> Mul<F> for Assigned<F> {
+impl<F: FieldFront> Mul<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: F) -> Assigned<F> {
         self * Self::Trivial(rhs)
     }
 }
 
-impl<F: FieldFr> Mul<F> for &Assigned<F> {
+impl<F: FieldFront> Mul<F> for &Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: F) -> Assigned<F> {
         *self * rhs
     }
 }
 
-impl<F: FieldFr> Mul<&Assigned<F>> for Assigned<F> {
+impl<F: FieldFront> Mul<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: &Assigned<F>) -> Assigned<F> {
         self * *rhs
     }
 }
 
-impl<F: FieldFr> MulAssign for Assigned<F> {
+impl<F: FieldFront> MulAssign for Assigned<F> {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl<F: FieldFr> MulAssign<&Assigned<F>> for Assigned<F> {
+impl<F: FieldFront> MulAssign<&Assigned<F>> for Assigned<F> {
     fn mul_assign(&mut self, rhs: &Self) {
         *self = *self * rhs;
     }
 }
 
-impl<F: FieldFr> Assigned<F> {
+impl<F: FieldFront> Assigned<F> {
     /// Returns the numerator.
     pub fn numerator(&self) -> F {
         match self {
@@ -371,9 +371,9 @@ mod proptests {
         ops::{Add, Mul, Neg, Sub},
     };
 
+    use crate::plonk::FieldFront;
     use halo2curves::pasta::Fp;
     use proptest::{collection::vec, prelude::*, sample::select};
-    use crate::plonk::FieldFr;
 
     use super::Assigned;
 
@@ -384,7 +384,7 @@ mod proptests {
         fn inv0(&self) -> Self;
     }
 
-    impl<F: FieldFr> UnaryOperand for F {
+    impl<F: FieldFront> UnaryOperand for F {
         fn double(&self) -> Self {
             self.double()
         }
@@ -402,7 +402,7 @@ mod proptests {
         }
     }
 
-    impl<F: FieldFr> UnaryOperand for Assigned<F> {
+    impl<F: FieldFront> UnaryOperand for Assigned<F> {
         fn double(&self) -> Self {
             self.double()
         }
@@ -450,8 +450,8 @@ mod proptests {
     }
 
     trait BinaryOperand: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> {}
-    impl<F: FieldFr> BinaryOperand for F {}
-    impl<F: FieldFr> BinaryOperand for Assigned<F> {}
+    impl<F: FieldFront> BinaryOperand for F {}
+    impl<F: FieldFront> BinaryOperand for Assigned<F> {}
 
     #[derive(Clone, Debug)]
     enum BinaryOperator {

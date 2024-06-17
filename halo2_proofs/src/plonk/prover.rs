@@ -3,7 +3,7 @@ use crate::poly::commitment::{self, CommitmentScheme, Params};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 use halo2_backend::plonk::{prover::Prover, ProvingKey};
 use halo2_frontend::circuit::WitnessCalculator;
-use halo2_frontend::plonk::{Circuit, ConstraintSystem, FieldFr};
+use halo2_frontend::plonk::{Circuit, ConstraintSystem, FieldFront};
 use halo2_middleware::ff::{FromUniformBytes, WithSmallOrderMulGroup};
 use halo2_middleware::zal::{
     impls::{PlonkEngine, PlonkEngineConfig},
@@ -25,7 +25,7 @@ pub fn create_proof_with_engine<
     T: TranscriptWrite<Scheme::Curve, E>,
     ConcreteCircuit: Circuit<F>,
     M: MsmAccel<Scheme::Curve>,
-    F: FieldFr<Field = Scheme::Scalar>,
+    F: FieldFront<Field = Scheme::Scalar>,
 >(
     engine: PlonkEngine<Scheme::Curve, M>,
     params: &'params Scheme::ParamsProver,
@@ -81,12 +81,20 @@ where
             .iter()
             .map(|v| {
                 v.into_iter()
-                    .map(|v| v.as_ref().map(|v| v.into_iter().map(|f| f.into_field()).collect()))
+                    .map(|v| {
+                        v.as_ref()
+                            .map(|v| v.into_iter().map(|f| f.into_field()).collect())
+                    })
                     .collect()
             })
             .collect();
 
-        challenges = prover.commit_phase(*phase, witnesses).unwrap().into_iter().map(|(k, v)| (k, F::into_field_fr(v))).collect();
+        challenges = prover
+            .commit_phase(*phase, witnesses)
+            .unwrap()
+            .into_iter()
+            .map(|(k, v)| (k, F::into_field_fr(v)))
+            .collect();
     }
     Ok(prover.create_proof()?)
 }
@@ -103,7 +111,7 @@ pub fn create_proof<
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
     ConcreteCircuit: Circuit<F>,
-    F: FieldFr<Field = Scheme::Scalar>,
+    F: FieldFront<Field = Scheme::Scalar>,
 >(
     params: &'params Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
@@ -124,9 +132,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::plonk::Error;
-    use halo2_frontend::plonk::{Circuit, FieldFr};
     use super::*;
+    use crate::plonk::Error;
+    use halo2_frontend::plonk::{Circuit, FieldFront};
 
     #[test]
     fn test_create_proof() {
@@ -139,14 +147,13 @@ mod test {
             },
             transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
         };
-        use halo2_middleware::ff::Field;
         use halo2curves::bn256::Bn256;
         use rand_core::OsRng;
 
         #[derive(Clone, Copy)]
         struct MyCircuit;
 
-        impl<F: FieldFr> Circuit<F> for MyCircuit {
+        impl<F: FieldFront> Circuit<F> for MyCircuit {
             type Config = ();
             type FloorPlanner = SimpleFloorPlanner;
             #[cfg(feature = "circuit-params")]
@@ -168,12 +175,22 @@ mod test {
         }
 
         let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, OsRng);
-        let vk = keygen_vk::<_, _, _,halo2curves::bn256::Fr>(&params, &MyCircuit).expect("keygen_vk should not fail");
-        let pk = keygen_pk::<_,_,_,halo2curves::bn256::Fr>(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
+        let vk = keygen_vk::<_, _, _, halo2curves::bn256::Fr>(&params, &MyCircuit)
+            .expect("keygen_vk should not fail");
+        let pk = keygen_pk::<_, _, _, halo2curves::bn256::Fr>(&params, vk, &MyCircuit)
+            .expect("keygen_pk should not fail");
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
         // Create proof with wrong number of instances
-        let proof = create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>,_, _, _, _, halo2curves::bn256::Fr>(
+        let proof = create_proof::<
+            KZGCommitmentScheme<_>,
+            ProverSHPLONK<_>,
+            _,
+            _,
+            _,
+            _,
+            halo2curves::bn256::Fr,
+        >(
             &params,
             &pk,
             &[MyCircuit, MyCircuit],
@@ -210,15 +227,14 @@ mod test {
             },
             transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
         };
-        use halo2_frontend::plonk::FieldFr;
-        use halo2_middleware::ff::Field;
+        use halo2_frontend::plonk::FieldFront;
         use halo2curves::bn256::Bn256;
         use rand_core::OsRng;
 
         #[derive(Clone, Copy)]
         struct MyCircuit;
 
-        impl<F: FieldFr> Circuit<F> for MyCircuit {
+        impl<F: FieldFront> Circuit<F> for MyCircuit {
             type Config = ();
             type FloorPlanner = SimpleFloorPlanner;
             #[cfg(feature = "circuit-params")]
@@ -241,14 +257,32 @@ mod test {
 
         let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, OsRng);
         let compress_selectors = true;
-        let vk = keygen_vk_custom::<_,_,_,halo2curves::bn256::Fr>(&params, &MyCircuit, compress_selectors)
-            .expect("keygen_vk_custom should not fail");
-        let pk = keygen_pk_custom::<_,_,_,halo2curves::bn256::Fr>(&params, vk, &MyCircuit, compress_selectors)
-            .expect("keygen_pk_custom should not fail");
+        let vk = keygen_vk_custom::<_, _, _, halo2curves::bn256::Fr>(
+            &params,
+            &MyCircuit,
+            compress_selectors,
+        )
+        .expect("keygen_vk_custom should not fail");
+        let pk = keygen_pk_custom::<_, _, _, halo2curves::bn256::Fr>(
+            &params,
+            vk,
+            &MyCircuit,
+            compress_selectors,
+        )
+        .expect("keygen_pk_custom should not fail");
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
         let engine = PlonkEngineConfig::build_default();
 
-        create_proof_with_engine::<KZGCommitmentScheme<_>, ProverSHPLONK<_>,_,_,  _, _, _, halo2curves::bn256::Fr>(
+        create_proof_with_engine::<
+            KZGCommitmentScheme<_>,
+            ProverSHPLONK<_>,
+            _,
+            _,
+            _,
+            _,
+            _,
+            halo2curves::bn256::Fr,
+        >(
             engine,
             &params,
             &pk,

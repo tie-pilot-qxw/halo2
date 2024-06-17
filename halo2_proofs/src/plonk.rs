@@ -12,7 +12,7 @@ mod verifier {
     pub use halo2_backend::plonk::verifier::verify_proof;
 }
 
-use halo2_frontend::{circuit::compile_circuit, plonk::FieldFr};
+use halo2_frontend::{circuit::compile_circuit, plonk::FieldFront};
 pub use keygen::{keygen_pk, keygen_pk_custom, keygen_vk, keygen_vk_custom};
 
 pub use prover::{create_proof, create_proof_with_engine};
@@ -50,7 +50,7 @@ pub fn vk_read<C: SerdeCurveAffine, R: io::Read, F, ConcreteCircuit: Circuit<F>>
 ) -> io::Result<VerifyingKey<C>>
 where
     C::Scalar: SerdePrimeField + FromUniformBytes<64>,
-    F: FieldFr<Field = C::Scalar>,
+    F: FieldFront<Field = C::Scalar>,
 {
     let (_, _, cs) = compile_circuit(k, circuit, compress_selectors)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
@@ -79,9 +79,8 @@ pub fn pk_read<C: SerdeCurveAffine, R: io::Read, F, ConcreteCircuit: Circuit<F>>
 ) -> io::Result<ProvingKey<C>>
 where
     C::Scalar: SerdePrimeField + FromUniformBytes<64>,
-    F: FieldFr<Field = C::Scalar>,
-
-    {
+    F: FieldFront<Field = C::Scalar>,
+{
     let (_, _, cs) = compile_circuit(k, circuit, compress_selectors)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
     let cs_mid: ConstraintSystemMid<_> = cs.into();

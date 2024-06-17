@@ -29,8 +29,8 @@ pub use floor_planner::single_pass::SimpleFloorPlanner;
 
 pub mod layouter;
 
+use crate::plonk::FieldFront;
 pub use table_layouter::{SimpleTableLayouter, TableLayouter};
-use crate::plonk::FieldFr;
 
 /// Compile a circuit.  Runs configure and synthesize on the circuit in order to materialize the
 /// circuit into its columns and the column configuration; as well as doing the fixed column and
@@ -38,7 +38,7 @@ use crate::plonk::FieldFr;
 /// generation, and proof generation.
 /// If `compress_selectors` is true, multiple selector columns may be multiplexed.
 #[allow(clippy::type_complexity)]
-pub fn compile_circuit<FF: FieldFr<Field=F>, F: Field, ConcreteCircuit: Circuit<FF>>(
+pub fn compile_circuit<FF: FieldFront<Field = F>, F: Field, ConcreteCircuit: Circuit<FF>>(
     k: u32,
     circuit: &ConcreteCircuit,
     compress_selectors: bool,
@@ -99,7 +99,10 @@ pub fn compile_circuit<FF: FieldFr<Field=F>, F: Field, ConcreteCircuit: Circuit<
         permutation: halo2_middleware::permutation::AssemblyMid {
             copies: assembly.permutation.copies,
         },
-        fixed: fixed.into_iter().map(|f| f.into_iter().map(|f| f.into_field()).collect()).collect(),
+        fixed: fixed
+            .into_iter()
+            .map(|f| f.into_iter().map(|f| f.into_field()).collect())
+            .collect(),
     };
 
     Ok((
@@ -112,7 +115,7 @@ pub fn compile_circuit<FF: FieldFr<Field=F>, F: Field, ConcreteCircuit: Circuit<
     ))
 }
 
-struct WitnessCollection<'a, F: FieldFr> {
+struct WitnessCollection<'a, F: FieldFront> {
     k: u32,
     current_phase: sealed::Phase,
     advice_column_phase: &'a Vec<sealed::Phase>,
@@ -122,7 +125,7 @@ struct WitnessCollection<'a, F: FieldFr> {
     usable_rows: RangeTo<usize>,
 }
 
-impl<'a, F: FieldFr> Assignment<F> for WitnessCollection<'a, F> {
+impl<'a, F: FieldFront> Assignment<F> for WitnessCollection<'a, F> {
     fn enter_region<NR, N>(&mut self, _: N)
     where
         NR: Into<String>,
@@ -253,7 +256,7 @@ impl<'a, F: FieldFr> Assignment<F> for WitnessCollection<'a, F> {
 
 /// Witness calculator.  Frontend function
 #[derive(Debug)]
-pub struct WitnessCalculator<'a, F: FieldFr, ConcreteCircuit: Circuit<F>> {
+pub struct WitnessCalculator<'a, F: FieldFront, ConcreteCircuit: Circuit<F>> {
     k: u32,
     n: usize,
     unusable_rows_start: usize,
@@ -264,7 +267,7 @@ pub struct WitnessCalculator<'a, F: FieldFr, ConcreteCircuit: Circuit<F>> {
     next_phase: u8,
 }
 
-impl<'a, F: FieldFr, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, ConcreteCircuit> {
+impl<'a, F: FieldFront, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, ConcreteCircuit> {
     /// Create a new WitnessCalculator
     pub fn new(
         k: u32,
@@ -361,7 +364,7 @@ impl<'a, F: FieldFr, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concr
 
 // Turn vectors of `Assigned<F>` into vectors of `F` by evaluation the divisions in `Assigned<F>`
 // using batched inversions.
-fn batch_invert_assigned<F: FieldFr>(assigned: Vec<Vec<Assigned<F>>>) -> Vec<Vec<F>> {
+fn batch_invert_assigned<F: FieldFront>(assigned: Vec<Vec<Assigned<F>>>) -> Vec<Vec<F>> {
     let mut assigned_denominators: Vec<_> = assigned
         .iter()
         .map(|f| {
@@ -393,7 +396,7 @@ fn batch_invert_assigned<F: FieldFr>(assigned: Vec<Vec<Assigned<F>>>) -> Vec<Vec
 // Turn a slice of `Assigned<F>` into a vector of F by multiplying each numerator with the elements
 // from `inv_denoms`, assuming that `inv_denoms` are the inverted denominators of the
 // `Assigned<F>`.
-fn poly_invert<F: FieldFr>(
+fn poly_invert<F: FieldFront>(
     poly: &[Assigned<F>],
     inv_denoms: impl ExactSizeIterator<Item = F>,
 ) -> Vec<F> {
@@ -412,7 +415,7 @@ fn poly_invert<F: FieldFr>(
 /// The chip also loads any fixed configuration needed at synthesis time
 /// using its own implementation of `load`, and stores it in [`Chip::Loaded`].
 /// This can be accessed via [`Chip::loaded`].
-pub trait Chip<F: FieldFr>: Sized {
+pub trait Chip<F: FieldFront>: Sized {
     /// A type that holds the configuration for this chip, and any other state it may need
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
     ///
@@ -484,13 +487,13 @@ pub struct Cell {
 
 /// An assigned cell.
 #[derive(Clone, Debug)]
-pub struct AssignedCell<V, F: FieldFr> {
+pub struct AssignedCell<V, F: FieldFront> {
     value: Value<V>,
     cell: Cell,
     _marker: PhantomData<F>,
 }
 
-impl<V, F: FieldFr> AssignedCell<V, F> {
+impl<V, F: FieldFront> AssignedCell<V, F> {
     /// Returns the value of the [`AssignedCell`].
     pub fn value(&self) -> Value<&V> {
         self.value.as_ref()
@@ -502,7 +505,7 @@ impl<V, F: FieldFr> AssignedCell<V, F> {
     }
 }
 
-impl<V, F: FieldFr> AssignedCell<V, F>
+impl<V, F: FieldFront> AssignedCell<V, F>
 where
     for<'v> Assigned<F>: From<&'v V>,
 {
@@ -512,7 +515,7 @@ where
     }
 }
 
-impl<F: FieldFr> AssignedCell<Assigned<F>, F> {
+impl<F: FieldFront> AssignedCell<Assigned<F>, F> {
     /// Evaluates this assigned cell's value directly, performing an unbatched inversion
     /// if necessary.
     ///
@@ -526,7 +529,7 @@ impl<F: FieldFr> AssignedCell<Assigned<F>, F> {
     }
 }
 
-impl<V: Clone, F: FieldFr> AssignedCell<V, F>
+impl<V: Clone, F: FieldFront> AssignedCell<V, F>
 where
     for<'v> Assigned<F>: From<&'v V>,
 {
@@ -565,17 +568,17 @@ where
 /// "logical" columns that are guaranteed to correspond to the chip (and have come from
 /// `Chip::Config`).
 #[derive(Debug)]
-pub struct Region<'r, F: FieldFr> {
+pub struct Region<'r, F: FieldFront> {
     region: &'r mut dyn layouter::RegionLayouter<F>,
 }
 
-impl<'r, F: FieldFr> From<&'r mut dyn layouter::RegionLayouter<F>> for Region<'r, F> {
+impl<'r, F: FieldFront> From<&'r mut dyn layouter::RegionLayouter<F>> for Region<'r, F> {
     fn from(region: &'r mut dyn layouter::RegionLayouter<F>) -> Self {
         Region { region }
     }
 }
 
-impl<'r, F: FieldFr> Region<'r, F> {
+impl<'r, F: FieldFront> Region<'r, F> {
     /// Enables a selector at the given offset.
     pub fn enable_selector<A, AR>(
         &mut self,
@@ -768,17 +771,17 @@ impl<'r, F: FieldFr> Region<'r, F> {
 
 /// A lookup table in the circuit.
 #[derive(Debug)]
-pub struct Table<'r, F: FieldFr> {
+pub struct Table<'r, F: FieldFront> {
     table: &'r mut dyn TableLayouter<F>,
 }
 
-impl<'r, F: FieldFr> From<&'r mut dyn TableLayouter<F>> for Table<'r, F> {
+impl<'r, F: FieldFront> From<&'r mut dyn TableLayouter<F>> for Table<'r, F> {
     fn from(table: &'r mut dyn TableLayouter<F>) -> Self {
         Table { table }
     }
 }
 
-impl<'r, F: FieldFr> Table<'r, F> {
+impl<'r, F: FieldFront> Table<'r, F> {
     /// Assigns a fixed value to a table cell.
     ///
     /// Returns an error if the table cell has already been assigned to.
@@ -809,7 +812,7 @@ impl<'r, F: FieldFr> Table<'r, F> {
 ///
 /// This abstracts over the circuit assignments, handling row indices etc.
 ///
-pub trait Layouter<F: FieldFr> {
+pub trait Layouter<F: FieldFront> {
     /// Represents the type of the "root" of this layouter, so that nested namespaces
     /// can minimize indirection.
     type Root: Layouter<F>;
@@ -893,9 +896,9 @@ pub trait Layouter<F: FieldFr> {
 /// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
-pub struct NamespacedLayouter<'a, F: FieldFr, L: Layouter<F> + 'a>(&'a mut L, PhantomData<F>);
+pub struct NamespacedLayouter<'a, F: FieldFront, L: Layouter<F> + 'a>(&'a mut L, PhantomData<F>);
 
-impl<'a, F: FieldFr, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a, F, L> {
+impl<'a, F: FieldFront, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a, F, L> {
     type Root = L::Root;
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
@@ -946,7 +949,7 @@ impl<'a, F: FieldFr, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a,
     }
 }
 
-impl<'a, F: FieldFr, L: Layouter<F> + 'a> Drop for NamespacedLayouter<'a, F, L> {
+impl<'a, F: FieldFront, L: Layouter<F> + 'a> Drop for NamespacedLayouter<'a, F, L> {
     fn drop(&mut self) {
         let gadget_name = {
             #[cfg(feature = "gadget-traces")]

@@ -15,7 +15,7 @@ pub trait ColumnType:
     'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
 {
     /// Return expression from cell
-    fn query_cell<F: FieldFr>(&self, index: usize, at: Rotation) -> Expression<F>;
+    fn query_cell<F: FieldFront>(&self, index: usize, at: Rotation) -> Expression<F>;
 }
 
 /// An advice column
@@ -31,7 +31,7 @@ pub struct Fixed;
 pub struct Instance;
 
 impl ColumnType for Advice {
-    fn query_cell<F: FieldFr>(&self, index: usize, at: Rotation) -> Expression<F> {
+    fn query_cell<F: FieldFront>(&self, index: usize, at: Rotation) -> Expression<F> {
         Expression::Advice(AdviceQuery {
             index: None,
             column_index: index,
@@ -40,7 +40,7 @@ impl ColumnType for Advice {
     }
 }
 impl ColumnType for Fixed {
-    fn query_cell<F: FieldFr>(&self, index: usize, at: Rotation) -> Expression<F> {
+    fn query_cell<F: FieldFront>(&self, index: usize, at: Rotation) -> Expression<F> {
         Expression::Fixed(FixedQuery {
             index: None,
             column_index: index,
@@ -49,7 +49,7 @@ impl ColumnType for Fixed {
     }
 }
 impl ColumnType for Instance {
-    fn query_cell<F: FieldFr>(&self, index: usize, at: Rotation) -> Expression<F> {
+    fn query_cell<F: FieldFront>(&self, index: usize, at: Rotation) -> Expression<F> {
         Expression::Instance(InstanceQuery {
             index: None,
             column_index: index,
@@ -58,7 +58,7 @@ impl ColumnType for Instance {
     }
 }
 impl ColumnType for Any {
-    fn query_cell<F: FieldFr>(&self, index: usize, at: Rotation) -> Expression<F> {
+    fn query_cell<F: FieldFront>(&self, index: usize, at: Rotation) -> Expression<F> {
         match self {
             Any::Advice => Expression::Advice(AdviceQuery {
                 index: None,
@@ -99,7 +99,7 @@ impl From<Instance> for Any {
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
-pub trait Assignment<F: FieldFr> {
+pub trait Assignment<F: FieldFront> {
     /// Creates a new region and enters into it.
     ///
     /// Panics if we are currently in a region (if `exit_region` was not called).
@@ -228,7 +228,7 @@ pub trait FloorPlanner {
     /// - Perform any necessary setup or measurement tasks, which may involve one or more
     ///   calls to `Circuit::default().synthesize(config, &mut layouter)`.
     /// - Call `circuit.synthesize(config, &mut layouter)` exactly once.
-    fn synthesize<F: FieldFr, CS: Assignment<F> + SyncDeps, C: Circuit<F>>(
+    fn synthesize<F: FieldFront, CS: Assignment<F> + SyncDeps, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
@@ -239,7 +239,7 @@ pub trait FloorPlanner {
 /// This is a trait that circuits provide implementations for so that the
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
-pub trait Circuit<F: FieldFr> {
+pub trait Circuit<F: FieldFront> {
     /// This is a configuration object that stores things like columns.
     type Config: Clone;
     /// The floor planner used for this circuit. This is an associated type of the
