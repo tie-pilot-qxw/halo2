@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use halo2_frontend::plonk::FieldFr;
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},

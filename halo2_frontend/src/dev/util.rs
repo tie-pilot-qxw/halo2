@@ -1,4 +1,3 @@
-use group::ff::Field;
 use std::collections::BTreeMap;
 
 use super::{metadata, CellValue, InstanceValue, Value};

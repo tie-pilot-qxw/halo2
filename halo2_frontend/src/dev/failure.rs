@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
 use std::fmt::{self, Debug};
 
-use group::ff::Field;
 use crate::plonk::FieldFr;
 
 use super::metadata::{DebugColumn, DebugVirtualCell};

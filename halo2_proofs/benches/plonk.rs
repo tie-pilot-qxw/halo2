@@ -2,6 +2,7 @@
 extern crate criterion;
 
 use group::ff::Field;
+use halo2_frontend::plonk::FieldFr;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
@@ -43,7 +44,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         sm: Column<Fixed>,
     }
 
-    trait StandardCs<FF: Field> {
+    trait StandardCs<FF: FieldFr> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -77,7 +78,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         _marker: PhantomData<F>,
     }
 
-    impl<FF: Field> StandardPlonk<FF> {
+    impl<FF: FieldFr> StandardPlonk<FF> {
         fn new(config: PlonkConfig) -> Self {
             StandardPlonk {
                 config,
@@ -86,7 +87,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         }
     }
 
-    impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
+    impl<FF: FieldFr> StandardCs<FF> for StandardPlonk<FF> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -287,7 +288,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         };
 
         let mut transcript = Blake2bWrite::<_, _, Challenge255<EqAffine>>::init(vec![]);
-        create_proof::<IPACommitmentScheme<EqAffine>, ProverIPA<EqAffine>, _, _, _, _>(
+        create_proof::<IPACommitmentScheme<EqAffine>, ProverIPA<EqAffine>, _, _, _, _, halo2curves::pasta::Fp>(
             params,
             pk,
             &[circuit],

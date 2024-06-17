@@ -467,24 +467,28 @@ pub enum Expression<F: FieldFr> {
 }
 
 // Arena context
-pub trait FieldFr : Field { 
-    type Field : Field;
+pub trait FieldFr: Field {
+    type Field: Field;
     fn push(expr: Expression<Self>) -> ExprRef<Self>;
     fn get(ref_: &ExprRef<Self>) -> Expression<Self>;
     fn into_field(self) -> Self::Field;
+    fn into_field_fr(f: Self::Field) -> Self;
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-struct ExprRef<F>(usize, std::marker::PhantomData<F>);
+pub struct ExprRef<F>(usize, std::marker::PhantomData<F>);
 impl<EF: FieldFr> Into<ExprRef<EF>> for Expression<EF> {
     fn into(self) -> ExprRef<EF> {
         EF::push(self)
     }
 }
 
+#[allow(unused)]
 struct ArenaPool<F: FieldFr> {
     expressions: Vec<Expression<F>>,
 }
+
+#[allow(unused)]
 impl<F: FieldFr> ArenaPool<F> {
     fn new() -> Self {
         Self {
@@ -499,9 +503,9 @@ impl<F: FieldFr> ArenaPool<F> {
     fn get(&self, ref_: ExprRef<F>) -> &Expression<F> {
         &self.expressions[ref_.0]
     }
-} 
+}
 
-impl<F: FieldFr<Field=IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF> {
+impl<F: FieldFr<Field = IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF> {
     fn from(val: Expression<F>) -> Self {
         match val {
             Expression::Constant(c) => ExpressionMid::Constant(c.into_field()),
@@ -541,10 +545,11 @@ impl<F: FieldFr<Field=IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF> 
             Expression::Product(lhs, rhs) => {
                 ExpressionMid::Product(Box::new(F::get(&lhs).into()), Box::new(F::get(&rhs).into()))
             }
-            Expression::Scaled(e, c) => {
-                ExpressionMid::Product(Box::new(F::get(&e).into()), Box::new(ExpressionMid::Constant(c.into_field())))
-            }
-            Expression::Ref(ref_) => F::get(&ref_).into()
+            Expression::Scaled(e, c) => ExpressionMid::Product(
+                Box::new(F::get(&e).into()),
+                Box::new(ExpressionMid::Constant(c.into_field())),
+            ),
+            Expression::Ref(ref_) => F::get(&ref_).into(),
         }
     }
 }
@@ -796,7 +801,7 @@ impl<EF: FieldFr> Expression<EF> {
                 sum(a, b)
             }
             Expression::Product(a, b) => {
-                let (a,b) = (EF::get(a), EF::get(b));
+                let (a, b) = (EF::get(a), EF::get(b));
                 let (a, b) = if a.complexity() <= b.complexity() {
                     (a, b)
                 } else {
@@ -942,7 +947,7 @@ impl<EF: FieldFr> Expression<EF> {
             Expression::Challenge(_) => 0,
             Expression::Negated(poly) => EF::get(poly).degree(),
             Expression::Sum(a, b) => max(EF::get(a).degree(), EF::get(b).degree()),
-            Expression::Product(a, b) => EF::get(a).degree() +EF::get(b).degree(),
+            Expression::Product(a, b) => EF::get(a).degree() + EF::get(b).degree(),
             Expression::Scaled(poly, _) => EF::get(poly).degree(),
             Expression::Ref(ref_) => EF::get(ref_).degree(),
         }
@@ -1059,11 +1064,21 @@ impl<EF: FieldFr> std::fmt::Debug for Expression<EF> {
                 f.debug_tuple("Challenge").field(challenge).finish()
             }
             Expression::Negated(poly) => f.debug_tuple("Negated").field(&EF::get(poly)).finish(),
-            Expression::Sum(a, b) => f.debug_tuple("Sum").field(&EF::get(a)).field(&EF::get(b)).finish(),
-            Expression::Product(a, b) => f.debug_tuple("Product").field(&EF::get(a)).field(&EF::get(b)).finish(),
-            Expression::Scaled(poly, scalar) => {
-                f.debug_tuple("Scaled").field(&EF::get(poly)).field(scalar).finish()
-            }
+            Expression::Sum(a, b) => f
+                .debug_tuple("Sum")
+                .field(&EF::get(a))
+                .field(&EF::get(b))
+                .finish(),
+            Expression::Product(a, b) => f
+                .debug_tuple("Product")
+                .field(&EF::get(a))
+                .field(&EF::get(b))
+                .finish(),
+            Expression::Scaled(poly, scalar) => f
+                .debug_tuple("Scaled")
+                .field(&EF::get(poly))
+                .field(scalar)
+                .finish(),
             Expression::Ref(ref_) => f.debug_tuple("").field(&EF::get(ref_)).finish(),
         }
     }
@@ -1115,7 +1130,7 @@ impl<F: FieldFr> Sub for Expression<F> {
             _ => F::push(rhs),
         };
         let rhs = F::push(Expression::Negated(rhs));
-        
+
         Expression::Ref(F::push(Expression::Sum(self_, rhs)))
     }
 }
@@ -1163,103 +1178,68 @@ impl<EF: FieldFr> Product<Self> for Expression<EF> {
     }
 }
 
+#[macro_export]
+macro_rules! expression_arena {
+    ($arena:ident, $field:ty) => {
+        paste::paste! {
+        static $arena: once_cell::sync::Lazy<parking_lot::RwLock<[<ExprArena $arena>]<$field>>> =
+            once_cell::sync::Lazy::new(|| parking_lot::RwLock::new([<ExprArena $arena>]::new()));
+
+        #[allow(non_camel_case_types)]
+        pub struct [<ExprArena $arena>]<F: FieldFr> {
+            expressions: Vec<Expression<F>>,
+        }
+        impl<F: FieldFr> [<ExprArena $arena>]<F> {
+            pub fn new() -> Self {
+                Self {
+                    expressions: Vec::new(),
+                }
+            }
+            pub fn push(&mut self, expr: Expression<F>) -> crate::plonk::ExprRef<F> {
+                let index = self.expressions.len();
+                self.expressions.push(expr);
+                ExprRef(index, std::marker::PhantomData)
+            }
+            pub fn get(&self, ref_: crate::plonk::ExprRef<F>) -> &Expression<F> {
+                &self.expressions[ref_.0]
+            }
+        }
+        }
+
+        impl crate::plonk::FieldFr for $field {
+            type Field = $field;
+            fn into_field(self) -> Self::Field {
+                self
+            }
+            fn into_field_fr(f: Self::Field) -> Self {
+                f
+            }
+            fn push(expr: crate::plonk::Expression<Self>) -> crate::plonk::ExprRef<Self> {
+                $arena.write().push(expr)
+            }
+            fn get(ref_: &crate::plonk::ExprRef<Self>) -> crate::plonk::Expression<Self> {
+                *$arena.read().get(*ref_)
+            }
+        }
+
+        impl Into<crate::plonk::ExprRef<$field>> for $field {
+            fn into(self) -> crate::plonk::ExprRef<$field> {
+                crate::plonk::FieldFr::push(crate::plonk::Expression::Constant(self))
+            }
+        }
+    };
+}
+
+//#[cfg(test)]
+expression_arena!(ARENA_BN256_FR, halo2curves::bn256::Fr);
+expression_arena!(ARENA_BN256_FQ, halo2curves::bn256::Fq);
+expression_arena!(PASTA_FP_ARENA, halo2curves::pasta::Fp);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::Expression;
+    use super::*;
     use halo2curves::bn256::Fr;
-    use once_cell::sync::Lazy;
-    use parking_lot::RwLock;
-
-    struct ExprArena<F: FieldFr> {
-        expressions: Vec<Expression<F>>,
-    }
-    impl<F: FieldFr> ExprArena<F> {
-        fn new() -> Self {
-            Self {
-                expressions: Vec::new(),
-            }
-        }
-        fn push(&mut self, expr: Expression<F>) -> ExprRef<F> {
-            let index = self.expressions.len();
-            self.expressions.push(expr);
-            ExprRef(index, std::marker::PhantomData)
-        }
-        fn get(&self, ref_: ExprRef<F>) -> &Expression<F> {
-            &self.expressions[ref_.0]
-        }
-    } 
-
-    static BN_256_FR_ARENA: Lazy<RwLock<ExprArena<halo2curves::bn256::Fr>>> = Lazy::new(|| {
-        RwLock::new(ExprArena::new())
-    });
-    
-    impl FieldFr for halo2curves::bn256::Fr {
-        type Field = halo2curves::bn256::Fr;
-        fn into_field(self) -> Self::Field {
-            self
-        }
-        fn push(expr: Expression<Self>) -> ExprRef<Self> {
-            BN_256_FR_ARENA.write().push(expr)
-        }
-        fn get(ref_: &ExprRef<Self>) -> Expression<Self> {
-            *BN_256_FR_ARENA.read().get(*ref_)
-        }
-    }
-
-    impl Into<ExprRef<halo2curves::bn256::Fr>> for halo2curves::bn256::Fr  {
-        fn into(self) -> ExprRef<halo2curves::bn256::Fr > {
-            FieldFr::push(Expression::Constant(self))
-        }
-    }
-
-    static BN_256_FQ_ARENA: Lazy<RwLock<ExprArena<halo2curves::bn256::Fq>>> = Lazy::new(|| {
-        RwLock::new(ExprArena::new())
-    });
-    
-    impl FieldFr for halo2curves::bn256::Fq {
-        type Field = halo2curves::bn256::Fq;
-        fn into_field(self) -> Self::Field {
-            self
-        }
-        fn push(expr: Expression<Self>) -> ExprRef<Self> {
-            BN_256_FQ_ARENA.write().push(expr)
-        }
-        fn get(ref_: &ExprRef<Self>) -> Expression<Self> {
-            *BN_256_FQ_ARENA.read().get(*ref_)
-        }
-    }
-
-    impl Into<ExprRef<halo2curves::bn256::Fq>> for halo2curves::bn256::Fq  {
-        fn into(self) -> ExprRef<halo2curves::bn256::Fq> {
-            FieldFr::push(Expression::Constant(self))
-        }
-    }
-
-    static PASTA_FP_ARENA: Lazy<RwLock<ExprArena<halo2curves::pasta::Fp>>> = Lazy::new(|| {
-        RwLock::new(ExprArena::new())
-    });
-    
-    impl FieldFr for halo2curves::pasta::Fp {
-        type Field = halo2curves::pasta::Fp;
-        fn into_field(self) -> Self::Field {
-            self
-        }       
-        fn push(expr: Expression<Self>) -> ExprRef<Self> {
-            PASTA_FP_ARENA.write().push(expr)
-        }
-        fn get(ref_: &ExprRef<Self>) -> Expression<Self> {
-            *PASTA_FP_ARENA.read().get(*ref_)
-        }
-    }
-
-    impl Into<ExprRef<halo2curves::pasta::Fp>> for halo2curves::pasta::Fp  {
-        fn into(self) -> ExprRef<halo2curves::pasta::Fp> {
-            FieldFr::push(Expression::Constant(self))
-        }
-    }
-
 
     #[test]
     fn iter_sum() {
@@ -1268,34 +1248,42 @@ mod tests {
             Expression::Constant(2.into()),
             Expression::Constant(3.into()),
         ];
-        let happened: Expression<Fr> = exprs.into_iter().sum();
-        let expected: Expression<Fr> = Expression::Sum(
-            Expression::Sum(
-               Expression::Constant(1.into()).into(),
-               Expression::Constant(2.into()).into(),
-            ).into(),
-            Expression::Constant(3.into()).into(),
+        let result: Expression<Fr> = exprs.into_iter().sum();
+        let result: Fr = result.evaluate(
+            &|c| c,
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|a| a,
+            &|a, b| a + b,
+            &|a, b| a * b,
+            &|a, b| a * b,
         );
-
-        assert_eq!(happened, expected);
+        assert_eq!(result, 6.into());
     }
 
     #[test]
     fn iter_product() {
         let exprs: Vec<Expression<Fr>> = vec![
-            Expression::Constant(1.into()),
             Expression::Constant(2.into()),
             Expression::Constant(3.into()),
+            Expression::Constant(4.into()),
         ];
-        let happened: Expression<Fr> = exprs.into_iter().product();
-        let expected: Expression<Fr> = Expression::Product(
-            Expression::Product(
-                Expression::Constant(1.into()).into(),
-                Expression::Constant(2.into()).into(),
-            ).into(),
-            Expression::Constant(3.into()).into(),
+        let result: Expression<Fr> = exprs.into_iter().product();
+        let result: Fr = result.evaluate(
+            &|c| c,
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|_| unimplemented!(),
+            &|a| a,
+            &|a, b| a + b,
+            &|a, b| a * b,
+            &|a, b| a * b,
         );
-
-        assert_eq!(happened, expected);
+        assert_eq!(result, 24.into());
     }
 }

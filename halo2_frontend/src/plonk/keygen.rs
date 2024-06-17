@@ -1,7 +1,6 @@
 use std::ops::Range;
 
 use halo2_middleware::circuit::Any;
-use halo2_middleware::ff::Field;
 use crate::plonk::FieldFr;
 
 use crate::circuit::Value;

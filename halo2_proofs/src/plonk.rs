@@ -12,7 +12,7 @@ mod verifier {
     pub use halo2_backend::plonk::verifier::verify_proof;
 }
 
-use halo2_frontend::circuit::compile_circuit;
+use halo2_frontend::{circuit::compile_circuit, plonk::FieldFr};
 pub use keygen::{keygen_pk, keygen_pk_custom, keygen_vk, keygen_vk_custom};
 
 pub use prover::{create_proof, create_proof_with_engine};
@@ -41,7 +41,7 @@ use std::io;
 /// Checks that field elements are less than modulus, and then checks that the point is on the curve.
 /// - `RawBytesUnchecked`: Reads an uncompressed curve element with coordinates in Montgomery form;
 /// does not perform any checks
-pub fn vk_read<C: SerdeCurveAffine, R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
+pub fn vk_read<C: SerdeCurveAffine, R: io::Read, EF, ConcreteCircuit: Circuit<EF>>(
     reader: &mut R,
     format: SerdeFormat,
     k: u32,
@@ -50,6 +50,7 @@ pub fn vk_read<C: SerdeCurveAffine, R: io::Read, ConcreteCircuit: Circuit<C::Sca
 ) -> io::Result<VerifyingKey<C>>
 where
     C::Scalar: SerdePrimeField + FromUniformBytes<64>,
+    EF: FieldFr<Field = C::Scalar>,
 {
     let (_, _, cs) = compile_circuit(k, circuit, compress_selectors)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
@@ -69,7 +70,7 @@ where
 /// Checks that field elements are less than modulus, and then checks that the point is on the curve.
 /// - `RawBytesUnchecked`: Reads an uncompressed curve element with coordinates in Montgomery form;
 /// does not perform any checks
-pub fn pk_read<C: SerdeCurveAffine, R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
+pub fn pk_read<C: SerdeCurveAffine, R: io::Read, EF, ConcreteCircuit: Circuit<EF>>(
     reader: &mut R,
     format: SerdeFormat,
     k: u32,
@@ -78,7 +79,9 @@ pub fn pk_read<C: SerdeCurveAffine, R: io::Read, ConcreteCircuit: Circuit<C::Sca
 ) -> io::Result<ProvingKey<C>>
 where
     C::Scalar: SerdePrimeField + FromUniformBytes<64>,
-{
+    EF: FieldFr<Field = C::Scalar>,
+
+    {
     let (_, _, cs) = compile_circuit(k, circuit, compress_selectors)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
     let cs_mid: ConstraintSystemMid<_> = cs.into();

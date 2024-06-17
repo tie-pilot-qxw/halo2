@@ -4,7 +4,6 @@ use std::fmt;
 use std::marker::PhantomData;
 
 use halo2_middleware::circuit::Any;
-use halo2_middleware::ff::Field;
 
 use crate::plonk::{Assigned, FieldFr};
 use crate::{

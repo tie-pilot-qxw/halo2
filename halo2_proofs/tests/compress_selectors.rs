@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use ff::PrimeField;
 use halo2_debug::display::expr_disp_names;
 use halo2_frontend::circuit::compile_circuit;
-use halo2_frontend::plonk::Error;
+use halo2_frontend::plonk::{Error, FieldFr};
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::poly::Rotation;
 
@@ -14,7 +14,6 @@ use halo2_backend::transcript::{
 };
 use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
-use halo2_proofs::arithmetic::Field;
 use halo2_proofs::plonk::{
     create_proof_with_engine, keygen_pk_custom, keygen_vk_custom, verify_proof, Advice, Assigned,
     Circuit, Column, ConstraintSystem, Instance, Selector,
@@ -25,6 +24,8 @@ use halo2_proofs::poly::kzg::strategy::SingleStrategy;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 use rand_core::block::BlockRng;
 use rand_core::block::BlockRngCore;
+use halo2_frontend::expression_arena;
+use halo2_frontend::plonk;
 
 // One number generator, that can be used as a deterministic Rng, outputing fixed values.
 pub struct OneNg {}
@@ -148,7 +149,7 @@ impl<F: FieldFr> MyCircuitChip<F> {
 
             let s_cubed = meta.query_selector(s_cubed);
 
-            vec![s_cubed * (l.clone() * l.clone() * l - o)]
+            vec![s_cubed * (l * l * l - o)]
         });
 
         MyCircuitConfig {
@@ -375,7 +376,7 @@ fn test_mycircuit(
     let instances = vec![vec![vec![Fr::one(), Fr::from_u128(3)]]];
 
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
-    create_proof_with_engine::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _, _>(
+    create_proof_with_engine::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _, _, halo2curves::bn256::Fr>(
         engine,
         &params,
         &pk,

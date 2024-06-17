@@ -1,5 +1,4 @@
 use super::{Expression, FieldFr};
-use halo2_middleware::ff::Field;
 
 /// This describes a selector and where it is activated.
 #[derive(Debug, Clone)]
@@ -234,6 +233,7 @@ mod tests {
     use halo2curves::pasta::Fp;
     use proptest::collection::{vec, SizeRange};
     use proptest::prelude::*;
+    use halo2_middleware::ff::Field;
 
     prop_compose! {
         fn arb_selector(assignment_size: usize, max_degree: usize)

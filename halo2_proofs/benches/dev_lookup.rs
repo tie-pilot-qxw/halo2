@@ -2,6 +2,7 @@
 extern crate criterion;
 
 use ff::{Field, PrimeField};
+use halo2_frontend::plonk::FieldFr;
 use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::*;
@@ -25,7 +26,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         advice: Column<Advice>,
     }
 
-    impl<F: PrimeField> Circuit<F> for MyCircuit<F> {
+    impl<F: FieldFr + From<u64>> Circuit<F> for MyCircuit<F> {
         type Config = MyConfig;
         type FloorPlanner = SimpleFloorPlanner;
         #[cfg(feature = "circuit-params")]

@@ -4,6 +4,7 @@
 use std::marker::PhantomData;
 
 use ff::FromUniformBytes;
+use halo2_frontend::plonk::FieldFr;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
@@ -466,9 +467,9 @@ impl<F: FieldFr> Circuit<F> for AddCircuit<F> {
 }
 // ANCHOR_END: circuit
 
-fn test_prover<C: CurveAffine>(
+fn test_prover<C: CurveAffine, FE: FieldFr<Field=C::Scalar>>(
     k: u32,
-    circuit: impl Circuit<C::Scalar>,
+    circuit: impl Circuit<FE>,
     expected: bool,
     instances: Vec<C::Scalar>,
 ) -> Vec<u8>
@@ -483,7 +484,7 @@ where
     let proof = {
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
-        create_proof::<IPACommitmentScheme<C>, ProverIPA<C>, _, _, _, _>(
+        create_proof::<IPACommitmentScheme<C>, ProverIPA<C>, _, _, _, _, C::ScalarExt>(
             &params,
             &pk,
             &[circuit],

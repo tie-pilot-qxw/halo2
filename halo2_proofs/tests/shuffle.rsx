@@ -1,4 +1,5 @@
 use ff::{BatchInvert, FromUniformBytes};
+use halo2_frontend::plonk::FieldFr;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
@@ -21,11 +22,11 @@ use halo2_proofs::{
 use rand_core::{OsRng, RngCore};
 use std::iter;
 
-fn rand_2d_array<F: Field, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
+fn rand_2d_array<F: FieldFr, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
     [(); W].map(|_| [(); H].map(|_| F::random(&mut *rng)))
 }
 
-fn shuffled<F: Field, R: RngCore, const W: usize, const H: usize>(
+fn shuffled<F: FieldFr, R: RngCore, const W: usize, const H: usize>(
     original: [[F; H]; W],
     rng: &mut R,
 ) -> [[F; H]; W] {
@@ -110,12 +111,12 @@ impl<const W: usize> MyConfig<W> {
 }
 
 #[derive(Clone, Default)]
-struct MyCircuit<F: Field, const W: usize, const H: usize> {
+struct MyCircuit<F: FieldFr, const W: usize, const H: usize> {
     original: Value<[[F; H]; W]>,
     shuffled: Value<[[F; H]; W]>,
 }
 
-impl<F: Field, const W: usize, const H: usize> MyCircuit<F, W, H> {
+impl<F: FieldFr, const W: usize, const H: usize> MyCircuit<F, W, H> {
     fn rand<R: RngCore>(rng: &mut R) -> Self {
         let original = rand_2d_array::<F, _, W, H>(rng);
         let shuffled = shuffled(original, rng);
@@ -127,7 +128,7 @@ impl<F: Field, const W: usize, const H: usize> MyCircuit<F, W, H> {
     }
 }
 
-impl<F: Field, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H> {
+impl<F: FieldFr, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H> {
     type Config = MyConfig<W>;
     type FloorPlanner = V1;
     #[cfg(feature = "circuit-params")]

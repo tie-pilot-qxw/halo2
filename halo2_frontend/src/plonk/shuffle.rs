@@ -1,5 +1,4 @@
 use crate::plonk::Expression;
-use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
 use crate::plonk::FieldFr;
 
