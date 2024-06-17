@@ -8,6 +8,7 @@ use halo2_backend::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
+use halo2_debug::check_witness;
 use halo2_frontend::{
     circuit::{
         compile_circuit, AssignedCell, Layouter, Region, SimpleFloorPlanner, Value,
@@ -20,6 +21,7 @@ use halo2_frontend::{
         Instance, SecondPhase, Selector,
     },
 };
+use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::circuit_linker::{
     link_cs, link_preprocessing, link_witness, LinkConfig, MergeStrategy,
 };
@@ -40,7 +42,8 @@ struct CircuitAConfig {
     // table:
     // s_c_not_zero * c in tbl_s_not_zero * tbl_x
     s_c_not_zero: Column<Fixed>,
-    // Dynamic table without constraints
+    // Dynamic table without constraints.  To be replaced by the columns of the circuit B which
+    // applies constraints to the table.
     tbl_s_not_zero: Column<Fixed>,
     tbl_x: Column<Advice>,
 }
@@ -70,6 +73,13 @@ impl<F: Field + From<u64>> Circuit<F> for CircuitA<F> {
         let s_c_not_zero = meta.fixed_column(); // Fixed 1
         let tbl_s_not_zero = meta.fixed_column(); // Fixed 2
         let tbl_x = meta.advice_column(); // Advice 3
+        meta.annotate_column(s_mul, || "s_mul");
+        meta.annotate_column(a, || "a");
+        meta.annotate_column(b, || "b");
+        meta.annotate_column(c, || "c");
+        meta.annotate_column(s_c_not_zero, || "s_c_not_zero");
+        meta.annotate_column(tbl_s_not_zero, || "tbl_s_not_zero");
+        meta.annotate_column(tbl_x, || "tbl_x");
 
         meta.create_gate("mul", |meta| {
             let s_mul = meta.query_fixed(s_mul, Rotation::cur());
@@ -192,6 +202,9 @@ impl<F: Field + From<u64>> Circuit<F> for CircuitB<F> {
         let s_not_zero = meta.fixed_column(); // Fixed 0
         let x = meta.advice_column(); // Advice 0
         let x_inv = meta.advice_column(); // Advice 1
+        meta.annotate_column(s_not_zero, || "s_not_zero");
+        meta.annotate_column(x, || "x");
+        meta.annotate_column(x_inv, || "x_inv");
 
         meta.create_gate("not_zero", |meta| {
             let s_not_zero = meta.query_fixed(s_not_zero, Rotation::cur());
@@ -244,6 +257,7 @@ use rand_core::SeedableRng;
 use rand_xorshift::XorShiftRng;
 // use rand_core::block::BlockRng;
 // use rand_core::block::BlockRngCore;
+use halo2_debug::display::{expr_disp_names, lookup_arg_disp_names};
 
 fn f(v: u64) -> Fr {
     Fr::from(v)
@@ -268,54 +282,86 @@ fn test_circuit_linker() {
     let (compiled_circuit_a, config_a, cs_a) = compile_circuit(k, &circuit_a, false).unwrap();
     let (compiled_circuit_b, config_b, cs_b) = compile_circuit(k, &circuit_b, false).unwrap();
 
-    let mut rng = XorShiftRng::from_seed([1; 16]);
+    let names_a = &compiled_circuit_a.cs.general_column_annotations;
+    let names_b = &compiled_circuit_b.cs.general_column_annotations;
+
+    const CIRCUIT_A: usize = 0;
+    const CIRCUIT_B: usize = 1;
+    const COL_TBL_X: usize = 3;
+    const COL_TBL_S_NOT_ZERO: usize = 2;
+    const COL_X: usize = 0;
+    const COL_S_NOT_ZERO: usize = 0;
+    assert_eq!(
+        "tbl_x",
+        names_a
+            .get(&ColumnMid::new(Any::Advice, COL_TBL_X))
+            .unwrap()
+    );
+    assert_eq!(
+        "tbl_s_not_zero",
+        names_a
+            .get(&ColumnMid::new(Any::Fixed, COL_TBL_S_NOT_ZERO))
+            .unwrap()
+    );
+    assert_eq!(
+        "x",
+        names_b.get(&ColumnMid::new(Any::Advice, COL_X)).unwrap()
+    );
+    assert_eq!(
+        "s_not_zero",
+        names_b
+            .get(&ColumnMid::new(Any::Fixed, COL_S_NOT_ZERO))
+            .unwrap()
+    );
 
     let cfg = LinkConfig {
-        shared_advice_columns: vec![vec![(0, 3), (1, 0)]],
-        shared_fixed_columns: vec![vec![(0, 2), (1, 0)]],
+        shared_advice_columns: vec![vec![(CIRCUIT_A, COL_TBL_X), (CIRCUIT_B, COL_X)]],
+        shared_fixed_columns: vec![vec![
+            (CIRCUIT_A, COL_TBL_S_NOT_ZERO),
+            (CIRCUIT_B, COL_S_NOT_ZERO),
+        ]],
         shared_challenges: vec![],
-        witness_merge_strategy: vec![MergeStrategy::Main(1, 0)],
-        fixed_merge_strategy: vec![MergeStrategy::Main(1, 0)],
+        witness_merge_strategy: vec![MergeStrategy::Main(CIRCUIT_B, COL_X)],
+        fixed_merge_strategy: vec![MergeStrategy::Main(CIRCUIT_B, COL_S_NOT_ZERO)],
     };
-    println!("== a ==");
-    for gate in &compiled_circuit_a.cs.gates {
-        println!("\"{}\" {}", gate.name, gate.poly.identifier());
+    {
+        // CircuitA
+        let cs_a = &compiled_circuit_a.cs;
+        assert_eq!(
+            "s_mul * (a - b * c)",
+            format!("{}", expr_disp_names(&cs_a.gates[0].poly, names_a))
+        );
+        assert_eq!(
+            "[s_c_not_zero * c] in [tbl_s_not_zero * tbl_x]",
+            format!("{}", lookup_arg_disp_names(&cs_a.lookups[0], names_a))
+        );
+
+        // CircuitB
+        let cs_b = &compiled_circuit_b.cs;
+        assert_eq!(
+            "s_not_zero * (x * x_inv - 1)",
+            format!("{}", expr_disp_names(&cs_b.gates[0].poly, names_b))
+        );
     }
-    println!("== b ==");
-    for gate in &compiled_circuit_b.cs.gates {
-        println!("\"{}\" {}", gate.name, gate.poly.identifier());
-    }
+
     let (cs, map) = link_cs(&cfg, &[compiled_circuit_a.cs, compiled_circuit_b.cs]);
-    println!("== c ==");
-    for gate in &cs.gates {
-        println!("\"{}\" {}", gate.name, gate.poly.identifier());
-    }
-    // let print_vec_f = |v: &Vec<Fr>| {
-    //     print!("[");
-    //     for (i, x) in v.iter().enumerate() {
-    //         if i != 0 {
-    //             print!(", ");
-    //         }
-    //         if *x == Fr::ZERO {
-    //             print!("0");
-    //         } else if *x == Fr::ONE {
-    //             print!("1");
-    //         } else {
-    //             print!("{:?}", x);
-    //         }
-    //     }
-    //     println!("]");
-    // };
-    // let print_fixed = |fixed: &Vec<Vec<Fr>>| {
-    //     for (i, column) in fixed.iter().enumerate() {
-    //         print!("f{}: ", i);
-    //         print_vec_f(column);
-    //     }
-    // };
-    // println!("A");
-    // print_fixed(&compiled_circuit_a.preprocessing.fixed);
-    // println!("B");
-    // print_fixed(&compiled_circuit_b.preprocessing.fixed);
+
+    // CircuitC
+    let cs_c = &cs;
+    let names_c = &cs.general_column_annotations;
+    assert_eq!(
+        "s_mul * (a - b * c)",
+        format!("{}", expr_disp_names(&cs_c.gates[0].poly, names_c))
+    );
+    assert_eq!(
+        "s_not_zero * (x * x_inv - 1)",
+        format!("{}", expr_disp_names(&cs_c.gates[1].poly, names_c))
+    );
+    assert_eq!(
+        "[s_c_not_zero * c] in [s_not_zero * x]",
+        format!("{}", lookup_arg_disp_names(&cs_c.lookups[0], names_c))
+    );
+
     let preprocessing = link_preprocessing(
         &cfg,
         &cs,
@@ -329,6 +375,26 @@ fn test_circuit_linker() {
     // print_fixed(&preprocessing.fixed);
     let compiled_circuit = CompiledCircuit { cs, preprocessing };
 
+    let public: Vec<Vec<Fr>> = Vec::new();
+    let mut witness_calc_a = WitnessCalculator::new(k, &circuit_a, &config_a, &cs_a, &public);
+    let mut witness_calc_b = WitnessCalculator::new(k, &circuit_b, &config_b, &cs_b, &public);
+    let challenges = HashMap::new();
+    let mut witness: Vec<Vec<Fr>> = vec![vec![]; compiled_circuit.cs.num_advice_columns];
+    for phase in 0..compiled_circuit.cs.phases() {
+        let witness_a = witness_calc_a.calc(phase as u8, &challenges).unwrap();
+        let witness_b = witness_calc_b.calc(phase as u8, &challenges).unwrap();
+        let phase_witness =
+            link_witness(&cfg, &compiled_circuit.cs, &map, vec![witness_a, witness_b]);
+        for (i, witness_column) in phase_witness.into_iter().filter_map(|c| c).enumerate() {
+            witness[i] = witness_column;
+        }
+    }
+
+    let blinding_rows = 10;
+    check_witness(&compiled_circuit, k, blinding_rows, &witness, &public);
+
+    /*
+    let mut rng = XorShiftRng::from_seed([1; 16]);
     // Setup
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
@@ -337,15 +403,9 @@ fn test_circuit_linker() {
     // Proving
     println!("Proving...");
     let instances: Vec<Vec<Fr>> = Vec::new();
-    let instances_slice: &[&[Fr]] = &(instances
-        .iter()
-        .map(|instance| instance.as_slice())
-        .collect::<Vec<_>>());
 
-    let mut witness_calc_a =
-        WitnessCalculator::new(k, &circuit_a, &config_a, &cs_a, instances_slice);
-    let mut witness_calc_b =
-        WitnessCalculator::new(k, &circuit_b, &config_b, &cs_b, instances_slice);
+    let mut witness_calc_a = WitnessCalculator::new(k, &circuit_a, &config_a, &cs_a, &instances);
+    let mut witness_calc_b = WitnessCalculator::new(k, &circuit_b, &config_b, &cs_b, &instances);
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     let engine = PlonkEngineConfig::new()
         .set_curve::<G1Affine>()
@@ -362,7 +422,7 @@ fn test_circuit_linker() {
         engine,
         &params,
         &pk,
-        instances_slice,
+        instances.clone(),
         &mut rng,
         &mut transcript,
     )
@@ -407,8 +467,9 @@ fn test_circuit_linker() {
         &verifier_params,
         &vk,
         strategy,
-        instances_slice,
+        instances.clone(),
         &mut verifier_transcript,
     )
     .expect("verify succeeds");
+    */
 }

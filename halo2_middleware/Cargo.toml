@@ -35,13 +35,11 @@ rayon = "1.8"
 ark-std = { version = "0.3" }
 proptest = "1"
 group = "0.13"
-rand_core = { version = "0.6", default-features = false }
+rand_xorshift = "0.3.0"
+rand_core = "0.6.4"
 halo2_backend = { path = "../halo2_backend" }
 halo2_frontend = { path = "../halo2_frontend" }
-rand_xorshift = "0.3"
-
-[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+halo2_debug = { path = "../halo2_debug" }
 
 [lib]
 bench = false

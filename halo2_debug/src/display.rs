@@ -18,7 +18,7 @@ impl<F: PrimeField> fmt::Display for FDisp<'_, F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let v = (*self.0).to_repr();
         let v = v.as_ref();
-        let v = BigUint::from_bytes_le(v.as_ref());
+        let v = BigUint::from_bytes_le(v);
         let v_bits = v.bits();
         if v_bits >= 8 && v.count_ones() == 1 {
             write!(f, "2^{}", v.trailing_zeros().unwrap_or_default())
@@ -27,7 +27,7 @@ impl<F: PrimeField> fmt::Display for FDisp<'_, F> {
         } else {
             let v_neg = (F::ZERO - self.0).to_repr();
             let v_neg = v_neg.as_ref();
-            let v_neg = BigUint::from_bytes_le(v_neg.as_ref());
+            let v_neg = BigUint::from_bytes_le(v_neg);
             let v_neg_bits = v_neg.bits();
             if v_neg_bits < 16 {
                 write!(f, "-{}", v_neg)
@@ -71,9 +71,7 @@ fn var_fmt_names(
 }
 
 /// ExprDisp constructor that formats viariables using their `Display` implementation.
-pub fn expr_disp<'a, F: PrimeField, V: Variable>(
-    e: &'a Expression<F, V>,
-) -> ExprDisp<'a, F, V, ()> {
+pub fn expr_disp<F: PrimeField, V: Variable>(e: &Expression<F, V>) -> ExprDisp<F, V, ()> {
     ExprDisp(e, var_fmt_default, &())
 }
 
@@ -106,22 +104,22 @@ impl<F: PrimeField, V: Variable, A> fmt::Display for ExprDisp<'_, F, V, A> {
             Expression::Var(v) => self.1(v, f, self.2),
             Expression::Negated(a) => {
                 write!(f, "-")?;
-                fmt_expr(&a, f, is_sum(&a))
+                fmt_expr(a, f, is_sum(a))
             }
             Expression::Sum(a, b) => {
-                fmt_expr(&a, f, false)?;
+                fmt_expr(a, f, false)?;
                 if let Expression::Negated(neg) = &**b {
                     write!(f, " - ")?;
-                    fmt_expr(&neg, f, is_sum(&neg))
+                    fmt_expr(neg, f, is_sum(neg))
                 } else {
                     write!(f, " + ")?;
-                    fmt_expr(&b, f, false)
+                    fmt_expr(b, f, false)
                 }
             }
             Expression::Product(a, b) => {
-                fmt_expr(&a, f, is_sum(&a))?;
+                fmt_expr(a, f, is_sum(a))?;
                 write!(f, " * ")?;
-                fmt_expr(&b, f, is_sum(&b))
+                fmt_expr(b, f, is_sum(b))
             }
         }
     }
@@ -143,9 +141,9 @@ pub struct LookupArgDisp<'a, F: PrimeField, V: Variable, A>(
 );
 
 /// LookupArgDisp constructor that formats viariables using their `Display` implementation.
-pub fn lookup_arg_disp<'a, F: PrimeField, V: Variable>(
-    a: &'a lookup::Argument<F, V>,
-) -> LookupArgDisp<'a, F, V, ()> {
+pub fn lookup_arg_disp<F: PrimeField, V: Variable>(
+    a: &lookup::Argument<F, V>,
+) -> LookupArgDisp<F, V, ()> {
     LookupArgDisp(a, var_fmt_default, &())
 }
 
@@ -196,9 +194,9 @@ pub struct ShuffleArgDisp<'a, F: PrimeField, V: Variable, A>(
 );
 
 /// ShuffleArgDisp constructor that formats viariables using their `Display` implementation.
-pub fn shuffle_arg_disp<'a, F: PrimeField, V: Variable>(
-    a: &'a shuffle::Argument<F, V>,
-) -> ShuffleArgDisp<'a, F, V, ()> {
+pub fn shuffle_arg_disp<F: PrimeField, V: Variable>(
+    a: &shuffle::Argument<F, V>,
+) -> ShuffleArgDisp<F, V, ()> {
     ShuffleArgDisp(a, var_fmt_default, &())
 }
 
@@ -344,10 +342,10 @@ mod test {
         let v = Fr::from(0x12345);
         assert_eq!("0x12345", format!("{}", FDisp(&v)));
 
-        let v = Fr::from(-Fr::ONE);
+        let v = -Fr::ONE;
         assert_eq!("-1", format!("{}", FDisp(&v)));
 
-        let v = Fr::from(-Fr::from(12345u64));
+        let v = -Fr::from(12345u64);
         assert_eq!("-12345", format!("{}", FDisp(&v)));
     }
 }
