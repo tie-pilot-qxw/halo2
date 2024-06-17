@@ -1117,6 +1117,43 @@
 <a href="#1101" id="1101">1101</a>
 <a href="#1102" id="1102">1102</a>
 <a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::circuit::Region;
 <span class="kw">use </span><span class="kw">crate</span>::plonk::circuit::{Advice, ColumnType, Fixed, Instance, VirtualCells};
 <span class="kw">use </span><span class="kw">crate</span>::plonk::Error;
@@ -2064,6 +2101,43 @@
             <span class="kw-2">&amp;</span>op,
             <span class="kw-2">&amp;</span>|a, <span class="kw">_</span>| a,
         )
+    }
+
+    <span class="doccomment">/// Returns whether or not this expression contains a `Fixed` column.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>contains_fixed_col(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.evaluate(
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">true</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|a| a,
+            <span class="kw-2">&amp;</span>|a, b| a || b,
+            <span class="kw-2">&amp;</span>|a, b| a || b,
+            <span class="kw-2">&amp;</span>|a, <span class="kw">_</span>| a,
+        )
+    }
+
+    <span class="doccomment">/// Returns whether or not this expression contains a `Selector`.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>contains_selector(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.evaluate(
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">true</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>,
+            <span class="kw-2">&amp;</span>|a| a,
+            <span class="kw-2">&amp;</span>|a, b| a || b,
+            <span class="kw-2">&amp;</span>|a, b| a || b,
+            <span class="kw-2">&amp;</span>|a, <span class="kw">_</span>| a,
+        )
+    }
+
+    <span class="doccomment">/// Returns whether or not this expression contains a `Selector` or `Fixed` column.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>contains_fixed_col_or_selector(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.contains_fixed_col() || <span class="self">self</span>.contains_selector()
     }
 }
 
