@@ -23,15 +23,15 @@ pub fn create_proof_with_engine<
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
-    ConcreteCircuit: Circuit<EF>,
+    ConcreteCircuit: Circuit<F>,
     M: MsmAccel<Scheme::Curve>,
-    EF: FieldFr<Field = Scheme::Scalar>,
+    F: FieldFr<Field = Scheme::Scalar>,
 >(
     engine: PlonkEngine<Scheme::Curve, M>,
     params: &'params Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: &[ConcreteCircuit],
-    instances: &[Vec<Vec<EF>>],
+    instances: &[Vec<Vec<F>>],
     rng: R,
     transcript: &mut T,
 ) -> Result<(), Error>
@@ -86,7 +86,7 @@ where
             })
             .collect();
 
-        challenges = prover.commit_phase(*phase, witnesses).unwrap().into_iter().map(|(k, v)| (k, EF::into_field_fr(v))).collect();
+        challenges = prover.commit_phase(*phase, witnesses).unwrap().into_iter().map(|(k, v)| (k, F::into_field_fr(v))).collect();
     }
     Ok(prover.create_proof()?)
 }
@@ -102,13 +102,13 @@ pub fn create_proof<
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
-    ConcreteCircuit: Circuit<EF>,
-    EF: FieldFr<Field = Scheme::Scalar>,
+    ConcreteCircuit: Circuit<F>,
+    F: FieldFr<Field = Scheme::Scalar>,
 >(
     params: &'params Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: &[ConcreteCircuit],
-    instances: &[Vec<Vec<EF>>],
+    instances: &[Vec<Vec<F>>],
     rng: R,
     transcript: &mut T,
 ) -> Result<(), Error>

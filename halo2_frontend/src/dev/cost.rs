@@ -25,7 +25,7 @@ use crate::{
 /// Measures a circuit to determine its costs, and explain what contributes to them.
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
+pub struct CircuitCost<G: PrimeGroup, F: FieldFr<Field=G::Scalar>, ConcreteCircuit: Circuit<F>> {
     /// Power-of-2 bound on the number of rows in the circuit.
     k: u32,
     /// Maximum degree of the circuit.
@@ -53,7 +53,7 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     num_instance_columns: usize,
     num_total_columns: usize,
 
-    _marker: PhantomData<(G, ConcreteCircuit)>,
+    _marker: PhantomData<(G, F, ConcreteCircuit)>,
 }
 
 /// Region implementation used by Layout
@@ -267,7 +267,7 @@ impl<F: FieldFr> Assignment<F> for Layout {
     }
 }
 
-impl<G: PrimeGroup, FE: FieldFr, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, ConcreteCircuit> {
+impl<G: PrimeGroup, FE: FieldFr<Field=G::Scalar>, ConcreteCircuit: Circuit<FE>> CircuitCost<G, FE, ConcreteCircuit> {
     /// Measures a circuit with parameter constant `k`.
     ///
     /// Panics if `k` is not large enough for the circuit.
@@ -556,6 +556,6 @@ mod tests {
                 Ok(())
             }
         }
-        CircuitCost::<Eq, MyCircuit>::measure(K, &MyCircuit).proof_size(1);
+        CircuitCost::<Eq, _, MyCircuit>::measure(K, &MyCircuit).proof_size(1);
     }
 }

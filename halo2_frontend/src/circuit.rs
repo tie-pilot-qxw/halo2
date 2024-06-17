@@ -38,7 +38,7 @@ use crate::plonk::FieldFr;
 /// generation, and proof generation.
 /// If `compress_selectors` is true, multiple selector columns may be multiplexed.
 #[allow(clippy::type_complexity)]
-pub fn compile_circuit<EF: FieldFr<Field=F>, F: Field, ConcreteCircuit: Circuit<EF>>(
+pub fn compile_circuit<FF: FieldFr<Field=F>, F: Field, ConcreteCircuit: Circuit<FF>>(
     k: u32,
     circuit: &ConcreteCircuit,
     compress_selectors: bool,
@@ -46,7 +46,7 @@ pub fn compile_circuit<EF: FieldFr<Field=F>, F: Field, ConcreteCircuit: Circuit<
     (
         CompiledCircuit<F>,
         ConcreteCircuit::Config,
-        ConstraintSystem<EF>,
+        ConstraintSystem<FF>,
     ),
     Error,
 > {
@@ -65,7 +65,7 @@ pub fn compile_circuit<EF: FieldFr<Field=F>, F: Field, ConcreteCircuit: Circuit<
 
     let mut assembly = plonk::keygen::Assembly {
         k,
-        fixed: vec![vec![EF::ZERO.into(); n]; cs.num_fixed_columns],
+        fixed: vec![vec![FF::ZERO.into(); n]; cs.num_fixed_columns],
         permutation: permutation::Assembly::new(n, &cs.permutation),
         selectors: vec![vec![false; n]; cs.num_selectors],
         usable_rows: 0..n - (cs.blinding_factors() + 1),

@@ -4,7 +4,7 @@
 use std::collections::HashSet;
 use std::{iter, num::ParseIntError, str::FromStr};
 
-use crate::plonk::Circuit;
+use crate::plonk::{Circuit, FieldFr};
 use halo2_middleware::ff::{Field, FromUniformBytes};
 use serde::Deserialize;
 use serde_derive::Serialize;
@@ -242,7 +242,7 @@ impl CostOptions {
 
 /// Given a Plonk circuit, this function returns a [ModelCircuit]
 pub fn from_circuit_to_model_circuit<
-    F: Ord + Field + FromUniformBytes<64>,
+    F: Ord + FieldFr + FromUniformBytes<64>,
     C: Circuit<F>,
     const COMM: usize,
     const SCALAR: usize,
@@ -257,7 +257,7 @@ pub fn from_circuit_to_model_circuit<
 }
 
 /// Given a Plonk circuit, this function returns [CostOptions]
-pub fn from_circuit_to_cost_model_options<F: Ord + Field + FromUniformBytes<64>, C: Circuit<F>>(
+pub fn from_circuit_to_cost_model_options<F: Ord + FieldFr + FromUniformBytes<64>, C: Circuit<F>>(
     k: u32,
     circuit: &C,
     instances: Vec<Vec<F>>,

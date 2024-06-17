@@ -46,27 +46,27 @@ impl<C: ColumnType> Column<C> {
     }
 
     /// Return expression from column at a relative position
-    pub fn query_cell<F: FieldFr, EF: FieldFr<Field = F>>(&self, at: Rotation) -> Expression<EF> {
+    pub fn query_cell<F: FieldFr>(&self, at: Rotation) -> Expression<F> {
         self.column_type.query_cell(self.index, at)
     }
 
     /// Return expression from column at the current row
-    pub fn cur<F: FieldFr, EF: FieldFr<Field = F>>(&self) -> Expression<EF> {
+    pub fn cur<F: FieldFr>(&self) -> Expression<F> {
         self.query_cell(Rotation::cur())
     }
 
     /// Return expression from column at the next row
-    pub fn next<F: FieldFr, EF: FieldFr<Field = F>>(&self) -> Expression<EF> {
+    pub fn next<F: FieldFr>(&self) -> Expression<F> {
         self.query_cell(Rotation::next())
     }
 
     /// Return expression from column at the previous row
-    pub fn prev<F: FieldFr, EF: FieldFr<Field = F>>(&self) -> Expression<EF> {
+    pub fn prev<F: FieldFr>(&self) -> Expression<F> {
         self.query_cell(Rotation::prev())
     }
 
     /// Return expression from column at the specified rotation
-    pub fn rot<F: FieldFr, EF: FieldFr<Field = F>>(&self, rotation: i32) -> Expression<EF> {
+    pub fn rot<F: FieldFr>(&self, rotation: i32) -> Expression<F> {
         self.query_cell(Rotation(rotation))
     }
 }
@@ -469,7 +469,7 @@ pub enum Expression<F: FieldFr> {
 // Arena context
 pub trait FieldFr: Field {
     type Field: Field;
-    fn push(expr: Expression<Self>) -> ExprRef<Self>;
+    fn alloc(expr: Expression<Self>) -> ExprRef<Self>;
     fn get(ref_: &ExprRef<Self>) -> Expression<Self>;
     fn into_field(self) -> Self::Field;
     fn into_field_fr(f: Self::Field) -> Self;
@@ -477,9 +477,9 @@ pub trait FieldFr: Field {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct ExprRef<F>(usize, std::marker::PhantomData<F>);
-impl<EF: FieldFr> Into<ExprRef<EF>> for Expression<EF> {
-    fn into(self) -> ExprRef<EF> {
-        EF::push(self)
+impl<F: FieldFr> Into<ExprRef<F>> for Expression<F> {
+    fn into(self) -> ExprRef<F> {
+        F::alloc(self)
     }
 }
 
@@ -554,9 +554,9 @@ impl<F: FieldFr<Field = IF>, IF: Field> From<Expression<F>> for ExpressionMid<IF
     }
 }
 
-impl<EF: FieldFr> Expression<EF> {
+impl<F: FieldFr> Expression<F> {
     /// Make side effects
-    pub fn query_cells(&mut self, cells: &mut VirtualCells<'_, EF>) {
+    pub fn query_cells(&mut self, cells: &mut VirtualCells<'_, F>) {
         match self {
             Expression::Constant(_) => (),
             Expression::Selector(selector) => {
@@ -595,17 +595,17 @@ impl<EF: FieldFr> Expression<EF> {
                 }
             }
             Expression::Challenge(_) => (),
-            Expression::Negated(a) => EF::get(a).query_cells(cells),
+            Expression::Negated(a) => F::get(a).query_cells(cells),
             Expression::Sum(a, b) => {
-                EF::get(a).query_cells(cells);
-                EF::get(b).query_cells(cells);
+                F::get(a).query_cells(cells);
+                F::get(b).query_cells(cells);
             }
             Expression::Product(a, b) => {
-                EF::get(a).query_cells(cells);
-                EF::get(b).query_cells(cells);
+                F::get(a).query_cells(cells);
+                F::get(b).query_cells(cells);
             }
-            Expression::Scaled(a, _) => EF::get(a).query_cells(cells),
-            Expression::Ref(a) => EF::get(a).query_cells(cells),
+            Expression::Scaled(a, _) => F::get(a).query_cells(cells),
+            Expression::Ref(a) => F::get(a).query_cells(cells),
         };
     }
 
@@ -614,7 +614,7 @@ impl<EF: FieldFr> Expression<EF> {
     #[allow(clippy::too_many_arguments)]
     pub fn evaluate<T>(
         &self,
-        constant: &impl Fn(EF) -> T,
+        constant: &impl Fn(F) -> T,
         selector_column: &impl Fn(Selector) -> T,
         fixed_column: &impl Fn(FixedQuery) -> T,
         advice_column: &impl Fn(AdviceQuery) -> T,
@@ -623,7 +623,7 @@ impl<EF: FieldFr> Expression<EF> {
         negated: &impl Fn(T) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
-        scaled: &impl Fn(T, EF) -> T,
+        scaled: &impl Fn(T, F) -> T,
     ) -> T {
         match self {
             Expression::Constant(scalar) => constant(*scalar),
@@ -633,7 +633,7 @@ impl<EF: FieldFr> Expression<EF> {
             Expression::Instance(query) => instance_column(*query),
             Expression::Challenge(value) => challenge(*value),
             Expression::Negated(a) => {
-                let a = EF::get(a).evaluate(
+                let a = F::get(a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -648,7 +648,7 @@ impl<EF: FieldFr> Expression<EF> {
                 negated(a)
             }
             Expression::Sum(a, b) => {
-                let a = EF::get(a).evaluate(
+                let a = F::get(a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -660,7 +660,7 @@ impl<EF: FieldFr> Expression<EF> {
                     product,
                     scaled,
                 );
-                let b = EF::get(b).evaluate(
+                let b = F::get(b).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -675,7 +675,7 @@ impl<EF: FieldFr> Expression<EF> {
                 sum(a, b)
             }
             Expression::Product(a, b) => {
-                let a = EF::get(a).evaluate(
+                let a = F::get(a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -687,7 +687,7 @@ impl<EF: FieldFr> Expression<EF> {
                     product,
                     scaled,
                 );
-                let b = EF::get(b).evaluate(
+                let b = F::get(b).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -702,7 +702,7 @@ impl<EF: FieldFr> Expression<EF> {
                 product(a, b)
             }
             Expression::Scaled(a, f) => {
-                let a = EF::get(a).evaluate(
+                let a = F::get(a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -716,7 +716,7 @@ impl<EF: FieldFr> Expression<EF> {
                 );
                 scaled(a, *f)
             }
-            Expression::Ref(ref_) => EF::get(ref_).evaluate(
+            Expression::Ref(ref_) => F::get(ref_).evaluate(
                 constant,
                 selector_column,
                 fixed_column,
@@ -736,7 +736,7 @@ impl<EF: FieldFr> Expression<EF> {
     #[allow(clippy::too_many_arguments)]
     pub fn evaluate_lazy<T: PartialEq>(
         &self,
-        constant: &impl Fn(EF) -> T,
+        constant: &impl Fn(F) -> T,
         selector_column: &impl Fn(Selector) -> T,
         fixed_column: &impl Fn(FixedQuery) -> T,
         advice_column: &impl Fn(AdviceQuery) -> T,
@@ -745,7 +745,7 @@ impl<EF: FieldFr> Expression<EF> {
         negated: &impl Fn(T) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
-        scaled: &impl Fn(T, EF) -> T,
+        scaled: &impl Fn(T, F) -> T,
         zero: &T,
     ) -> T {
         match self {
@@ -756,7 +756,7 @@ impl<EF: FieldFr> Expression<EF> {
             Expression::Instance(query) => instance_column(*query),
             Expression::Challenge(value) => challenge(*value),
             Expression::Negated(a) => {
-                let a = EF::get(a).evaluate_lazy(
+                let a = F::get(a).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -772,7 +772,7 @@ impl<EF: FieldFr> Expression<EF> {
                 negated(a)
             }
             Expression::Sum(a, b) => {
-                let a = EF::get(a).evaluate_lazy(
+                let a = F::get(a).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -785,7 +785,7 @@ impl<EF: FieldFr> Expression<EF> {
                     scaled,
                     zero,
                 );
-                let b = EF::get(b).evaluate_lazy(
+                let b = F::get(b).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -801,7 +801,7 @@ impl<EF: FieldFr> Expression<EF> {
                 sum(a, b)
             }
             Expression::Product(a, b) => {
-                let (a, b) = (EF::get(a), EF::get(b));
+                let (a, b) = (F::get(a), F::get(b));
                 let (a, b) = if a.complexity() <= b.complexity() {
                     (a, b)
                 } else {
@@ -841,7 +841,7 @@ impl<EF: FieldFr> Expression<EF> {
                 }
             }
             Expression::Scaled(a, f) => {
-                let a = EF::get(a).evaluate_lazy(
+                let a = F::get(a).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -856,7 +856,7 @@ impl<EF: FieldFr> Expression<EF> {
                 );
                 scaled(a, *f)
             }
-            Expression::Ref(ref_) => EF::get(ref_).evaluate_lazy(
+            Expression::Ref(ref_) => F::get(ref_).evaluate_lazy(
                 constant,
                 selector_column,
                 fixed_column,
@@ -902,28 +902,28 @@ impl<EF: FieldFr> Expression<EF> {
             }
             Expression::Negated(a) => {
                 writer.write_all(b"(-")?;
-                EF::get(a).write_identifier(writer)?;
+                F::get(a).write_identifier(writer)?;
                 writer.write_all(b")")
             }
             Expression::Sum(a, b) => {
                 writer.write_all(b"(")?;
-                EF::get(a).write_identifier(writer)?;
+                F::get(a).write_identifier(writer)?;
                 writer.write_all(b"+")?;
-                EF::get(b).write_identifier(writer)?;
+                F::get(b).write_identifier(writer)?;
                 writer.write_all(b")")
             }
             Expression::Product(a, b) => {
                 writer.write_all(b"(")?;
-                EF::get(a).write_identifier(writer)?;
+                F::get(a).write_identifier(writer)?;
                 writer.write_all(b"*")?;
-                EF::get(b).write_identifier(writer)?;
+                F::get(b).write_identifier(writer)?;
                 writer.write_all(b")")
             }
             Expression::Scaled(a, f) => {
-                EF::get(a).write_identifier(writer)?;
+                F::get(a).write_identifier(writer)?;
                 write!(writer, "*{f:?}")
             }
-            Expression::Ref(a) => EF::get(a).write_identifier(writer),
+            Expression::Ref(a) => F::get(a).write_identifier(writer),
         }
     }
 
@@ -945,11 +945,11 @@ impl<EF: FieldFr> Expression<EF> {
             Expression::Advice(_) => 1,
             Expression::Instance(_) => 1,
             Expression::Challenge(_) => 0,
-            Expression::Negated(poly) => EF::get(poly).degree(),
-            Expression::Sum(a, b) => max(EF::get(a).degree(), EF::get(b).degree()),
-            Expression::Product(a, b) => EF::get(a).degree() + EF::get(b).degree(),
-            Expression::Scaled(poly, _) => EF::get(poly).degree(),
-            Expression::Ref(ref_) => EF::get(ref_).degree(),
+            Expression::Negated(poly) => F::get(poly).degree(),
+            Expression::Sum(a, b) => max(F::get(a).degree(), F::get(b).degree()),
+            Expression::Product(a, b) => F::get(a).degree() + F::get(b).degree(),
+            Expression::Scaled(poly, _) => F::get(poly).degree(),
+            Expression::Ref(ref_) => F::get(ref_).degree(),
         }
     }
 
@@ -962,16 +962,16 @@ impl<EF: FieldFr> Expression<EF> {
             Expression::Advice(_) => 1,
             Expression::Instance(_) => 1,
             Expression::Challenge(_) => 0,
-            Expression::Negated(poly) => EF::get(poly).complexity() + 5,
-            Expression::Sum(a, b) => EF::get(a).complexity() + EF::get(b).complexity() + 15,
-            Expression::Product(a, b) => EF::get(a).complexity() + EF::get(b).complexity() + 30,
-            Expression::Scaled(poly, _) => EF::get(poly).complexity() + 30,
-            Expression::Ref(ref_) => EF::get(ref_).complexity(),
+            Expression::Negated(poly) => F::get(poly).complexity() + 5,
+            Expression::Sum(a, b) => F::get(a).complexity() + F::get(b).complexity() + 15,
+            Expression::Product(a, b) => F::get(a).complexity() + F::get(b).complexity() + 30,
+            Expression::Scaled(poly, _) => F::get(poly).complexity() + 30,
+            Expression::Ref(ref_) => F::get(ref_).complexity(),
         }
     }
 
     /// Square this expression.
-    pub fn square(self) -> Expression<EF> {
+    pub fn square(self) -> Expression<F> {
         self * self
     }
 
@@ -1021,7 +1021,7 @@ impl<EF: FieldFr> Expression<EF> {
     }
 }
 
-impl<EF: FieldFr> std::fmt::Debug for Expression<EF> {
+impl<F: FieldFr> std::fmt::Debug for Expression<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expression::Constant(scalar) => f.debug_tuple("Constant").field(scalar).finish(),
@@ -1063,23 +1063,23 @@ impl<EF: FieldFr> std::fmt::Debug for Expression<EF> {
             Expression::Challenge(challenge) => {
                 f.debug_tuple("Challenge").field(challenge).finish()
             }
-            Expression::Negated(poly) => f.debug_tuple("Negated").field(&EF::get(poly)).finish(),
+            Expression::Negated(poly) => f.debug_tuple("Negated").field(&F::get(poly)).finish(),
             Expression::Sum(a, b) => f
                 .debug_tuple("Sum")
-                .field(&EF::get(a))
-                .field(&EF::get(b))
+                .field(&F::get(a))
+                .field(&F::get(b))
                 .finish(),
             Expression::Product(a, b) => f
                 .debug_tuple("Product")
-                .field(&EF::get(a))
-                .field(&EF::get(b))
+                .field(&F::get(a))
+                .field(&F::get(b))
                 .finish(),
             Expression::Scaled(poly, scalar) => f
                 .debug_tuple("Scaled")
-                .field(&EF::get(poly))
+                .field(&F::get(poly))
                 .field(scalar)
                 .finish(),
-            Expression::Ref(ref_) => f.debug_tuple("").field(&EF::get(ref_)).finish(),
+            Expression::Ref(ref_) => f.debug_tuple("").field(&F::get(ref_)).finish(),
         }
     }
 }
@@ -1089,9 +1089,9 @@ impl<F: FieldFr> Neg for Expression<F> {
     fn neg(self) -> Self::Output {
         let ref_ = match self {
             Self::Ref(ref_) => ref_,
-            _ => F::push(self),
+            _ => F::alloc(self),
         };
-        let ref_ = F::push(Expression::Negated(ref_));
+        let ref_ = F::alloc(Expression::Negated(ref_));
         Expression::Ref(ref_)
     }
 }
@@ -1104,13 +1104,13 @@ impl<F: FieldFr> Add for Expression<F> {
         }
         let self_ = match self {
             Expression::Ref(ref_) => ref_,
-            _ => F::push(self),
+            _ => F::alloc(self),
         };
         let rhs = match rhs {
             Expression::Ref(ref_) => ref_,
-            _ => F::push(rhs),
+            _ => F::alloc(rhs),
         };
-        let ref_ = F::push(Expression::Sum(self_, rhs));
+        let ref_ = F::alloc(Expression::Sum(self_, rhs));
         Expression::Ref(ref_)
     }
 }
@@ -1123,87 +1123,84 @@ impl<F: FieldFr> Sub for Expression<F> {
         }
         let self_ = match self {
             Expression::Ref(ref_) => ref_,
-            _ => F::push(self),
+            _ => F::alloc(self),
         };
         let rhs = match rhs {
             Expression::Ref(ref_) => ref_,
-            _ => F::push(rhs),
+            _ => F::alloc(rhs),
         };
-        let rhs = F::push(Expression::Negated(rhs));
+        let rhs = F::alloc(Expression::Negated(rhs));
 
-        Expression::Ref(F::push(Expression::Sum(self_, rhs)))
+        Expression::Ref(F::alloc(Expression::Sum(self_, rhs)))
     }
 }
 
-impl<EF: FieldFr> Mul for Expression<EF> {
-    type Output = Expression<EF>;
-    fn mul(self, rhs: Expression<EF>) -> Expression<EF> {
+impl<F: FieldFr> Mul for Expression<F> {
+    type Output = Expression<F>;
+    fn mul(self, rhs: Expression<F>) -> Expression<F> {
         if self.contains_simple_selector() && rhs.contains_simple_selector() {
             panic!("attempted to multiply two expressions containing simple selectors");
         }
         let self_ = match self {
             Expression::Ref(ref_) => ref_,
-            _ => EF::push(self),
+            _ => F::alloc(self),
         };
         let rhs = match rhs {
             Expression::Ref(ref_) => ref_,
-            _ => EF::push(rhs),
+            _ => F::alloc(rhs),
         };
-        Expression::Ref(EF::push(Expression::Product(self_, rhs)))
+        Expression::Ref(F::alloc(Expression::Product(self_, rhs)))
     }
 }
 
-impl<EF: FieldFr> Mul<EF> for Expression<EF> {
-    type Output = Expression<EF>;
-    fn mul(self, rhs: EF) -> Expression<EF> {
+impl<F: FieldFr> Mul<F> for Expression<F> {
+    type Output = Expression<F>;
+    fn mul(self, rhs: F) -> Expression<F> {
         let self_ = match self {
             Expression::Ref(ref_) => ref_,
-            _ => EF::push(self),
+            _ => F::alloc(self),
         };
         Expression::Scaled(self_, rhs)
     }
 }
 
-impl<EF: FieldFr> Sum<Self> for Expression<EF> {
+impl<F: FieldFr> Sum<Self> for Expression<F> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|acc, x| acc + x)
-            .unwrap_or(Expression::Constant(EF::ZERO))
+            .unwrap_or(Expression::Constant(F::ZERO))
     }
 }
 
-impl<EF: FieldFr> Product<Self> for Expression<EF> {
+impl<F: FieldFr> Product<Self> for Expression<F> {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|acc, x| acc * x)
-            .unwrap_or(Expression::Constant(EF::ONE))
+            .unwrap_or(Expression::Constant(F::ONE))
+    }
+}
+
+#[allow(non_camel_case_types)]
+pub struct ExprArena<F: FieldFr>(Vec<Expression<F>>);
+
+impl<F: FieldFr> ExprArena<F> {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+    pub fn push(&mut self, expr: Expression<F>) -> crate::plonk::ExprRef<F> {
+        let index = self.0.len();
+        self.0.push(expr);
+        ExprRef(index, std::marker::PhantomData)
+    }
+    pub fn get(&self, ref_: crate::plonk::ExprRef<F>) -> &Expression<F> {
+        &self.0[ref_.0]
     }
 }
 
 #[macro_export]
 macro_rules! expression_arena {
     ($arena:ident, $field:ty) => {
-        paste::paste! {
-        static $arena: once_cell::sync::Lazy<parking_lot::RwLock<[<ExprArena $arena>]<$field>>> =
-            once_cell::sync::Lazy::new(|| parking_lot::RwLock::new([<ExprArena $arena>]::new()));
-
-        #[allow(non_camel_case_types)]
-        pub struct [<ExprArena $arena>]<F: FieldFr> {
-            expressions: Vec<Expression<F>>,
-        }
-        impl<F: FieldFr> [<ExprArena $arena>]<F> {
-            pub fn new() -> Self {
-                Self {
-                    expressions: Vec::new(),
-                }
-            }
-            pub fn push(&mut self, expr: Expression<F>) -> crate::plonk::ExprRef<F> {
-                let index = self.expressions.len();
-                self.expressions.push(expr);
-                ExprRef(index, std::marker::PhantomData)
-            }
-            pub fn get(&self, ref_: crate::plonk::ExprRef<F>) -> &Expression<F> {
-                &self.expressions[ref_.0]
-            }
-        }
+        fn $arena() -> &'static std::sync::RwLock<ExprArena<$field>> {
+            static LINES: std::sync::OnceLock<std::sync::RwLock<ExprArena<$field>>> = std::sync::OnceLock::new();
+            LINES.get_or_init(|| std::sync::RwLock::new(ExprArena::new()))
         }
 
         impl crate::plonk::FieldFr for $field {
@@ -1214,26 +1211,26 @@ macro_rules! expression_arena {
             fn into_field_fr(f: Self::Field) -> Self {
                 f
             }
-            fn push(expr: crate::plonk::Expression<Self>) -> crate::plonk::ExprRef<Self> {
-                $arena.write().push(expr)
+            fn alloc(expr: crate::plonk::Expression<Self>) -> crate::plonk::ExprRef<Self> {
+                $arena().write().unwrap().push(expr)
             }
             fn get(ref_: &crate::plonk::ExprRef<Self>) -> crate::plonk::Expression<Self> {
-                *$arena.read().get(*ref_)
+                *$arena().read().unwrap().get(*ref_)
             }
         }
 
         impl Into<crate::plonk::ExprRef<$field>> for $field {
             fn into(self) -> crate::plonk::ExprRef<$field> {
-                crate::plonk::FieldFr::push(crate::plonk::Expression::Constant(self))
+                crate::plonk::FieldFr::alloc(crate::plonk::Expression::Constant(self))
             }
         }
     };
 }
 
 //#[cfg(test)]
-expression_arena!(ARENA_BN256_FR, halo2curves::bn256::Fr);
-expression_arena!(ARENA_BN256_FQ, halo2curves::bn256::Fq);
-expression_arena!(PASTA_FP_ARENA, halo2curves::pasta::Fp);
+expression_arena!(arena_bn256_fr, halo2curves::bn256::Fr);
+expression_arena!(arena_bn256_fq, halo2curves::bn256::Fq);
+expression_arena!(arena_pasta_fp, halo2curves::pasta::Fp);
 
 #[cfg(test)]
 mod tests {

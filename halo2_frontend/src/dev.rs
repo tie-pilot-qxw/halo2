@@ -29,8 +29,8 @@ mod util;
 mod failure;
 pub use failure::{FailureLocation, VerifyFailure};
 
-// pub mod cost;
-// pub use cost::CircuitCost;
+pub mod cost;
+pub use cost::CircuitCost;
 
 #[cfg(feature = "cost-estimator")]
 pub mod cost_model;
@@ -284,7 +284,7 @@ impl<F: FieldFr> Mul<F> for Value<F> {
 ///     MockProver::<Fp>::run(2, &circuit, vec![]).unwrap_err()
 /// });
 /// assert_eq!(
-///     result.unwrap_err().downcast_ref::<String>().unwrap(),
+///     result.unwrap_err().downcast_rF::<String>().unwrap(),
 ///     "n=4, minimum_rows=8, k=2"
 /// );
 /// ```

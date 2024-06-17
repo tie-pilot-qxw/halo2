@@ -6,7 +6,7 @@ use plotters::{
 use std::collections::HashSet;
 use std::ops::Range;
 
-use crate::plonk::{Circuit, Column, ConstraintSystem, FloorPlanner};
+use crate::plonk::{Circuit, Column, ConstraintSystem, FloorPlanner, FieldFr};
 use crate::{circuit::layouter::RegionColumn, dev::cost::Layout};
 use halo2_middleware::circuit::Any;
 

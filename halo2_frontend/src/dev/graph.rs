@@ -1,6 +1,6 @@
 use crate::plonk::{
     Advice, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, Fixed,
-    FloorPlanner, Instance, Selector,
+    FloorPlanner, Instance, Selector, FieldFr
 };
 use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;

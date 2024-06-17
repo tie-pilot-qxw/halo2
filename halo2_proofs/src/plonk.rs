@@ -41,7 +41,7 @@ use std::io;
 /// Checks that field elements are less than modulus, and then checks that the point is on the curve.
 /// - `RawBytesUnchecked`: Reads an uncompressed curve element with coordinates in Montgomery form;
 /// does not perform any checks
-pub fn vk_read<C: SerdeCurveAffine, R: io::Read, EF, ConcreteCircuit: Circuit<EF>>(
+pub fn vk_read<C: SerdeCurveAffine, R: io::Read, F, ConcreteCircuit: Circuit<F>>(
     reader: &mut R,
     format: SerdeFormat,
     k: u32,
@@ -50,7 +50,7 @@ pub fn vk_read<C: SerdeCurveAffine, R: io::Read, EF, ConcreteCircuit: Circuit<EF
 ) -> io::Result<VerifyingKey<C>>
 where
     C::Scalar: SerdePrimeField + FromUniformBytes<64>,
-    EF: FieldFr<Field = C::Scalar>,
+    F: FieldFr<Field = C::Scalar>,
 {
     let (_, _, cs) = compile_circuit(k, circuit, compress_selectors)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
@@ -70,7 +70,7 @@ where
 /// Checks that field elements are less than modulus, and then checks that the point is on the curve.
 /// - `RawBytesUnchecked`: Reads an uncompressed curve element with coordinates in Montgomery form;
 /// does not perform any checks
-pub fn pk_read<C: SerdeCurveAffine, R: io::Read, EF, ConcreteCircuit: Circuit<EF>>(
+pub fn pk_read<C: SerdeCurveAffine, R: io::Read, F, ConcreteCircuit: Circuit<F>>(
     reader: &mut R,
     format: SerdeFormat,
     k: u32,
@@ -79,7 +79,7 @@ pub fn pk_read<C: SerdeCurveAffine, R: io::Read, EF, ConcreteCircuit: Circuit<EF
 ) -> io::Result<ProvingKey<C>>
 where
     C::Scalar: SerdePrimeField + FromUniformBytes<64>,
-    EF: FieldFr<Field = C::Scalar>,
+    F: FieldFr<Field = C::Scalar>,
 
     {
     let (_, _, cs) = compile_circuit(k, circuit, compress_selectors)
