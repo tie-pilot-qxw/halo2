@@ -1529,10 +1529,7 @@ mod tests {
                     let s_ltable = cells.query_selector(s_ltable);
 
                     // If q is enabled, a must be in the table.
-                    vec![
-                        (q.clone() * a.clone(), s_ltable.clone() * table),
-                        (q * a, s_ltable * advice_table),
-                    ]
+                    vec![(q * a, s_ltable * table), (q * a, s_ltable * advice_table)]
                 });
 
                 FaultyCircuitConfig {
@@ -1607,7 +1604,7 @@ mod tests {
                     let table = cells.query_instance(table, Rotation::cur());
 
                     // If q is enabled, a must be in the table.
-                    vec![(q.clone() * a.clone(), table), (q * a, advice_table)]
+                    vec![(q * a, table), (q * a, advice_table)]
                 });
 
                 FaultyCircuitConfig {
@@ -1750,8 +1747,8 @@ mod tests {
                     // If q is enabled, a must be in the table.
                     // If `s_ltable` is enabled, the value of `advice_table` & `table` is used as lookup table.
                     vec![
-                        (q.clone() * a.clone(), table * s_ltable.clone()),
-                        (q.clone() * a, advice_table * s_ltable.clone()),
+                        (q * a, table * s_ltable),
+                        (q * a, advice_table * s_ltable),
                         (q, s_ltable),
                     ]
                 });

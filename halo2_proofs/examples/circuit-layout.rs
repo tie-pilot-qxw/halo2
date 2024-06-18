@@ -243,7 +243,7 @@ impl<F: FieldFront> Circuit<F> for MyCircuit<F> {
             let sc = meta.query_fixed(sc, Rotation::cur());
             let sm = meta.query_fixed(sm, Rotation::cur());
 
-            vec![a.clone() * sa + b.clone() * sb + a * b * sm - (c * sc) + sf * (d * e)]
+            vec![a * sa + b * sb + a * b * sm - (c * sc) + sf * (d * e)]
         });
 
         PlonkConfig {
