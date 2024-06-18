@@ -75,6 +75,8 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Legacy halo2 API that wraps the frontend-backend split API.  This crate doesn't implement any
 //! core functionality, it just imports from the other crates and offers the legacy API in the same
 //! module structure so that projects depending on halo2 can update their dependency towards it
@@ -105,7 +107,9 @@
 }
 <span class="doccomment">/// Tools for developing circuits.
 </span><span class="kw">pub mod </span>dev {
-    <span class="kw">pub use </span>halo2_frontend::dev::{metadata, FailureLocation, MockProver, VerifyFailure};
+    <span class="kw">pub use </span>halo2_frontend::dev::{
+        metadata, CellValue, FailureLocation, InstanceValue, MockProver, VerifyFailure,
+    };
 
     <span class="attr">#[cfg(feature = <span class="string">"cost-estimator"</span>)]
     </span><span class="kw">pub use </span>halo2_frontend::dev::cost_model;

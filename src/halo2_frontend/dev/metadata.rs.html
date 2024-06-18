@@ -337,7 +337,7 @@
 
 <span class="doccomment">/// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
-</span><span class="attr">#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+</span><span class="attr">#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 </span><span class="kw">pub struct </span>VirtualCell {
     name: String,
     <span class="kw">pub</span>(<span class="kw">super</span>) column: Column,

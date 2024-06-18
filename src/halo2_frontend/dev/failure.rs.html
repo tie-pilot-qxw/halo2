@@ -1020,7 +1020,7 @@
 }
 
 <span class="doccomment">/// The reasons why a particular circuit is not satisfied.
-</span><span class="attr">#[derive(PartialEq, Eq)]
+</span><span class="attr">#[derive(PartialEq, Eq, Clone)]
 </span><span class="kw">pub enum </span>VerifyFailure {
     <span class="doccomment">/// A cell used in an active gate was not assigned to.
     </span>CellNotAssigned {
