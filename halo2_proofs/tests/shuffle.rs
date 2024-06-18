@@ -19,8 +19,7 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use rand_chacha::ChaCha20Rng;
-use rand_core::{RngCore, SeedableRng};
+use rand_core::RngCore;
 use std::iter;
 
 fn rand_2d_array<F: Field, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
@@ -327,8 +326,7 @@ fn test_shuffle() {
     const H: usize = 32;
     const K: u32 = 8;
 
-    let mut shuffle_rng = ChaCha20Rng::seed_from_u64(0xdeadbeef);
-    let circuit = &MyCircuit::<_, W, H>::rand(&mut shuffle_rng);
+    let circuit = &MyCircuit::<_, W, H>::rand(&mut test_rng());
 
     {
         test_mock_prover(K, circuit.clone(), Ok(()));
