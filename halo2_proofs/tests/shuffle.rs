@@ -22,7 +22,9 @@ use halo2_proofs::{
 use rand_core::{OsRng, RngCore};
 use std::iter;
 
-fn rand_2d_array<F: FieldFront, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
+fn rand_2d_array<F: FieldFront, R: RngCore, const W: usize, const H: usize>(
+    rng: &mut R,
+) -> [[F; H]; W] {
     [(); W].map(|_| [(); H].map(|_| F::random(&mut *rng)))
 }
 
@@ -86,15 +88,15 @@ impl<const W: usize> MyConfig<W> {
             let original = original
                 .iter()
                 .cloned()
-                .reduce(|acc, a| acc * theta.clone() + a)
+                .reduce(|acc, a| acc * theta + a)
                 .unwrap();
             let shuffled = shuffled
                 .iter()
                 .cloned()
-                .reduce(|acc, a| acc * theta.clone() + a)
+                .reduce(|acc, a| acc * theta + a)
                 .unwrap();
 
-            vec![q_shuffle * (z.cur() * (original + gamma.clone()) - z.next() * (shuffled + gamma))]
+            vec![q_shuffle * (z.cur() * (original + gamma) - z.next() * (shuffled + gamma))]
         });
 
         Self {
@@ -270,7 +272,7 @@ fn test_mock_prover<F: FieldFront + Ord + FromUniformBytes<64>, const W: usize, 
     };
 }
 
-fn test_prover<C: CurveAffine, F: FieldFront<Field=C::Scalar>, const W: usize, const H: usize>(
+fn test_prover<C: CurveAffine, F: FieldFront<Field = C::Scalar>, const W: usize, const H: usize>(
     k: u32,
     circuit: MyCircuit<F, W, H>,
     expected: bool,
@@ -325,7 +327,7 @@ fn test_shuffle() {
 
     {
         test_mock_prover(K, circuit.clone(), Ok(()));
-        test_prover::<EqAffine,halo2curves::pasta::Fp, W, H>(K, circuit.clone(), true);
+        test_prover::<EqAffine, halo2curves::pasta::Fp, W, H>(K, circuit.clone(), true);
     }
 
     #[cfg(not(feature = "sanity-checks"))]
@@ -349,6 +351,6 @@ fn test_shuffle() {
                 },
             )]),
         );
-        test_prover::<EqAffine,halo2curves::pasta::Fp, W, H>(K, circuit, false);
+        test_prover::<EqAffine, halo2curves::pasta::Fp, W, H>(K, circuit, false);
     }
 }

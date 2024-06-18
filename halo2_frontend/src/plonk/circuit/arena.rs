@@ -19,7 +19,10 @@ pub trait FieldFront: Field {
     fn alloc(expr: Expression<Self>) -> ExprRef<Self>;
 
     /// Get an expression from the arena, panics if the reference is invalid.
-    fn get(ref_: &ExprRef<Self>) -> Expression<Self>;
+    fn get(ref_: ExprRef<Self>) -> Expression<Self>;
+
+    /// Replace old expression for a new one
+    fn replace(ref_: crate::plonk::ExprRef<Self>, expr: Expression<Self>);
 }
 
 #[derive(Default)]
@@ -33,6 +36,9 @@ impl<F: FieldFront> ExprArena<F> {
     }
     fn get(&self, ref_: crate::plonk::ExprRef<F>) -> &Expression<F> {
         &self.0[ref_.0]
+    }
+    fn replace(&mut self, ref_: crate::plonk::ExprRef<F>, expr: Expression<F>) {
+        self.0[ref_.0] = expr;
     }
 }
 
@@ -56,8 +62,11 @@ macro_rules! expression_arena {
             fn alloc(expr: $crate::plonk::Expression<Self>) -> $crate::plonk::ExprRef<Self> {
                 $arena().write().unwrap().push(expr)
             }
-            fn get(ref_: &$crate::plonk::ExprRef<Self>) -> $crate::plonk::Expression<Self> {
-                *$arena().read().unwrap().get(*ref_)
+            fn get(ref_: $crate::plonk::ExprRef<Self>) -> $crate::plonk::Expression<Self> {
+                *$arena().read().unwrap().get(ref_)
+            }
+            fn replace(ref_: $crate::plonk::ExprRef<Self>, expr: $crate::plonk::Expression<Self>) {
+                $arena().write().unwrap().replace(ref_, expr);
             }
         }
         impl From<$field> for $crate::plonk::ExprRef<$field> {

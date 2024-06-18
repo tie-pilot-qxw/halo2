@@ -512,27 +512,25 @@ impl<FF: FieldFront<Field = F>, F: Field> From<Expression<FF>> for ExpressionMid
                 rotation,
             })),
             Expression::Challenge(c) => ExpressionMid::Var(VarMid::Challenge(c.into())),
-            Expression::Negated(e) => ExpressionMid::Negated(Box::new((FF::get(&e)).into())),
-            Expression::Sum(lhs, rhs) => ExpressionMid::Sum(
-                Box::new(FF::get(&lhs).into()),
-                Box::new(FF::get(&rhs).into()),
-            ),
-            Expression::Product(lhs, rhs) => ExpressionMid::Product(
-                Box::new(FF::get(&lhs).into()),
-                Box::new(FF::get(&rhs).into()),
-            ),
+            Expression::Negated(e) => ExpressionMid::Negated(Box::new((FF::get(e)).into())),
+            Expression::Sum(lhs, rhs) => {
+                ExpressionMid::Sum(Box::new(FF::get(lhs).into()), Box::new(FF::get(rhs).into()))
+            }
+            Expression::Product(lhs, rhs) => {
+                ExpressionMid::Product(Box::new(FF::get(lhs).into()), Box::new(FF::get(rhs).into()))
+            }
             Expression::Scaled(e, c) => ExpressionMid::Product(
-                Box::new(FF::get(&e).into()),
+                Box::new(FF::get(e).into()),
                 Box::new(ExpressionMid::Constant(c.into_field())),
             ),
-            Expression::Ref(ref_) => FF::get(&ref_).into(),
+            Expression::Ref(ref_) => FF::get(ref_).into(),
         }
     }
 }
 
 impl<F: FieldFront> Expression<F> {
     /// Make side effects
-    pub fn query_cells(&mut self, cells: &mut VirtualCells<'_, F>) {
+    pub fn query_cells(&mut self, ref_: Option<&ExprRef<F>>, cells: &mut VirtualCells<'_, F>) {
         match self {
             Expression::Constant(_) => (),
             Expression::Selector(selector) => {
@@ -548,6 +546,9 @@ impl<F: FieldFront> Expression<F> {
                     };
                     cells.queried_cells.push((col, query.rotation).into());
                     query.index = Some(cells.meta.query_fixed_index(col, query.rotation));
+                    if let Some(ref_) = ref_ {
+                        F::replace(*ref_, Expression::Fixed(*query));
+                    }
                 }
             }
             Expression::Advice(query) => {
@@ -558,6 +559,9 @@ impl<F: FieldFront> Expression<F> {
                     };
                     cells.queried_cells.push((col, query.rotation).into());
                     query.index = Some(cells.meta.query_advice_index(col, query.rotation));
+                    if let Some(ref_) = ref_ {
+                        F::replace(*ref_, Expression::Advice(*query));
+                    }
                 }
             }
             Expression::Instance(query) => {
@@ -568,20 +572,23 @@ impl<F: FieldFront> Expression<F> {
                     };
                     cells.queried_cells.push((col, query.rotation).into());
                     query.index = Some(cells.meta.query_instance_index(col, query.rotation));
+                    if let Some(ref_) = ref_ {
+                        F::replace(*ref_, Expression::Instance(*query));
+                    }
                 }
             }
             Expression::Challenge(_) => (),
-            Expression::Negated(a) => F::get(a).query_cells(cells),
+            Expression::Negated(a) => F::get(*a).query_cells(Some(a), cells),
             Expression::Sum(a, b) => {
-                F::get(a).query_cells(cells);
-                F::get(b).query_cells(cells);
+                F::get(*a).query_cells(Some(a), cells);
+                F::get(*b).query_cells(Some(b), cells);
             }
             Expression::Product(a, b) => {
-                F::get(a).query_cells(cells);
-                F::get(b).query_cells(cells);
+                F::get(*a).query_cells(Some(a), cells);
+                F::get(*b).query_cells(Some(b), cells);
             }
-            Expression::Scaled(a, _) => F::get(a).query_cells(cells),
-            Expression::Ref(a) => F::get(a).query_cells(cells),
+            Expression::Scaled(a, _) => F::get(*a).query_cells(Some(a), cells),
+            Expression::Ref(a) => F::get(*a).query_cells(Some(a), cells),
         };
     }
 
@@ -609,7 +616,7 @@ impl<F: FieldFront> Expression<F> {
             Expression::Instance(query) => instance_column(*query),
             Expression::Challenge(value) => challenge(*value),
             Expression::Negated(a) => {
-                let a = F::get(a).evaluate(
+                let a = F::get(*a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -624,7 +631,7 @@ impl<F: FieldFront> Expression<F> {
                 negated(a)
             }
             Expression::Sum(a, b) => {
-                let a = F::get(a).evaluate(
+                let a = F::get(*a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -636,7 +643,7 @@ impl<F: FieldFront> Expression<F> {
                     product,
                     scaled,
                 );
-                let b = F::get(b).evaluate(
+                let b = F::get(*b).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -651,7 +658,7 @@ impl<F: FieldFront> Expression<F> {
                 sum(a, b)
             }
             Expression::Product(a, b) => {
-                let a = F::get(a).evaluate(
+                let a = F::get(*a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -663,7 +670,7 @@ impl<F: FieldFront> Expression<F> {
                     product,
                     scaled,
                 );
-                let b = F::get(b).evaluate(
+                let b = F::get(*b).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -678,7 +685,7 @@ impl<F: FieldFront> Expression<F> {
                 product(a, b)
             }
             Expression::Scaled(a, f) => {
-                let a = F::get(a).evaluate(
+                let a = F::get(*a).evaluate(
                     constant,
                     selector_column,
                     fixed_column,
@@ -692,7 +699,7 @@ impl<F: FieldFront> Expression<F> {
                 );
                 scaled(a, *f)
             }
-            Expression::Ref(ref_) => F::get(ref_).evaluate(
+            Expression::Ref(ref_) => F::get(*ref_).evaluate(
                 constant,
                 selector_column,
                 fixed_column,
@@ -710,7 +717,7 @@ impl<F: FieldFront> Expression<F> {
     /// Evaluate the polynomial lazily using the provided closures to perform the
     /// operations.
     #[allow(clippy::too_many_arguments)]
-    pub fn evaluate_lazy<T: PartialEq>(
+    pub fn evaluate_lazy<T: PartialEq + Debug>(
         &self,
         constant: &impl Fn(F) -> T,
         selector_column: &impl Fn(Selector) -> T,
@@ -731,8 +738,8 @@ impl<F: FieldFront> Expression<F> {
             Expression::Advice(query) => advice_column(*query),
             Expression::Instance(query) => instance_column(*query),
             Expression::Challenge(value) => challenge(*value),
-            Expression::Negated(a) => {
-                let a = F::get(a).evaluate_lazy(
+            Expression::Negated(a_ref) => {
+                let a = F::get(*a_ref).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -747,8 +754,8 @@ impl<F: FieldFront> Expression<F> {
                 );
                 negated(a)
             }
-            Expression::Sum(a, b) => {
-                let a = F::get(a).evaluate_lazy(
+            Expression::Sum(a_ref, b_ref) => {
+                let a = F::get(*a_ref).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -761,7 +768,7 @@ impl<F: FieldFront> Expression<F> {
                     scaled,
                     zero,
                 );
-                let b = F::get(b).evaluate_lazy(
+                let b = F::get(*b_ref).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -777,13 +784,13 @@ impl<F: FieldFront> Expression<F> {
                 sum(a, b)
             }
             Expression::Product(a, b) => {
-                let (a, b) = (F::get(a), F::get(b));
-                let (a, b) = if a.complexity() <= b.complexity() {
-                    (a, b)
+                let (a_ref, b_ref) = (F::get(*a), F::get(*b));
+                let (a_ref, b_ref) = if a_ref.complexity() <= b_ref.complexity() {
+                    (a_ref, b_ref)
                 } else {
-                    (b, a)
+                    (b_ref, a_ref)
                 };
-                let a = a.evaluate_lazy(
+                let a = a_ref.evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -800,7 +807,7 @@ impl<F: FieldFront> Expression<F> {
                 if a == *zero {
                     a
                 } else {
-                    let b = b.evaluate_lazy(
+                    let b = b_ref.evaluate_lazy(
                         constant,
                         selector_column,
                         fixed_column,
@@ -816,8 +823,8 @@ impl<F: FieldFront> Expression<F> {
                     product(a, b)
                 }
             }
-            Expression::Scaled(a, f) => {
-                let a = F::get(a).evaluate_lazy(
+            Expression::Scaled(a_ref, f) => {
+                let a = F::get(*a_ref).evaluate_lazy(
                     constant,
                     selector_column,
                     fixed_column,
@@ -832,7 +839,7 @@ impl<F: FieldFront> Expression<F> {
                 );
                 scaled(a, *f)
             }
-            Expression::Ref(ref_) => F::get(ref_).evaluate_lazy(
+            Expression::Ref(ref_) => F::get(*ref_).evaluate_lazy(
                 constant,
                 selector_column,
                 fixed_column,
@@ -878,28 +885,28 @@ impl<F: FieldFront> Expression<F> {
             }
             Expression::Negated(a) => {
                 writer.write_all(b"(-")?;
-                F::get(a).write_identifier(writer)?;
+                F::get(*a).write_identifier(writer)?;
                 writer.write_all(b")")
             }
             Expression::Sum(a, b) => {
                 writer.write_all(b"(")?;
-                F::get(a).write_identifier(writer)?;
+                F::get(*a).write_identifier(writer)?;
                 writer.write_all(b"+")?;
-                F::get(b).write_identifier(writer)?;
+                F::get(*b).write_identifier(writer)?;
                 writer.write_all(b")")
             }
             Expression::Product(a, b) => {
                 writer.write_all(b"(")?;
-                F::get(a).write_identifier(writer)?;
+                F::get(*a).write_identifier(writer)?;
                 writer.write_all(b"*")?;
-                F::get(b).write_identifier(writer)?;
+                F::get(*b).write_identifier(writer)?;
                 writer.write_all(b")")
             }
             Expression::Scaled(a, f) => {
-                F::get(a).write_identifier(writer)?;
+                F::get(*a).write_identifier(writer)?;
                 write!(writer, "*{f:?}")
             }
-            Expression::Ref(a) => F::get(a).write_identifier(writer),
+            Expression::Ref(a) => F::get(*a).write_identifier(writer),
         }
     }
 
@@ -921,11 +928,11 @@ impl<F: FieldFront> Expression<F> {
             Expression::Advice(_) => 1,
             Expression::Instance(_) => 1,
             Expression::Challenge(_) => 0,
-            Expression::Negated(poly) => F::get(poly).degree(),
-            Expression::Sum(a, b) => max(F::get(a).degree(), F::get(b).degree()),
-            Expression::Product(a, b) => F::get(a).degree() + F::get(b).degree(),
-            Expression::Scaled(poly, _) => F::get(poly).degree(),
-            Expression::Ref(ref_) => F::get(ref_).degree(),
+            Expression::Negated(poly) => F::get(*poly).degree(),
+            Expression::Sum(a, b) => max(F::get(*a).degree(), F::get(*b).degree()),
+            Expression::Product(a, b) => F::get(*a).degree() + F::get(*b).degree(),
+            Expression::Scaled(poly, _) => F::get(*poly).degree(),
+            Expression::Ref(ref_) => F::get(*ref_).degree(),
         }
     }
 
@@ -938,11 +945,11 @@ impl<F: FieldFront> Expression<F> {
             Expression::Advice(_) => 1,
             Expression::Instance(_) => 1,
             Expression::Challenge(_) => 0,
-            Expression::Negated(poly) => F::get(poly).complexity() + 5,
-            Expression::Sum(a, b) => F::get(a).complexity() + F::get(b).complexity() + 15,
-            Expression::Product(a, b) => F::get(a).complexity() + F::get(b).complexity() + 30,
-            Expression::Scaled(poly, _) => F::get(poly).complexity() + 30,
-            Expression::Ref(ref_) => F::get(ref_).complexity(),
+            Expression::Negated(poly) => F::get(*poly).complexity() + 5,
+            Expression::Sum(a, b) => F::get(*a).complexity() + F::get(*b).complexity() + 15,
+            Expression::Product(a, b) => F::get(*a).complexity() + F::get(*b).complexity() + 30,
+            Expression::Scaled(poly, _) => F::get(*poly).complexity() + 30,
+            Expression::Ref(ref_) => F::get(*ref_).complexity(),
         }
     }
 
@@ -1039,23 +1046,23 @@ impl<F: FieldFront> std::fmt::Debug for Expression<F> {
             Expression::Challenge(challenge) => {
                 f.debug_tuple("Challenge").field(challenge).finish()
             }
-            Expression::Negated(poly) => f.debug_tuple("Negated").field(&F::get(poly)).finish(),
+            Expression::Negated(poly) => f.debug_tuple("Negated").field(&F::get(*poly)).finish(),
             Expression::Sum(a, b) => f
                 .debug_tuple("Sum")
-                .field(&F::get(a))
-                .field(&F::get(b))
+                .field(&F::get(*a))
+                .field(&F::get(*b))
                 .finish(),
             Expression::Product(a, b) => f
                 .debug_tuple("Product")
-                .field(&F::get(a))
-                .field(&F::get(b))
+                .field(&F::get(*a))
+                .field(&F::get(*b))
                 .finish(),
             Expression::Scaled(poly, scalar) => f
                 .debug_tuple("Scaled")
-                .field(&F::get(poly))
+                .field(&F::get(*poly))
                 .field(scalar)
                 .finish(),
-            Expression::Ref(ref_) => f.debug_tuple("").field(&F::get(ref_)).finish(),
+            Expression::Ref(ref_) => f.debug_tuple("").field(&F::get(*ref_)).finish(),
         }
     }
 }

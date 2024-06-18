@@ -373,8 +373,8 @@ impl<F: FieldFront> ConstraintSystem<F> {
                     panic!("expression containing simple selector supplied to lookup argument");
                 }
                 let mut table = cells.query_fixed(table.inner(), Rotation::cur());
-                input.query_cells(&mut cells);
-                table.query_cells(&mut cells);
+                input.query_cells(None, &mut cells);
+                table.query_cells(None, &mut cells);
                 (input, table)
             })
             .collect();
@@ -405,8 +405,8 @@ impl<F: FieldFront> ConstraintSystem<F> {
                 if table.contains_simple_selector() {
                     panic!("expression containing simple selector supplied to lookup argument");
                 }
-                input.query_cells(&mut cells);
-                table.query_cells(&mut cells);
+                input.query_cells(None, &mut cells);
+                table.query_cells(None, &mut cells);
                 (input, table)
             })
             .collect();
@@ -428,8 +428,8 @@ impl<F: FieldFront> ConstraintSystem<F> {
         let shuffle_map = shuffle_map(&mut cells)
             .into_iter()
             .map(|(mut input, mut table)| {
-                input.query_cells(&mut cells);
-                table.query_cells(&mut cells);
+                input.query_cells(None, &mut cells);
+                table.query_cells(None, &mut cells);
                 (input, table)
             })
             .collect();
@@ -565,7 +565,7 @@ impl<F: FieldFront> ConstraintSystem<F> {
             .into_iter()
             .map(|c| c.into())
             .map(|mut c: Constraint<F>| {
-                c.poly.query_cells(&mut cells);
+                c.poly.query_cells(None, &mut cells);
                 (c.name, c.poly)
             })
             .unzip();
