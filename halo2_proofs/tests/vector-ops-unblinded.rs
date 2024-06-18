@@ -4,7 +4,7 @@
 use std::marker::PhantomData;
 
 use ff::FromUniformBytes;
-use halo2_debug::one_rng;
+use halo2_debug::test_rng;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
@@ -475,7 +475,7 @@ fn test_prover<C: CurveAffine>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let rng = one_rng();
+    let rng = test_rng();
 
     let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
@@ -550,7 +550,7 @@ fn test_vector_ops_unbinded() {
     let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "3c24612b31ee894b843867429d0ba99bbe9ce3f3ea40dd86041239566651dba8",
+        "1ad48349d290fd0862955d0bb8c5a03cbaff24cdd6c6a2251f65a53b14c70da0",
         halo2_debug::keccak_hex(&proof_1),
     );
 
@@ -558,7 +558,7 @@ fn test_vector_ops_unbinded() {
     let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "5863afa234a433b2b7e198f51e81ba286b0db89d0794dbab4aca73e03fcd9b0e",
+        "7d9f9525dcbdfc4d99ec42afcbf29824ed6df8455ab10df9bab78fc2351aad0a",
         halo2_debug::keccak_hex(&proof_2),
     );
 

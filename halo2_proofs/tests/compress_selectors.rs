@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use ff::PrimeField;
 use halo2_debug::display::expr_disp_names;
-use halo2_debug::one_rng;
+use halo2_debug::test_rng;
 use halo2_frontend::circuit::compile_circuit;
 use halo2_frontend::plonk::Error;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
@@ -348,7 +348,7 @@ fn test_mycircuit(
         constant: Fr::one(),
     };
 
-    let mut rng = one_rng();
+    let mut rng = test_rng();
 
     // Setup
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
@@ -489,7 +489,7 @@ fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     let _proof = test_mycircuit(true, true)?;
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "d0f9083017f4ef79cb2b2c4efef297572177ea59a0290eecc5ada2a594d2e32a",
+        "54567f2f61aca2232780ff6becb4e3d755b10deefea3a421af2b0448336e0bfb",
         halo2_debug::keccak_hex(_proof),
     );
 
@@ -497,7 +497,7 @@ fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     let _proof = test_mycircuit(false, false)?;
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "705caf13656b7ee48c69fb8f64499d341514f302c3c781c5b6f1391d7790a5d6",
+        "74695fecf57b69fd698c55290beb34e21c631df58cb31947e3ecf0b961e56631",
         halo2_debug::keccak_hex(_proof),
     );
 

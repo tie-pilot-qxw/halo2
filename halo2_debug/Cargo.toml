@@ -28,3 +28,4 @@ halo2_middleware = { path = "../halo2_middleware" }
 tiny-keccak = { version = "2.0.2", features=["keccak"] }
 hex = "0.4.3"
 rand_core = "0.6.4"
+rand_chacha = "0.3"

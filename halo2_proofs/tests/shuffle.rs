@@ -1,5 +1,5 @@
 use ff::{BatchInvert, FromUniformBytes};
-use halo2_debug::one_rng;
+use halo2_debug::test_rng;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
@@ -279,7 +279,7 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let rng = one_rng();
+    let rng = test_rng();
 
     let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
@@ -336,7 +336,7 @@ fn test_shuffle() {
 
         #[cfg(all(feature = "vector-tests", not(coverage)))]
         assert_eq!(
-            "7a0cfc86f1f37b7c425a441abbe7a04a37c593c4b08c8d620c6615250d690020",
+            "4aa130bdb970e2c3176a0b385efc672468a6ac7ed65c68afb4c1c9928278afba",
             halo2_debug::keccak_hex(_proof),
         );
     }

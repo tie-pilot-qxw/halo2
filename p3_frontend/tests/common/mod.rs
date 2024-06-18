@@ -11,7 +11,7 @@ use halo2_backend::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use halo2_debug::one_rng;
+use halo2_debug::test_rng;
 use halo2_middleware::circuit::CompiledCircuit;
 use halo2_middleware::zal::impls::H2cEngine;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
@@ -61,7 +61,7 @@ pub(crate) fn setup_prove_verify(
     witness: Vec<Option<Vec<Fr>>>,
 ) {
     // Setup
-    let mut rng = one_rng();
+    let mut rng = test_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let start = Instant::now();

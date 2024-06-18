@@ -1,23 +1,9 @@
-use rand_core::block::BlockRng;
-use rand_core::block::BlockRngCore;
+use rand_chacha::ChaCha20Rng;
+use rand_core::SeedableRng;
 use tiny_keccak::Hasher;
 
-/// One number generator, that can be used as a deterministic Rng, outputing fixed values.
-pub struct OneNg {}
-
-impl BlockRngCore for OneNg {
-    type Item = u32;
-    type Results = [u32; 16];
-
-    fn generate(&mut self, results: &mut Self::Results) {
-        for elem in results.iter_mut() {
-            *elem = 1;
-        }
-    }
-}
-
-pub fn one_rng() -> BlockRng<OneNg> {
-    BlockRng::<OneNg>::new(OneNg {})
+pub fn test_rng() -> ChaCha20Rng {
+    ChaCha20Rng::seed_from_u64(0xdeadbeef)
 }
 
 /// Gets the hex representation of the keccak hash of the input data

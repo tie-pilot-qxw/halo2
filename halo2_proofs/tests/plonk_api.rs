@@ -3,7 +3,7 @@
 
 use assert_matches::assert_matches;
 use ff::{FromUniformBytes, WithSmallOrderMulGroup};
-use halo2_debug::one_rng;
+use halo2_debug::test_rng;
 use halo2_middleware::zal::{
     impls::{PlonkEngine, PlonkEngineConfig},
     traits::MsmAccel,
@@ -577,7 +577,7 @@ fn plonk_api() {
 
         bad_keys!(Scheme);
 
-        let mut rng = one_rng();
+        let mut rng = test_rng();
 
         let params = ParamsKZG::<Bn256>::setup(K, &mut rng);
         let pk = keygen::<KZGCommitmentScheme<_>>(&params);
@@ -598,7 +598,7 @@ fn plonk_api() {
 
         #[cfg(all(feature = "vector-tests", not(coverage)))]
         assert_eq!(
-            "50969312b469ebbc528e6c765e8483b53c92292028a85afda22fa83a7b76c667",
+            "c1476c9e9075574456d16442a2e2da05c8e718adcfd8e8647a0c701b5cef67d0",
             halo2_debug::keccak_hex(proof),
         );
     }
@@ -612,7 +612,7 @@ fn plonk_api() {
         type Scheme = KZGCommitmentScheme<Bn256>;
         bad_keys!(Scheme);
 
-        let mut rng = one_rng();
+        let mut rng = test_rng();
         let params = ParamsKZG::<Bn256>::setup(K, &mut rng);
 
         let pk = keygen::<KZGCommitmentScheme<_>>(&params);
@@ -633,7 +633,7 @@ fn plonk_api() {
 
         #[cfg(all(feature = "vector-tests", not(coverage)))]
         assert_eq!(
-            "ade2d9dae7d02871c63d0a80bc0e09d536138e49b4925c62046e2e86cb288bc3",
+            "352b7b196bd010c31f287cd25376eab0e74be444711891ff0b05068d8366c70d",
             halo2_debug::keccak_hex(proof),
         );
     }
@@ -647,7 +647,7 @@ fn plonk_api() {
         type Scheme = IPACommitmentScheme<EqAffine>;
         bad_keys!(Scheme);
 
-        let mut rng = one_rng();
+        let mut rng = test_rng();
         let params = ParamsIPA::<EqAffine>::new(K);
 
         let pk = keygen::<IPACommitmentScheme<EqAffine>>(&params);

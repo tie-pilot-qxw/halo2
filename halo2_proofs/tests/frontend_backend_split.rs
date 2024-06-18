@@ -11,7 +11,7 @@ use halo2_backend::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use halo2_debug::one_rng;
+use halo2_debug::test_rng;
 use halo2_frontend::{
     circuit::{
         compile_circuit, AssignedCell, Layouter, Region, SimpleFloorPlanner, Value,
@@ -493,7 +493,7 @@ fn test_mycircuit_full_legacy() {
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
 
     // Setup
-    let mut rng = one_rng();
+    let mut rng = test_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let start = Instant::now();
     let vk = keygen_vk_legacy(&params, &circuit).expect("keygen_vk should not fail");
@@ -536,7 +536,7 @@ fn test_mycircuit_full_legacy() {
 
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
+        "625d492217ab78c9a55eb6f9154bd57a63ca7a37f6e3f64cce670b6d1fc8271d",
         halo2_debug::keccak_hex(proof),
     );
 }
@@ -554,7 +554,7 @@ fn test_mycircuit_full_split() {
     let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, true).unwrap();
 
     // Setup
-    let mut rng = one_rng();
+    let mut rng = test_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let start = Instant::now();
     let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
@@ -614,7 +614,7 @@ instances.clone(),
 
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "c5c11281474b586795a5d97bdefeee80456d2921584b3a8b00523eebd49f2fac",
+        "625d492217ab78c9a55eb6f9154bd57a63ca7a37f6e3f64cce670b6d1fc8271d",
         halo2_debug::keccak_hex(proof),
     );
 }

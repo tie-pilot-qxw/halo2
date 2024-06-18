@@ -4,7 +4,7 @@ use std::{
 };
 
 use ff::Field;
-use halo2_debug::one_rng;
+use halo2_debug::test_rng;
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
@@ -132,7 +132,7 @@ impl Circuit<Fr> for StandardPlonk {
 fn test_serialization() {
     let k = 4;
 
-    let mut rng = one_rng();
+    let mut rng = test_rng();
 
     let circuit = StandardPlonk(Fr::random(&mut rng));
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
@@ -173,7 +173,7 @@ fn test_serialization() {
         &pk,
         &[circuit],
         instances.as_slice(),
-        one_rng(),
+        test_rng(),
         &mut transcript,
     )
     .expect("prover should not fail");
@@ -199,7 +199,7 @@ fn test_serialization() {
 
     #[cfg(all(feature = "vector-tests", not(coverage)))]
     assert_eq!(
-        "431a9b8a8e289cc85655576965f443da657e88a6cdc200179d8916c23bd8bda7",
+        "a8bc8d8311d30617ba9d170f1610adc6cfc0a93074c6d2ac4e0b65d931be3848",
         halo2_debug::keccak_hex(proof),
     )
 }
