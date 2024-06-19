@@ -47,7 +47,7 @@ pub(crate) struct Committed<C: CurveAffine> {
 ///
 /// It indicates that the permutation product polynomials([`Committed`]) have been evaluated in the evaluation domain, and converted to [`Evaluated`](see [`Committed::evaluate`]).  
 ///
-/// It also indicates that the permuted product polynomials([`Evaluated`]) can be **open** (see [`Evaluated::open`]).  
+/// It also indicates that the permuted product polynomials([`Evaluated`]) can be **opened** (see [`Evaluated::open`]).  
 pub(crate) struct Evaluated<C: CurveAffine> {
     constructed: Committed<C>,
 }
