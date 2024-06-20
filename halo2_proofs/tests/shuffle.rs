@@ -328,16 +328,12 @@ fn test_shuffle() {
 
     let circuit = &MyCircuit::<_, W, H>::rand(&mut test_rng());
 
-    {
-        test_mock_prover(K, circuit.clone(), Ok(()));
-        let _proof = test_prover::<EqAffine, W, H>(K, circuit.clone(), true);
+    test_mock_prover(K, circuit.clone(), Ok(()));
 
-        #[cfg(all(feature = "vector-tests", not(coverage)))]
-        assert_eq!(
-            "4aa130bdb970e2c3176a0b385efc672468a6ac7ed65c68afb4c1c9928278afba",
-            halo2_debug::keccak_hex(_proof),
-        );
-    }
+    halo2_debug::test_result(
+        || test_prover::<EqAffine, W, H>(K, circuit.clone(), true),
+        "8526b66a372eaeccb687c21daf358d4fdb1c9d2b7e81470317c472634c5c1470",
+    );
 
     #[cfg(not(feature = "sanity-checks"))]
     {
@@ -360,11 +356,9 @@ fn test_shuffle() {
                 },
             )]),
         );
-        let _proof = test_prover::<EqAffine, W, H>(K, circuit, false);
-        #[cfg(all(feature = "vector-tests", not(coverage)))]
-        assert_eq!(
-            "0b4e97f2d561fae56fe893333eba2df5228c78e80f8bd7c509d4d40d127dff92",
-            halo2_debug::keccak_hex(_proof),
+        halo2_debug::test_result(
+            || test_prover::<EqAffine, W, H>(K, circuit.clone(), false),
+            "27ad558ee60a6675911b87a0df5de49d7c9b5673d723bb05a9811aa33bf486d1",
         );
     }
 }

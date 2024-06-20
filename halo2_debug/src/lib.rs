@@ -14,4 +14,24 @@ pub fn keccak_hex<D: AsRef<[u8]>>(data: D) -> String {
     hasher.finalize(&mut hash);
     hex::encode(hash)
 }
+
+/// Executes a test and checks the result against the expected value
+pub fn test_result<F: FnOnce() -> Vec<u8> + Send>(test: F, _expected: &str) -> Vec<u8> {
+    #[cfg(feature = "vector-tests")]
+    let result = rayon::ThreadPoolBuilder::new()
+        .num_threads(1)
+        .build()
+        .unwrap()
+        .install(|| {
+            let result = test();
+            assert_eq!(_expected, keccak_hex(result.clone()),);
+            result
+        });
+
+    #[cfg(not(feature = "vector-tests"))]
+    let result = test();
+
+    result
+}
+
 pub mod display;

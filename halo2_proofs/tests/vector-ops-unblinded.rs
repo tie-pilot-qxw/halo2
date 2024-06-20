@@ -360,7 +360,7 @@ impl<F: Field> NumericInstructions<F> for AddChip<F> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MulCircuit<F: Field> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
@@ -413,7 +413,7 @@ impl<F: Field> Circuit<F> for MulCircuit<F> {
 }
 // ANCHOR_END: circuit
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct AddCircuit<F: Field> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
@@ -547,19 +547,15 @@ fn test_vector_ops_unbinded() {
     };
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
-    let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
-    #[cfg(all(feature = "vector-tests", not(coverage)))]
-    assert_eq!(
-        "1ad48349d290fd0862955d0bb8c5a03cbaff24cdd6c6a2251f65a53b14c70da0",
-        halo2_debug::keccak_hex(&proof_1),
+    let proof_1 = halo2_debug::test_result(
+        || test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit.clone(), true, c_mul.clone()),
+        "1f726eaddd926057e6c2aa8a364d1b4192da27f53c38c9f21d8924ef3eb0f0ab",
     );
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
-    let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
-    #[cfg(all(feature = "vector-tests", not(coverage)))]
-    assert_eq!(
-        "7d9f9525dcbdfc4d99ec42afcbf29824ed6df8455ab10df9bab78fc2351aad0a",
-        halo2_debug::keccak_hex(&proof_2),
+    let proof_2 = halo2_debug::test_result(
+        || test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit.clone(), true, c_add.clone()),
+        "a42eb2f3e4761e6588bfd8db7e7035ead1cc1331017b6b09a7b75ddfbefefc58",
     );
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily

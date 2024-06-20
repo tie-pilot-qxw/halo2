@@ -130,76 +130,78 @@ impl Circuit<Fr> for StandardPlonk {
 
 #[test]
 fn test_serialization() {
-    let k = 4;
+    halo2_debug::test_result(
+        || {
+            let k = 4;
 
-    let mut rng = test_rng();
+            let mut rng = test_rng();
 
-    let circuit = StandardPlonk(Fr::random(&mut rng));
-    let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
-    let compress_selectors = true;
-    let vk = keygen_vk_custom(&params, &circuit, compress_selectors).expect("vk should not fail");
-    let pk = keygen_pk(&params, vk, &circuit).expect("pk should not fail");
+            let circuit = StandardPlonk(Fr::random(&mut rng));
+            let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
+            let compress_selectors = true;
+            let vk = keygen_vk_custom(&params, &circuit, compress_selectors)
+                .expect("vk should not fail");
+            let pk = keygen_pk(&params, vk, &circuit).expect("pk should not fail");
 
-    let f = File::create("serialization-test.pk").unwrap();
-    let mut writer = BufWriter::new(f);
-    pk.write(&mut writer, SerdeFormat::RawBytes).unwrap();
-    writer.flush().unwrap();
+            let f = File::create("serialization-test.pk").unwrap();
+            let mut writer = BufWriter::new(f);
+            pk.write(&mut writer, SerdeFormat::RawBytes).unwrap();
+            writer.flush().unwrap();
 
-    let f = File::open("serialization-test.pk").unwrap();
-    let mut reader = BufReader::new(f);
-    #[allow(clippy::unit_arg)]
-    let pk = pk_read::<G1Affine, _, StandardPlonk>(
-        &mut reader,
-        SerdeFormat::RawBytes,
-        k,
-        &circuit,
-        compress_selectors,
-    )
-    .unwrap();
+            let f = File::open("serialization-test.pk").unwrap();
+            let mut reader = BufReader::new(f);
+            #[allow(clippy::unit_arg)]
+            let pk = pk_read::<G1Affine, _, StandardPlonk>(
+                &mut reader,
+                SerdeFormat::RawBytes,
+                k,
+                &circuit,
+                compress_selectors,
+            )
+            .unwrap();
 
-    std::fs::remove_file("serialization-test.pk").unwrap();
+            std::fs::remove_file("serialization-test.pk").unwrap();
 
-    let instances: Vec<Vec<Vec<Fr>>> = vec![vec![vec![circuit.0]]];
-    let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-    create_proof::<
-        KZGCommitmentScheme<Bn256>,
-        ProverGWC<'_, Bn256>,
-        Challenge255<G1Affine>,
-        _,
-        Blake2bWrite<Vec<u8>, G1Affine, Challenge255<_>>,
-        _,
-    >(
-        &params,
-        &pk,
-        &[circuit],
-        instances.as_slice(),
-        test_rng(),
-        &mut transcript,
-    )
-    .expect("prover should not fail");
-    let proof = transcript.finalize();
+            let instances: Vec<Vec<Vec<Fr>>> = vec![vec![vec![circuit.0]]];
+            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+            create_proof::<
+                KZGCommitmentScheme<Bn256>,
+                ProverGWC<'_, Bn256>,
+                Challenge255<G1Affine>,
+                _,
+                Blake2bWrite<Vec<u8>, G1Affine, Challenge255<_>>,
+                _,
+            >(
+                &params,
+                &pk,
+                &[circuit],
+                instances.as_slice(),
+                test_rng(),
+                &mut transcript,
+            )
+            .expect("prover should not fail");
+            let proof = transcript.finalize();
 
-    let verifier_params = params.verifier_params();
-    let strategy = SingleStrategy::new(&verifier_params);
-    let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-    assert!(verify_proof::<
-        KZGCommitmentScheme<Bn256>,
-        VerifierGWC<Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
-        SingleStrategy<Bn256>,
-    >(
-        &verifier_params,
-        pk.get_vk(),
-        strategy,
-        instances.as_slice(),
-        &mut transcript
-    )
-    .is_ok());
+            let verifier_params = params.verifier_params();
+            let strategy = SingleStrategy::new(&verifier_params);
+            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            assert!(verify_proof::<
+                KZGCommitmentScheme<Bn256>,
+                VerifierGWC<Bn256>,
+                Challenge255<G1Affine>,
+                Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
+                SingleStrategy<Bn256>,
+            >(
+                &verifier_params,
+                pk.get_vk(),
+                strategy,
+                instances.as_slice(),
+                &mut transcript
+            )
+            .is_ok());
 
-    #[cfg(all(feature = "vector-tests", not(coverage)))]
-    assert_eq!(
-        "a8bc8d8311d30617ba9d170f1610adc6cfc0a93074c6d2ac4e0b65d931be3848",
-        halo2_debug::keccak_hex(proof),
-    )
+            proof
+        },
+        "0d3baeea90249588c3939dc2f64b071b24b7e4744c4ca8442fe4b2553aae9167",
+    );
 }

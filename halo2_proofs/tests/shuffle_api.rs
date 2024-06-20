@@ -196,32 +196,31 @@ where
 
 #[test]
 fn test_shuffle_api() {
-    use halo2_proofs::dev::MockProver;
-    use halo2curves::pasta::Fp;
-    const K: u32 = 4;
-    let input_0 = [1, 2, 4, 1]
-        .map(|e: u64| Value::known(Fp::from(e)))
-        .to_vec();
-    let input_1 = [10, 20, 40, 10].map(Fp::from).to_vec();
-    let shuffle_0 = [4, 1, 1, 2]
-        .map(|e: u64| Value::known(Fp::from(e)))
-        .to_vec();
-    let shuffle_1 = [40, 10, 10, 20]
-        .map(|e: u64| Value::known(Fp::from(e)))
-        .to_vec();
-    let circuit = MyCircuit {
-        input_0,
-        input_1,
-        shuffle_0,
-        shuffle_1,
-    };
-    let prover = MockProver::run(K, &circuit, vec![]).unwrap();
-    prover.assert_satisfied();
-    let _proof = test_prover::<EqAffine>(K, circuit, true);
-
-    #[cfg(all(feature = "vector-tests", not(coverage)))]
-    assert_eq!(
-        "31a11556ab6a031a5c1015f6269686736aa1273203a99460ad9dfcc8ec29d383",
-        halo2_debug::keccak_hex(_proof),
+    halo2_debug::test_result(
+        || {
+            use halo2_proofs::dev::MockProver;
+            use halo2curves::pasta::Fp;
+            const K: u32 = 4;
+            let input_0 = [1, 2, 4, 1]
+                .map(|e: u64| Value::known(Fp::from(e)))
+                .to_vec();
+            let input_1 = [10, 20, 40, 10].map(Fp::from).to_vec();
+            let shuffle_0 = [4, 1, 1, 2]
+                .map(|e: u64| Value::known(Fp::from(e)))
+                .to_vec();
+            let shuffle_1 = [40, 10, 10, 20]
+                .map(|e: u64| Value::known(Fp::from(e)))
+                .to_vec();
+            let circuit = MyCircuit {
+                input_0,
+                input_1,
+                shuffle_0,
+                shuffle_1,
+            };
+            let prover = MockProver::run(K, &circuit, vec![]).unwrap();
+            prover.assert_satisfied();
+            test_prover::<EqAffine>(K, circuit, true)
+        },
+        "54f4fec1776178aadf8816754d7877f1de685e0ffb5b6af4db20f557d87550d6",
     );
 }

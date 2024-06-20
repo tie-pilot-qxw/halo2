@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use ff::PrimeField;
 use halo2_debug::display::expr_disp_names;
-use halo2_debug::test_rng;
+use halo2_debug::{test_result, test_rng};
 use halo2_frontend::circuit::compile_circuit;
 use halo2_frontend::plonk::Error;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
@@ -486,19 +486,15 @@ fn test_compress_gates() {
 #[test]
 fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     // vk & pk keygen both WITH compress
-    let _proof = test_mycircuit(true, true)?;
-    #[cfg(all(feature = "vector-tests", not(coverage)))]
-    assert_eq!(
-        "54567f2f61aca2232780ff6becb4e3d755b10deefea3a421af2b0448336e0bfb",
-        halo2_debug::keccak_hex(_proof),
+    test_result(
+        || test_mycircuit(true, true).expect("should pass"),
+        "8326140d1873a91630d439a8812d1f104667144e03e0cd5c59eb358ae5d1a4eb",
     );
 
     // vk & pk keygen both WITHOUT compress
-    let _proof = test_mycircuit(false, false)?;
-    #[cfg(all(feature = "vector-tests", not(coverage)))]
-    assert_eq!(
-        "74695fecf57b69fd698c55290beb34e21c631df58cb31947e3ecf0b961e56631",
-        halo2_debug::keccak_hex(_proof),
+    test_result(
+        || test_mycircuit(false, false).expect("should pass"),
+        "73dd4c3c9c51d55dc8cf68ca2b5d8acdb40ed44bc8a88d718325bc0023688f64",
     );
 
     Ok(())
