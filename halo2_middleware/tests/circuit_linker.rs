@@ -1,31 +1,14 @@
-use halo2_backend::{
-    plonk::{
-        keygen::{keygen_pk, keygen_vk},
-        prover::ProverSingle,
-        verifier::{verify_proof, verify_proof_single},
-    },
-    transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
-    },
-};
 use halo2_debug::check_witness;
 use halo2_frontend::{
-    circuit::{
-        compile_circuit, AssignedCell, Layouter, Region, SimpleFloorPlanner, Value,
-        WitnessCalculator,
-    },
-    dev::MockProver,
+    circuit::{compile_circuit, Layouter, SimpleFloorPlanner, Value, WitnessCalculator},
     plonk::{
-        circuit::{Challenge, Column},
-        Advice, Circuit, ConstraintSystem, Error as ErrorFront, Expression, FirstPhase, Fixed,
-        Instance, SecondPhase, Selector,
+        circuit::Column, Advice, Circuit, ConstraintSystem, Error as ErrorFront, Expression, Fixed,
     },
 };
 use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::circuit_linker::{
     link_cs, link_preprocessing, link_witness, LinkConfig, MergeStrategy,
 };
-use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 use halo2_middleware::{circuit::CompiledCircuit, ff::Field, poly::Rotation};
 use std::collections::HashMap;
 
@@ -96,9 +79,9 @@ impl<F: Field + From<u64>> Circuit<F> for CircuitA<F> {
             let tbl_s_not_zero = meta.query_fixed(tbl_s_not_zero, Rotation::cur());
             let tbl_x = meta.query_advice(tbl_x, Rotation::cur());
 
-            let lhs = s_c_not_zero * c;
-            let rhs = tbl_s_not_zero * tbl_x;
-            vec![(lhs, rhs)]
+            let lhs = s_c_not_zero.clone() * c;
+            let rhs = tbl_s_not_zero.clone() * tbl_x;
+            vec![(s_c_not_zero, tbl_s_not_zero), (lhs, rhs)]
         });
 
         CircuitAConfig {
@@ -249,15 +232,8 @@ impl<F: Field + From<u64>> Circuit<F> for CircuitB<F> {
     }
 }
 
-use halo2_backend::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
-use halo2_backend::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
-use halo2_backend::poly::kzg::strategy::SingleStrategy;
-use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::SeedableRng;
-use rand_xorshift::XorShiftRng;
-// use rand_core::block::BlockRng;
-// use rand_core::block::BlockRngCore;
 use halo2_debug::display::{expr_disp_names, lookup_arg_disp_names};
+use halo2curves::bn256::Fr;
 
 fn f(v: u64) -> Fr {
     Fr::from(v)
@@ -332,7 +308,7 @@ fn test_circuit_linker() {
             format!("{}", expr_disp_names(&cs_a.gates[0].poly, names_a))
         );
         assert_eq!(
-            "[s_c_not_zero * c] in [tbl_s_not_zero * tbl_x]",
+            "[s_c_not_zero, s_c_not_zero * c] in [tbl_s_not_zero, tbl_s_not_zero * tbl_x]",
             format!("{}", lookup_arg_disp_names(&cs_a.lookups[0], names_a))
         );
 
@@ -358,7 +334,7 @@ fn test_circuit_linker() {
         format!("{}", expr_disp_names(&cs_c.gates[1].poly, names_c))
     );
     assert_eq!(
-        "[s_c_not_zero * c] in [s_not_zero * x]",
+        "[s_c_not_zero, s_c_not_zero * c] in [s_not_zero, s_not_zero * x]",
         format!("{}", lookup_arg_disp_names(&cs_c.lookups[0], names_c))
     );
 
@@ -392,84 +368,4 @@ fn test_circuit_linker() {
 
     let blinding_rows = 10;
     check_witness(&compiled_circuit, k, blinding_rows, &witness, &public);
-
-    /*
-    let mut rng = XorShiftRng::from_seed([1; 16]);
-    // Setup
-    let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
-    let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
-    let pk = keygen_pk(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
-
-    // Proving
-    println!("Proving...");
-    let instances: Vec<Vec<Fr>> = Vec::new();
-
-    let mut witness_calc_a = WitnessCalculator::new(k, &circuit_a, &config_a, &cs_a, &instances);
-    let mut witness_calc_b = WitnessCalculator::new(k, &circuit_b, &config_b, &cs_b, &instances);
-    let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
-    let engine = PlonkEngineConfig::new()
-        .set_curve::<G1Affine>()
-        .set_msm(H2cEngine::new())
-        .build();
-    let mut prover = ProverSingle::<
-        KZGCommitmentScheme<Bn256>,
-        ProverSHPLONK<'_, Bn256>,
-        _,
-        _,
-        _,
-        _,
-    >::new_with_engine(
-        engine,
-        &params,
-        &pk,
-        instances.clone(),
-        &mut rng,
-        &mut transcript,
-    )
-    .unwrap();
-    let mut challenges = HashMap::new();
-    for phase in 0..compiled_circuit.cs.phases() {
-        println!("phase {phase}");
-        let witness_a = witness_calc_a.calc(phase as u8, &challenges).unwrap();
-        let witness_b = witness_calc_b.calc(phase as u8, &challenges).unwrap();
-        // println!(
-        //     "w_a, w_b {:?} {:?}",
-        //     witness_a
-        //         .iter()
-        //         .map(|w| w.as_ref().map(|w| w.len()))
-        //         .collect::<Vec<_>>(),
-        //     witness_b
-        //         .iter()
-        //         .map(|w| w.as_ref().map(|w| w.len()))
-        //         .collect::<Vec<_>>()
-        // );
-        let witness = link_witness(&cfg, &compiled_circuit.cs, &map, vec![witness_a, witness_b]);
-        // println!(
-        //     "w {:?}",
-        //     witness
-        //         .iter()
-        //         .map(|w| w.as_ref().map(|w| w.len()))
-        //         .collect::<Vec<_>>(),
-        // );
-        challenges = prover.commit_phase(phase as u8, witness).unwrap();
-    }
-    prover.create_proof().unwrap();
-    let proof = transcript.finalize();
-
-    // Verify
-    println!("Verifying...");
-    let mut verifier_transcript =
-        Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    let verifier_params = params.verifier_params();
-    let strategy = SingleStrategy::new(&verifier_params);
-
-    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
-        &verifier_params,
-        &vk,
-        strategy,
-        instances.clone(),
-        &mut verifier_transcript,
-    )
-    .expect("verify succeeds");
-    */
 }
