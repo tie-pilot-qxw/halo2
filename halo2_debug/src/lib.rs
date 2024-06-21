@@ -15,7 +15,8 @@ pub fn keccak_hex<D: AsRef<[u8]>>(data: D) -> String {
     hex::encode(hash)
 }
 
-/// Executes a test and checks the result against the expected value
+/// When the feature `vector-tests` is enabled, executes the test in a single thread and checks the result against the expected value.
+/// When the feature `vector-tests` is disabled, just executes the test.
 pub fn test_result<F: FnOnce() -> Vec<u8> + Send>(test: F, _expected: &str) -> Vec<u8> {
     #[cfg(feature = "vector-tests")]
     let result = rayon::ThreadPoolBuilder::new()
