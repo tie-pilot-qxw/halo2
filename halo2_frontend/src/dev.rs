@@ -399,7 +399,12 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         }
     }
 
-    fn enable_selector<A, AR>(&mut self, _: A, selector: &Selector, row: usize) -> Result<(), Error>
+    fn enable_selector<A, AR>(
+        &mut self,
+        name: A,
+        selector: &Selector,
+        row: usize,
+    ) -> Result<(), Error>
     where
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -410,7 +415,9 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
         assert!(
             self.usable_rows.contains(&row),
-            "row={} not in usable_rows={:?}, k={}",
+            "cell `{}` enable error: column=Selector({}), row={} not in usable_rows={:?}, k={}",
+            name().into(),
+            selector.index(),
             row,
             self.usable_rows,
             self.k,
@@ -438,7 +445,8 @@ impl<F: Field> Assignment<F> for MockProver<F> {
     ) -> Result<circuit::Value<F>, Error> {
         assert!(
             self.usable_rows.contains(&row),
-            "row={}, usable_rows={:?}, k={}",
+            "query_instance error: column=Instance({}), row={}, usable_rows={:?}, k={}",
+            column.index(),
             row,
             self.usable_rows,
             self.k,
@@ -454,7 +462,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
     fn assign_advice<V, VR, A, AR>(
         &mut self,
-        _: A,
+        name: A,
         column: Column<Advice>,
         row: usize,
         to: V,
@@ -468,7 +476,9 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         if self.in_phase(FirstPhase) {
             assert!(
                 self.usable_rows.contains(&row),
-                "row={}, usable_rows={:?}, k={}",
+                "cell `{}` assign error: column=Advice({}), row={}, usable_rows={:?}, k={}",
+                name().into(),
+                column.index(),
                 row,
                 self.usable_rows,
                 self.k,
@@ -507,7 +517,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
     fn assign_fixed<V, VR, A, AR>(
         &mut self,
-        _: A,
+        name: A,
         column: Column<Fixed>,
         row: usize,
         to: V,
@@ -524,7 +534,9 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
         assert!(
             self.usable_rows.contains(&row),
-            "row={}, usable_rows={:?}, k={}",
+            "cell `{}` assign error: column=Fixed({}), row={}, usable_rows={:?}, k={}",
+            name().into(),
+            column.index(),
             row,
             self.usable_rows,
             self.k,
@@ -561,8 +573,12 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
         assert!(
             self.usable_rows.contains(&left_row) && self.usable_rows.contains(&right_row),
-            "left_row={}, right_row={}, usable_rows={:?}, k={}",
+            "copy error: left_column={:?}({}), left_row={}, right_column={:?}({}), right_row={}, usable_rows={:?}, k={}",
+            left_column.column_type(),
+            left_column.index(),
             left_row,
+            right_column.column_type(),
+            right_column.index(),
             right_row,
             self.usable_rows,
             self.k,
@@ -584,7 +600,9 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
         assert!(
             self.usable_rows.contains(&from_row),
-            "row={}, usable_rows={:?}, k={}",
+            "fill_from_row error: column={:?}({}), from_row={}, usable_rows={:?}, k={}",
+            col.column_type(),
+            col.index(),
             from_row,
             self.usable_rows,
             self.k,
