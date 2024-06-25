@@ -7,6 +7,7 @@ use std::ops::{Add, Mul, Neg, Range};
 
 use blake2b_simd::blake2b;
 
+use crate::plonk::AssignmentError;
 use crate::{
     circuit,
     plonk::{
@@ -401,7 +402,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
     fn enable_selector<A, AR>(
         &mut self,
-        name: A,
+        desc: A,
         selector: &Selector,
         row: usize,
     ) -> Result<(), Error>
@@ -413,15 +414,15 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        assert!(
-            self.usable_rows.contains(&row),
-            "cell `{}` enable error: column=Selector({}), row={} not in usable_rows={:?}, k={}",
-            name().into(),
-            selector.index(),
-            row,
-            self.usable_rows,
-            self.k,
-        );
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::AssignmentError(AssignmentError::EnableSelector {
+                desc: desc().into(),
+                selector: *selector,
+                row,
+                usable_rows: (self.usable_rows.start, self.usable_rows.end),
+                k: self.k,
+            }));
+        }
 
         // Track that this selector was enabled. We require that all selectors are enabled
         // inside some region (i.e. no floating selectors).
@@ -443,14 +444,14 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         column: Column<Instance>,
         row: usize,
     ) -> Result<circuit::Value<F>, Error> {
-        assert!(
-            self.usable_rows.contains(&row),
-            "query_instance error: column=Instance({}), row={}, usable_rows={:?}, k={}",
-            column.index(),
-            row,
-            self.usable_rows,
-            self.k,
-        );
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::AssignmentError(AssignmentError::QueryInstance {
+                col: column.into(),
+                row,
+                usable_rows: (self.usable_rows.start, self.usable_rows.end),
+                k: self.k,
+            }));
+        }
 
         Ok(self
             .instance
@@ -462,7 +463,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
     fn assign_advice<V, VR, A, AR>(
         &mut self,
-        name: A,
+        desc: A,
         column: Column<Advice>,
         row: usize,
         to: V,
@@ -474,15 +475,15 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         AR: Into<String>,
     {
         if self.in_phase(FirstPhase) {
-            assert!(
-                self.usable_rows.contains(&row),
-                "cell `{}` assign error: column=Advice({}), row={}, usable_rows={:?}, k={}",
-                name().into(),
-                column.index(),
-                row,
-                self.usable_rows,
-                self.k,
-            );
+            if !self.usable_rows.contains(&row) {
+                return Err(Error::AssignmentError(AssignmentError::AssignAdvice {
+                    desc: desc().into(),
+                    col: column.into(),
+                    row,
+                    usable_rows: (self.usable_rows.start, self.usable_rows.end),
+                    k: self.k,
+                }));
+            }
 
             if let Some(region) = self.current_region.as_mut() {
                 region.update_extent(column.into(), row);
@@ -517,7 +518,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
     fn assign_fixed<V, VR, A, AR>(
         &mut self,
-        name: A,
+        desc: A,
         column: Column<Fixed>,
         row: usize,
         to: V,
@@ -532,15 +533,15 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        assert!(
-            self.usable_rows.contains(&row),
-            "cell `{}` assign error: column=Fixed({}), row={}, usable_rows={:?}, k={}",
-            name().into(),
-            column.index(),
-            row,
-            self.usable_rows,
-            self.k,
-        );
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::AssignmentError(AssignmentError::AssignFixed {
+                desc: desc().into(),
+                col: column.into(),
+                row,
+                usable_rows: (self.usable_rows.start, self.usable_rows.end),
+                k: self.k,
+            }));
+        }
 
         if let Some(region) = self.current_region.as_mut() {
             region.update_extent(column.into(), row);
@@ -571,18 +572,16 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        assert!(
-            self.usable_rows.contains(&left_row) && self.usable_rows.contains(&right_row),
-            "copy error: left_column={:?}({}), left_row={}, right_column={:?}({}), right_row={}, usable_rows={:?}, k={}",
-            left_column.column_type(),
-            left_column.index(),
-            left_row,
-            right_column.column_type(),
-            right_column.index(),
-            right_row,
-            self.usable_rows,
-            self.k,
-        );
+        if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
+            return Err(Error::AssignmentError(AssignmentError::Copy {
+                left_col: left_column,
+                left_row,
+                right_col: right_column,
+                right_row,
+                usable_rows: (self.usable_rows.start, self.usable_rows.end),
+                k: self.k,
+            }));
+        }
 
         self.permutation
             .copy(left_column, left_row, right_column, right_row)
@@ -598,15 +597,14 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        assert!(
-            self.usable_rows.contains(&from_row),
-            "fill_from_row error: column={:?}({}), from_row={}, usable_rows={:?}, k={}",
-            col.column_type(),
-            col.index(),
-            from_row,
-            self.usable_rows,
-            self.k,
-        );
+        if !self.usable_rows.contains(&from_row) {
+            return Err(Error::AssignmentError(AssignmentError::FillFromRow {
+                col: col.into(),
+                from_row,
+                usable_rows: (self.usable_rows.start, self.usable_rows.end),
+                k: self.k,
+            }));
+        }
 
         for row in self.usable_rows.clone().skip(from_row) {
             self.assign_fixed(|| "", col, row, || to)?;
