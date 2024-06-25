@@ -4,7 +4,12 @@ use super::TableColumn;
 use crate::plonk::{Column, Selector};
 use halo2_middleware::circuit::Any;
 
-/// This is an error that could occur during circuit synthesis.
+/// This is an error that could occur during circuit synthesis.  
+///
+/// **NOTE**: [`AssignmentError`] is introduced to provide more debugging info     
+/// to developers when assigning witnesses to circuit cells.  
+/// Hence, they are used for [`MockProver`] and [`WitnessCollection`].  
+/// The [`keygen`] process use the [`NotEnoughRowsAvailable`], since it is just enough.
 #[derive(Debug)]
 pub enum Error {
     /// This is an error that can occur during synthesis of the circuit, for
@@ -105,7 +110,7 @@ impl fmt::Display for TableError {
     }
 }
 
-/// This is an error that could occur during assign_*, copy, etc.
+/// This is an error that could occur during `assign_advice`, `assign_fixed`, `copy`, etc.
 #[derive(Debug)]
 pub enum AssignmentError {
     AssignAdvice {
