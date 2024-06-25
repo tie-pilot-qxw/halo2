@@ -243,7 +243,6 @@
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::plonk::{Error, ErrorBack};
 <span class="kw">use </span><span class="kw">crate</span>::poly::commitment::{<span class="self">self</span>, CommitmentScheme, Params};
 <span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptWrite};
@@ -315,7 +314,6 @@
     }
     <span class="prelude-val">Ok</span>(prover.create_proof()<span class="question-mark">?</span>)
 }
-
 <span class="doccomment">/// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit. The provided `instances`
