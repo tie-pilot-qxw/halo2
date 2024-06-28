@@ -2270,6 +2270,9 @@
 <a href="#2254" id="2254">2254</a>
 <a href="#2255" id="2255">2255</a>
 <a href="#2256" id="2256">2256</a>
+<a href="#2257" id="2257">2257</a>
+<a href="#2258" id="2258">2258</a>
+<a href="#2259" id="2259">2259</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Tools for developing circuits.
 
 </span><span class="kw">use </span>std::collections::HashMap;
@@ -3767,7 +3770,8 @@
         );
     }
 
-    <span class="attr">#[test]
+    <span class="attr">#[cfg(feature = <span class="string">"lookup-any-sanity-checks"</span>)]
+    #[test]
     #[should_panic(
         expected = <span class="string">"pair of tagging expressions(query of the tag columns or mutiple query combinations) should be included"
     </span>)]
@@ -3850,7 +3854,8 @@
         .unwrap();
     }
 
-    <span class="attr">#[test]
+    <span class="attr">#[cfg(feature = <span class="string">"lookup-any-sanity-checks"</span>)]
+    #[test]
     #[should_panic(expected = <span class="string">"all table expressions need selector/fixed query for tagging"</span>)]
     </span><span class="kw">fn </span>bad_lookup_any_no_fixed_col_or_selector() {
         <span class="kw">const </span>K: u32 = <span class="number">4</span>;
@@ -3924,7 +3929,8 @@
         .unwrap();
     }
 
-    <span class="attr">#[test]
+    <span class="attr">#[cfg(feature = <span class="string">"lookup-any-sanity-checks"</span>)]
+    #[test]
     #[should_panic(
         expected = <span class="string">"all table expressions contain only fixed query, should use `lookup` api instead of `lookup_any`"
     </span>)]
