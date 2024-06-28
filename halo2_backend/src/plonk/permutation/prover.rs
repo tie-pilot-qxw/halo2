@@ -34,7 +34,7 @@ pub(crate) struct CommittedSet<C: CurveAffine> {
 
 /// Set of permutation product polynomials, which have been **committed**.
 ///
-/// This struct is to contain all the permutation product commitments, from a single circuit.
+/// This struct is to contain all of the permutation product polynomials([`CommittedSet`]), from a single circuit.
 ///
 /// It stores multiple `Z_P` in [permutation argument specification](https://zcash.github.io/halo2/design/proving-system/permutation.html#spanning-a-large-number-of-columns).
 pub(crate) struct Committed<C: CurveAffine> {
