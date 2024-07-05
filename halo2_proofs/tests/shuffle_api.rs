@@ -10,15 +10,12 @@ use halo2_proofs::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
         ConstraintSystem, ErrorFront, Fixed, Selector,
     },
-    poly::Rotation,
-    poly::{
-        ipa::{
-            commitment::{IPACommitmentScheme, ParamsIPA},
-            multiopen::{ProverIPA, VerifierIPA},
-            strategy::AccumulatorStrategy,
-        },
-        VerificationStrategy,
+    poly::ipa::{
+        commitment::{IPACommitmentScheme, ParamsIPA},
+        multiopen::{ProverIPA, VerifierIPA},
+        strategy::AccumulatorStrategy,
     },
+    poly::Rotation,
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },

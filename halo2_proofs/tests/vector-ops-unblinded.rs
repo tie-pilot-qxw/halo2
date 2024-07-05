@@ -16,7 +16,7 @@ use halo2_proofs::{
             multiopen::{ProverIPA, VerifierIPA},
             strategy::AccumulatorStrategy,
         },
-        Rotation, VerificationStrategy,
+        Rotation,
     },
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
