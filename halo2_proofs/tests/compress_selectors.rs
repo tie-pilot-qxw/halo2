@@ -375,16 +375,14 @@ fn test_mycircuit(
     // Verify
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    let strategy = SingleStrategy::new(&verifier_params);
-
-    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
-        &verifier_params,
-        &vk,
-        strategy,
-        instances.as_slice(),
-        &mut verifier_transcript,
-    )
-    .map_err(halo2_proofs::plonk::Error::Backend)?;
+    if !verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, SingleStrategy<_>>(
+            &verifier_params,
+            &vk,
+            instances.as_slice(),
+            &mut verifier_transcript,
+    ) {
+       return Err(halo2_proofs::plonk::Error::Backend(halo2_backend::plonk::Error::Opening));
+    };
 
     Ok(proof)
 }

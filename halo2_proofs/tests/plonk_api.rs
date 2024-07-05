@@ -560,11 +560,12 @@ fn plonk_api() {
         let mut transcript = T::init(proof);
         let instance = [vec![vec![instance_val]], vec![vec![instance_val]]];
 
-        let strategy = Strategy::new(params_verifier);
-        let strategy =
-            verify_plonk_proof(params_verifier, vk, strategy, &instance, &mut transcript).unwrap();
-
-        assert!(strategy.finalize());
+        assert!(verify_plonk_proof::<_, _, _, _, Strategy>(
+            params_verifier,
+            vk,
+            &instance,
+            &mut transcript
+        ));
     }
 
     fn test_plonk_api_gwc() {

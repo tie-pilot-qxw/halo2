@@ -183,22 +183,22 @@ fn test_serialization() {
             let proof = transcript.finalize();
 
             let verifier_params = params.verifier_params();
-            let strategy = SingleStrategy::new(&verifier_params);
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            assert!(verify_proof::<
-                KZGCommitmentScheme<Bn256>,
-                VerifierGWC<Bn256>,
-                Challenge255<G1Affine>,
-                Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
-                SingleStrategy<Bn256>,
-            >(
-                &verifier_params,
-                pk.get_vk(),
-                strategy,
-                instances.as_slice(),
-                &mut transcript
-            )
-            .is_ok());
+            assert!(
+                verify_proof::<
+                    KZGCommitmentScheme<Bn256>,
+                    VerifierGWC<Bn256>,
+                    Challenge255<G1Affine>,
+                    Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
+                    SingleStrategy<Bn256>,
+                >(
+                    &verifier_params,
+                    pk.get_vk(),
+                    instances.as_slice(),
+                    &mut transcript
+                ),
+                "failed to verify proof"
+            );
 
             proof
         },

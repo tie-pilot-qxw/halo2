@@ -301,18 +301,14 @@ where
     };
 
     let accepted = {
-        let strategy = AccumulatorStrategy::new(&params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
 
-        verify_proof::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, _>(
+        verify_proof::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, AccumulatorStrategy<C>>(
             &params,
             pk.get_vk(),
-            strategy,
             &[vec![]],
             &mut transcript,
         )
-        .map(|strategy| strategy.finalize())
-        .unwrap_or_default()
     };
 
     assert_eq!(accepted, expected);

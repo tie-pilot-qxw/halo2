@@ -525,16 +525,22 @@ fn test_mycircuit_full_legacy() {
             let mut verifier_transcript =
                 Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
             let verifier_params = params.verifier_params();
-            let strategy = SingleStrategy::new(&verifier_params);
 
-            verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
-                &verifier_params,
-                &vk,
-                strategy,
-                instances.as_slice(),
-                &mut verifier_transcript,
-            )
-            .expect("verify succeeds");
+            assert!(
+                verify_proof::<
+                    KZGCommitmentScheme<Bn256>,
+                    VerifierSHPLONK<Bn256>,
+                    _,
+                    _,
+                    SingleStrategy<_>,
+                >(
+                    &verifier_params,
+                    &vk,
+                    instances.as_slice(),
+                    &mut verifier_transcript,
+                ),
+                "failed to verify proof"
+            );
             println!("Verify: {:?}", start.elapsed());
 
             proof
@@ -605,16 +611,17 @@ fn test_mycircuit_full_split() {
             let mut verifier_transcript =
                 Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
             let verifier_params = params.verifier_params();
-            let strategy = SingleStrategy::new(&verifier_params);
 
-            verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
-                &verifier_params,
-                &vk,
-                strategy,
-                instances,
-                &mut verifier_transcript,
-            )
-            .expect("verify succeeds");
+            assert!(
+                verify_proof_single::<
+                    KZGCommitmentScheme<Bn256>,
+                    VerifierSHPLONK<Bn256>,
+                    _,
+                    _,
+                    SingleStrategy<_>,
+                >(&verifier_params, &vk, instances, &mut verifier_transcript,),
+                "failed to verify proof"
+            );
             println!("Verify: {:?}", start.elapsed());
 
             proof

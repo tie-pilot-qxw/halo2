@@ -300,9 +300,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     fn verifier(params: &ParamsIPA<EqAffine>, vk: &VerifyingKey<EqAffine>, proof: &[u8]) {
-        let strategy = SingleStrategy::new(params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(proof);
-        assert!(verify_proof(params, vk, strategy, &[vec![vec![]]], &mut transcript).is_ok());
+        assert!(verify_proof::<_, _, _, _, SingleStrategy<_>>(
+            params,
+            vk,
+            &[vec![vec![]]],
+            &mut transcript
+        ));
     }
 
     let k_range = 8..=16;
