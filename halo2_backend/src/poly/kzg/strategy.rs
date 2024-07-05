@@ -155,7 +155,7 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type Output = ();
+    type Output = Self;
 
     fn new(params: &'params ParamsVerifierKZG<E>) -> Self {
         Self::new(params)
@@ -168,16 +168,15 @@ where
         // Guard is updated with new msm contributions
         let guard = f(self.msm)?;
         let msm = guard.msm_accumulator;
-        // Verification is (supposedly) cheap, hence we don't use an accelerator engine
-        let default_engine = H2cEngine::new();
-        if msm.check(&default_engine, &self.params) {
-            Ok(())
-        } else {
-            Err(Error::ConstraintSystemFailure)
-        }
+        Ok(Self {
+            msm,
+            params: self.params,
+        })
     }
 
     fn finalize(self) -> bool {
-        unreachable!();
+        // Verification is (supposedly) cheap, hence we don't use an accelerator engine
+        let default_engine = H2cEngine::new();
+        self.msm.check(&default_engine, &self.params)
     }
 }
