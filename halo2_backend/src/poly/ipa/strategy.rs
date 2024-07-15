@@ -79,8 +79,6 @@ pub struct AccumulatorStrategy<'params, C: CurveAffine> {
 impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<C>>
     for AccumulatorStrategy<'params, C>
 {
-    type Output = Self;
-
     fn new(params: &'params ParamsIPA<C>) -> Self {
         AccumulatorStrategy {
             msm: MSMIPA::new(params),
@@ -90,7 +88,7 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<
     fn process(
         mut self,
         f: impl FnOnce(MSMIPA<'params, C>) -> Result<GuardIPA<'params, C>, Error>,
-    ) -> Result<Self::Output, Error> {
+    ) -> Result<Self, Error> {
         self.msm.scale(C::Scalar::random(OsRng));
         let guard = f(self.msm)?;
 
@@ -119,8 +117,6 @@ pub struct SingleStrategy<'params, C: CurveAffine> {
 impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<C>>
     for SingleStrategy<'params, C>
 {
-    type Output = Self;
-
     fn new(params: &'params ParamsIPA<C>) -> Self {
         SingleStrategy {
             msm: MSMIPA::new(params),
@@ -130,7 +126,7 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<
     fn process(
         self,
         f: impl FnOnce(MSMIPA<'params, C>) -> Result<GuardIPA<'params, C>, Error>,
-    ) -> Result<Self::Output, Error> {
+    ) -> Result<Self, Error> {
         let guard = f(self.msm)?;
         Ok(Self {
             msm: guard.use_challenges(),

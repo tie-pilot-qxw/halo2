@@ -120,8 +120,6 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type Output = Self;
-
     fn new(params: &'params ParamsVerifierKZG<E>) -> Self {
         AccumulatorStrategy::new(params)
     }
@@ -129,7 +127,7 @@ where
     fn process(
         mut self,
         f: impl FnOnce(V::MSMAccumulator) -> Result<V::Guard, Error>,
-    ) -> Result<Self::Output, Error> {
+    ) -> Result<Self, Error> {
         self.msm_accumulator.scale(E::Fr::random(OsRng));
 
         // Guard is updated with new msm contributions
@@ -155,8 +153,6 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type Output = Self;
-
     fn new(params: &'params ParamsVerifierKZG<E>) -> Self {
         Self::new(params)
     }
@@ -164,7 +160,7 @@ where
     fn process(
         self,
         f: impl FnOnce(V::MSMAccumulator) -> Result<V::Guard, Error>,
-    ) -> Result<Self::Output, Error> {
+    ) -> Result<Self, Error> {
         // Guard is updated with new msm contributions
         let guard = f(self.msm)?;
         let msm = guard.msm_accumulator;

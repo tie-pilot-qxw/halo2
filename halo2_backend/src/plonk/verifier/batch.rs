@@ -34,8 +34,6 @@ struct BatchStrategy<'params, C: CurveAffine> {
 impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<C>>
     for BatchStrategy<'params, C>
 {
-    type Output = Self;
-
     fn new(params: &'params ParamsVerifierIPA<C>) -> Self {
         BatchStrategy {
             msm: MSMIPA::new(params),
@@ -45,7 +43,7 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<
     fn process(
         self,
         f: impl FnOnce(MSMIPA<'params, C>) -> Result<GuardIPA<'params, C>, Error>,
-    ) -> Result<Self::Output, Error> {
+    ) -> Result<Self, Error> {
         let guard = f(self.msm)?;
         Ok(Self {
             msm: guard.use_challenges(),

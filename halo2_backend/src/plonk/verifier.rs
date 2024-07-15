@@ -42,7 +42,7 @@ where
     V: Verifier<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     T: TranscriptRead<Scheme::Curve, E>,
-    Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
+    Strategy: VerificationStrategy<'params, Scheme, V>,
 {
     verify_proof_multi::<Scheme, V, E, T, Strategy>(params, vk, &[instance], transcript)
 }
@@ -54,14 +54,14 @@ pub fn verify_proof_with_strategy<
     V: Verifier<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     T: TranscriptRead<Scheme::Curve, E>,
-    Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
+    Strategy: VerificationStrategy<'params, Scheme, V>,
 >(
     params: &'params Scheme::ParamsVerifier,
     vk: &VerifyingKey<Scheme::Curve>,
     strategy: Strategy,
     instances: &[Vec<Vec<Scheme::Scalar>>],
     transcript: &mut T,
-) -> Result<Strategy::Output, Error>
+) -> Result<Strategy, Error>
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
 {
@@ -526,7 +526,7 @@ pub fn verify_proof_multi<
     V: Verifier<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     T: TranscriptRead<Scheme::Curve, E>,
-    Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
+    Strategy: VerificationStrategy<'params, Scheme, V>,
 >(
     params: &'params Scheme::ParamsVerifier,
     vk: &VerifyingKey<Scheme::Curve>,

@@ -547,7 +547,7 @@ fn plonk_api() {
         V: Verifier<'params, Scheme>,
         E: EncodedChallenge<Scheme::Curve>,
         T: TranscriptReadBuffer<&'a [u8], Scheme::Curve, E>,
-        Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
+        Strategy: VerificationStrategy<'params, Scheme, V>,
     >(
         params_verifier: &'params Scheme::ParamsVerifier,
         vk: &VerifyingKey<Scheme::Curve>,
