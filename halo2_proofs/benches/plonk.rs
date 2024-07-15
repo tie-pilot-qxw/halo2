@@ -298,7 +298,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     fn verifier(params: &ParamsIPA<EqAffine>, vk: &VerifyingKey<EqAffine>, proof: &[u8]) {
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(proof);
-        assert!(verify_proof::<_, _, _, _, SingleStrategy<_>>(
+        assert!(verify_proof_multi::<_, _, _, _, SingleStrategy<_>>(
             params,
             vk,
             &[vec![vec![]]],

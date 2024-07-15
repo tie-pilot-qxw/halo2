@@ -30,7 +30,7 @@ pub use batch::BatchVerifier;
 
 /// Returns a boolean indicating whether or not the proof is valid.  Verifies a single proof (not
 /// batched).
-pub fn verify_proof_single<'params, Scheme, V, E, T, Strategy>(
+pub fn verify_proof<'params, Scheme, V, E, T, Strategy>(
     params: &'params Scheme::ParamsVerifier,
     vk: &VerifyingKey<Scheme::Curve>,
     instance: Vec<Vec<Scheme::Scalar>>,
@@ -44,7 +44,7 @@ where
     T: TranscriptRead<Scheme::Curve, E>,
     Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
 {
-    verify_proof::<Scheme, V, E, T, Strategy>(params, vk, &[instance], transcript)
+    verify_proof_multi::<Scheme, V, E, T, Strategy>(params, vk, &[instance], transcript)
 }
 
 /// Process the proof, checks that the proof is valid and returns the `Strategy` output.
@@ -520,7 +520,7 @@ where
 }
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<
+pub fn verify_proof_multi<
     'params,
     Scheme: CommitmentScheme,
     V: Verifier<'params, Scheme>,

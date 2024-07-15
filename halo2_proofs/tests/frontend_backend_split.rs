@@ -5,7 +5,7 @@ use halo2_backend::{
     plonk::{
         keygen::{keygen_pk, keygen_vk},
         prover::ProverSingle,
-        verifier::{verify_proof, verify_proof_single},
+        verifier::{verify_proof, verify_proof_multi},
     },
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
@@ -527,7 +527,7 @@ fn test_mycircuit_full_legacy() {
             let verifier_params = params.verifier_params();
 
             assert!(
-                verify_proof::<
+                verify_proof_multi::<
                     KZGCommitmentScheme<Bn256>,
                     VerifierSHPLONK<Bn256>,
                     _,
@@ -613,7 +613,7 @@ fn test_mycircuit_full_split() {
             let verifier_params = params.verifier_params();
 
             assert!(
-                verify_proof_single::<
+                verify_proof::<
                     KZGCommitmentScheme<Bn256>,
                     VerifierSHPLONK<Bn256>,
                     _,

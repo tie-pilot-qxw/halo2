@@ -5,7 +5,7 @@ use halo2_backend::{
     plonk::{
         keygen::{keygen_pk, keygen_vk},
         prover::ProverSingle,
-        verifier::verify_proof_single,
+        verifier::verify_proof,
     },
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
@@ -95,13 +95,7 @@ pub(crate) fn setup_prove_verify(
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
 
     assert!(
-        verify_proof_single::<
-            KZGCommitmentScheme<Bn256>,
-            VerifierSHPLONK<Bn256>,
-            _,
-            _,
-            SingleStrategy<_>,
-        >(
+        verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, SingleStrategy<_>>(
             &verifier_params,
             &vk,
             pis.to_vec(),

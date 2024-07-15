@@ -17,8 +17,8 @@ use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::plonk::{
-    create_proof_with_engine, keygen_pk_custom, keygen_vk_custom, verify_proof, Advice, Assigned,
-    Circuit, Column, ConstraintSystem, Instance, Selector,
+    create_proof_with_engine, keygen_pk_custom, keygen_vk_custom, verify_proof_multi, Advice,
+    Assigned, Circuit, Column, ConstraintSystem, Instance, Selector,
 };
 use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
@@ -375,7 +375,13 @@ fn test_mycircuit(
     // Verify
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    if !verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, SingleStrategy<_>>(
+    if !verify_proof_multi::<
+        KZGCommitmentScheme<Bn256>,
+        VerifierSHPLONK<Bn256>,
+        _,
+        _,
+        SingleStrategy<_>,
+    >(
         &verifier_params,
         &vk,
         instances.as_slice(),

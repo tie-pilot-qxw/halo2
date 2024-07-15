@@ -7,7 +7,7 @@ use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
+        create_proof, keygen_pk, keygen_vk, verify_proof_multi, Advice, Circuit, Column,
         ConstraintSystem, ErrorFront, Fixed, Selector,
     },
     poly::ipa::{
@@ -174,7 +174,7 @@ where
     let accepted = {
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
 
-        verify_proof::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, AccumulatorStrategy<_>>(
+        verify_proof_multi::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, AccumulatorStrategy<_>>(
             &params,
             pk.get_vk(),
             &[vec![]],

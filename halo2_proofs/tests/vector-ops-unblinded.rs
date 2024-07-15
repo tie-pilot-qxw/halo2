@@ -501,7 +501,7 @@ where
     let accepted = {
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
 
-        verify_proof::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, AccumulatorStrategy<_>>(
+        verify_proof_multi::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, AccumulatorStrategy<_>>(
             &params,
             pk.get_vk(),
             &instances,

@@ -13,8 +13,8 @@ use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
     create_proof_with_engine as create_plonk_proof_with_engine, keygen_pk, keygen_vk,
-    verify_proof as verify_plonk_proof, Advice, Assigned, Circuit, Column, ConstraintSystem, Error,
-    ErrorFront, Fixed, ProvingKey, TableColumn, VerifyingKey,
+    verify_proof_multi as verify_multi_plonk_proof, Advice, Assigned, Circuit, Column,
+    ConstraintSystem, Error, ErrorFront, Fixed, ProvingKey, TableColumn, VerifyingKey,
 };
 use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
 use halo2_proofs::poly::Rotation;
@@ -560,7 +560,7 @@ fn plonk_api() {
         let mut transcript = T::init(proof);
         let instance = [vec![vec![instance_val]], vec![vec![instance_val]]];
 
-        assert!(verify_plonk_proof::<_, _, _, _, Strategy>(
+        assert!(verify_multi_plonk_proof::<_, _, _, _, Strategy>(
             params_verifier,
             vk,
             &instance,

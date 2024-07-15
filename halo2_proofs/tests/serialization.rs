@@ -8,8 +8,8 @@ use halo2_debug::test_rng;
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
-        create_proof, keygen_pk, keygen_vk_custom, pk_read, verify_proof, Advice, Circuit, Column,
-        ConstraintSystem, ErrorFront, Fixed, Instance,
+        create_proof, keygen_pk, keygen_vk_custom, pk_read, verify_proof_multi, Advice, Circuit,
+        Column, ConstraintSystem, ErrorFront, Fixed, Instance,
     },
     poly::{
         kzg::{
@@ -185,7 +185,7 @@ fn test_serialization() {
             let verifier_params = params.verifier_params();
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
             assert!(
-                verify_proof::<
+                verify_proof_multi::<
                     KZGCommitmentScheme<Bn256>,
                     VerifierGWC<Bn256>,
                     Challenge255<G1Affine>,
