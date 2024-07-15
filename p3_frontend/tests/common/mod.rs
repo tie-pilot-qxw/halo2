@@ -4,7 +4,7 @@ use halo2_backend::poly::kzg::strategy::SingleStrategy;
 use halo2_backend::{
     plonk::{
         keygen::{keygen_pk, keygen_vk},
-        prover::ProverSingle,
+        prover::Prover,
         verifier::verify_proof,
     },
     transcript::{
@@ -73,7 +73,7 @@ pub(crate) fn setup_prove_verify(
     println!("Proving...");
     let start = Instant::now();
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
-    let mut prover = ProverSingle::<
+    let mut prover = Prover::<
         KZGCommitmentScheme<Bn256>,
         ProverSHPLONK<'_, Bn256>,
         _,
