@@ -1258,7 +1258,7 @@ mod tests {
 
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::circuit::{Layouter, SimpleFloorPlanner, Value};
-    use crate::dev::{CellValue, InstanceValue};
+    use crate::dev::{CellValue, InstanceValue, TracingFloorPlanner};
     use crate::plonk::{
         Advice, Circuit, Column, ConstraintSystem, Error, Expression, Fixed, Instance, Selector,
         TableColumn,
@@ -2255,5 +2255,122 @@ mod tests {
 
         // if this verifies correctly -> we have an issue and we are missing a range check
         assert_eq!(prover.verify(), Ok(()));
+    }
+
+    #[test]
+    fn test_tracing_floor_planner() {
+        use tracing_capture::{CaptureLayer, SharedStorage};
+        use tracing_subscriber::layer::SubscriberExt;
+
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct TestCircuitConfig {
+            a: Column<Advice>,
+            b: Column<Advice>,
+            c: Column<Advice>,
+            d: Column<Fixed>,
+            q: Selector,
+        }
+
+        struct TestCircuit {}
+
+        impl Circuit<Fp> for TestCircuit {
+            type Config = TestCircuitConfig;
+            type FloorPlanner = TracingFloorPlanner<SimpleFloorPlanner>;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let c = meta.advice_column();
+                let d = meta.fixed_column();
+                let q = meta.selector();
+
+                meta.create_gate("Equality check", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let b = cells.query_advice(b, Rotation::cur());
+                    let c = cells.query_advice(c, Rotation::cur());
+                    let d = cells.query_fixed(d, Rotation::cur());
+                    let q = cells.query_selector(q);
+
+                    // If q is enabled, a and b must be assigned to.
+                    vec![q * (a - b) * (c - d)]
+                });
+
+                TestCircuitConfig { a, b, c, d, q }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "Correct synthesis",
+                    |mut region| {
+                        // Enable the equality gate.
+                        config.q.enable(&mut region, 0)?;
+
+                        // Assign a = 1.
+                        region.assign_advice(|| "a", config.a, 0, || Value::known(Fp::one()))?;
+
+                        // Assign b = 1.
+                        region.assign_advice(|| "b", config.b, 0, || Value::known(Fp::one()))?;
+
+                        // Assign c = 5.
+                        region.assign_advice(
+                            || "c",
+                            config.c,
+                            0,
+                            || Value::known(Fp::from(5u64)),
+                        )?;
+                        // Assign d = 7.
+                        region.assign_fixed(
+                            || "d",
+                            config.d,
+                            0,
+                            || Value::known(Fp::from(7u64)),
+                        )?;
+                        Ok(())
+                    },
+                )?;
+
+                Ok(())
+            }
+        }
+
+        // // At the start of your test, enable tracing.
+        // tracing_subscriber::fmt()
+        //     .with_max_level(tracing::Level::DEBUG)
+        //     .with_ansi(false)
+        //     .without_time()
+        //     .init();
+
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_ansi(false)
+            .without_time()
+            .finish();
+        let storage = SharedStorage::default();
+        let subscriber = subscriber.with(CaptureLayer::new(&storage));
+        tracing::subscriber::set_global_default(subscriber).unwrap();
+
+        // run the prover to check if every step is traced.
+        let prover = MockProver::run(K, &TestCircuit {}, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()));
+
+        // check if all tracing logs are captured
+        let storage = storage.lock();
+        assert_eq!(storage.all_spans().len(), 12);
+        for span in storage.all_spans() {
+            let metadata = span.metadata();
+            assert_eq!(*metadata.level(), tracing::Level::DEBUG);
+        }
     }
 }
