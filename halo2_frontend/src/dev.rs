@@ -1258,7 +1258,7 @@ mod tests {
 
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::circuit::{Layouter, SimpleFloorPlanner, Value};
-    use crate::dev::{CellValue, InstanceValue, TracingFloorPlanner};
+    use crate::dev::{CellValue, CircuitGates, InstanceValue, TracingFloorPlanner};
     use crate::plonk::{
         Advice, Circuit, Column, ConstraintSystem, Error, Expression, Fixed, Instance, Selector,
         TableColumn,
@@ -2372,5 +2372,68 @@ mod tests {
             let metadata = span.metadata();
             assert_eq!(*metadata.level(), tracing::Level::DEBUG);
         }
+    }
+
+    #[test]
+    fn test_gates() {
+        #[derive(Clone)]
+        struct TestCircuitConfig {
+            a: Column<Advice>,
+            b: Column<Advice>,
+            c: Column<Advice>,
+            d: Column<Fixed>,
+            q: Selector,
+        }
+
+        struct TestCircuit {}
+
+        impl Circuit<Fp> for TestCircuit {
+            type Config = TestCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let c = meta.advice_column();
+                let d = meta.fixed_column();
+                let q = meta.selector();
+
+                meta.create_gate("Equality check", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let b = cells.query_advice(b, Rotation::cur());
+                    let c = cells.query_advice(c, Rotation::cur());
+                    let d = cells.query_fixed(d, Rotation::cur());
+                    let q = cells.query_selector(q);
+
+                    // If q is enabled, a and b must be assigned to.
+                    vec![q * (a - b) * (c - d)]
+                });
+
+                TestCircuitConfig { a, b, c, d, q }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(&self, _: Self::Config, _: impl Layouter<Fp>) -> Result<(), Error> {
+                unreachable!();
+            }
+        }
+
+        let gates = CircuitGates::collect::<Fp, TestCircuit>();
+        assert_eq!(
+            format!("{}", gates),
+            r#####"Equality check:
+- (S0 * (A0@0 - A1@0)) * (A2@0 - F0@0)
+Total gates: 1
+Total custom constraint polynomials: 1
+Total negations: 2
+Total additions: 2
+Total multiplications: 2
+"#####
+        )
     }
 }
