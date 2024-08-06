@@ -338,6 +338,8 @@ mod tests {
         impl Circuit<Fp> for TestCircuit {
             type Config = TestCircuitConfig;
             type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
 
             fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
                 let a = meta.advice_column();
@@ -369,7 +371,10 @@ mod tests {
             }
         }
 
-        let gates = CircuitGates::collect::<Fp, TestCircuit>();
+        let gates = CircuitGates::collect::<Fp, TestCircuit>(
+            #[cfg(feature = "circuit-params")]
+            (),
+        );
         assert_eq!(
             format!("{}", gates),
             r#####"Equality check:
