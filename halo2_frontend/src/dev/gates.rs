@@ -338,8 +338,6 @@ mod tests {
         impl Circuit<Fp> for TestCircuit {
             type Config = TestCircuitConfig;
             type FloorPlanner = SimpleFloorPlanner;
-            #[cfg(feature = "circuit-params")]
-            type Params = ();
 
             fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
                 let a = meta.advice_column();
