@@ -1179,8 +1179,12 @@ mod tests {
         let sr: Expression<Fr> = Expression::Selector(Selector(1, false));
         let sm: Expression<Fr> = Expression::Selector(Selector(2, false));
         let so: Expression<Fr> = Expression::Selector(Selector(3, false));
-        let c: Expression<Fr> = Expression::Fixed(FixedQuery { index: None, column_index: 0, rotation: Rotation::cur()});
-        
+        let c: Expression<Fr> = Expression::Fixed(FixedQuery {
+            index: None,
+            column_index: 0,
+            rotation: Rotation::cur(),
+        });
+
         let simple_plonk_expr = sl * l.clone() + sr * r.clone() + sm * (l * r) - so * o + c;
         assert_eq!(simple_plonk_expr.identifier(), "(((((selector[0]*advice[0][0])+(selector[1]*advice[1][0]))+(selector[2]*(advice[0][0]*advice[1][0])))+(-(selector[3]*advice[2][0])))+fixed[0][0])");
     }
