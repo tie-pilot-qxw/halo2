@@ -65,7 +65,7 @@ impl<F: Field, V: Variable> Expression<F, V> {
         }
     }
 
-    pub fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+    fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         match self {
             Expression::Constant(scalar) => write!(writer, "{scalar:?}"),
             Expression::Var(v) => v.write_identifier(writer),
