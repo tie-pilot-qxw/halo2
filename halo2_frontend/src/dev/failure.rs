@@ -1018,6 +1018,75 @@ mod tests {
         let errs = prover.verify().unwrap_err();
 
         assert_eq!(errs.len(), 1);
+        // debug printing
+        assert_eq!(
+            format!("{:?}", errs[0]),
+            r#####"ConstraintCaseDebug {
+    constraint: Constraint {
+        gate: Gate {
+            index: 0,
+            name: "Equality check",
+        },
+        index: 0,
+        name: "",
+    },
+    location: InRegion {
+        region: Region 1 ('Wrong synthesis'),
+        offset: 0,
+    },
+    cell_values: [
+        (
+            DebugVirtualCell {
+                name: "",
+                column: DebugColumn {
+                    column_type: Advice,
+                    index: 0,
+                    annotation: "This is Advice!",
+                },
+                rotation: 0,
+            },
+            "1",
+        ),
+        (
+            DebugVirtualCell {
+                name: "",
+                column: DebugColumn {
+                    column_type: Advice,
+                    index: 1,
+                    annotation: "This is Advice too!",
+                },
+                rotation: 0,
+            },
+            "0",
+        ),
+        (
+            DebugVirtualCell {
+                name: "",
+                column: DebugColumn {
+                    column_type: Advice,
+                    index: 2,
+                    annotation: "Another one!",
+                },
+                rotation: 0,
+            },
+            "0x5",
+        ),
+        (
+            DebugVirtualCell {
+                name: "",
+                column: DebugColumn {
+                    column_type: Fixed,
+                    index: 0,
+                    annotation: "This is a Fixed!",
+                },
+                rotation: 0,
+            },
+            "0x7",
+        ),
+    ],
+}"#####
+        );
+        // display printing
         assert_eq!(
             format!("{}", errs[0]),
             r#####"Constraint 0 in gate 0 ('Equality check') is not satisfied in Region 1 ('Wrong synthesis') at offset 0
@@ -1158,6 +1227,94 @@ mod tests {
         assert_eq!(
             format!("{}", errs[0]),
             r#####"Region 1 ('Wrong synthesis') uses Gate 0 ('Equality check') at offset 1, which requires cell in column Column { index: 1, column_type: Advice } at offset 0 with annotation Some("This is Advice too!") to be assigned."#####
+        );
+    }
+
+    #[test]
+    fn test_failure_instance_cell_not_assigned() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            b: Column<Advice>,
+            c: Column<Advice>,
+            d: Column<Instance>,
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let c = meta.advice_column();
+                let d = meta.instance_column();
+                let q = meta.selector();
+
+                meta.enable_equality(c);
+                meta.enable_equality(d);
+
+                meta.create_gate("Addition check", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let b = cells.query_advice(b, Rotation::cur());
+                    let c = cells.query_advice(c, Rotation::cur());
+                    let q = cells.query_selector(q);
+
+                    vec![q * (a + b - c)]
+                });
+
+                FaultyCircuitConfig { a, b, c, d, q }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "Instance value not assigned",
+                    |mut region| {
+                        // Enable the equality gate.
+                        config.q.enable(&mut region, 0)?;
+
+                        // Assign a = 1.
+                        region.assign_advice(|| "a", config.a, 0, || Value::known(Fp::one()))?;
+
+                        // Assign b = 1.
+                        region.assign_advice(|| "b", config.b, 0, || Value::known(Fp::one()))?;
+
+                        // Assign & constraint c = 2.
+                        region.assign_advice_from_instance(|| "c", config.d, 0, config.c, 0)?;
+
+                        Ok(())
+                    },
+                )?;
+                Ok(())
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit {}, vec![vec![]]).unwrap();
+        let errs = prover.verify().unwrap_err();
+
+        assert_eq!(errs.len(), 1);
+        assert_eq!(
+            format!("{}", errs[0]),
+            r#####"Constraint 0 in gate 0 ('Addition check') is not satisfied in Region 0 ('Instance value not assigned') at offset 0
+- Column('Advice', 0 - )@0 = 1
+- Column('Advice', 1 - )@0 = 1
+- Column('Advice', 2 - )@0 = 0
+"#####
         );
     }
 }
