@@ -8,7 +8,8 @@ use halo2_debug::test_rng;
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
-        create_proof, keygen_pk, keygen_vk_custom, pk_read, verify_proof, vk_read, Advice, Circuit, Column, ConstraintSystem, ErrorFront, Fixed, Instance
+        create_proof, keygen_pk, keygen_vk_custom, pk_read, verify_proof, vk_read, Advice, Circuit,
+        Column, ConstraintSystem, ErrorFront, Fixed, Instance,
     },
     poly::{
         kzg::{
