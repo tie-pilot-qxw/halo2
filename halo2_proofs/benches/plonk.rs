@@ -288,7 +288,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             params,
             pk,
             &[circuit],
-            &[vec![vec![]]],
+            &[vec![]],
             rng,
             &mut transcript,
         )
@@ -301,7 +301,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         assert!(verify_proof_multi::<_, _, _, _, SingleStrategy<_>>(
             params,
             vk,
-            &[vec![vec![]]],
+            &[vec![]],
             &mut transcript
         ));
     }
