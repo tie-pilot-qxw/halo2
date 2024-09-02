@@ -487,6 +487,511 @@ impl<
         Ok(challenges.clone())
     }
 
+    /// splited create proof
+    pub fn create_proof_split(mut self) -> Result<(), Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let cs = &self.pk.vk.cs;
+        assert_eq!(self.challenges.len(), cs.num_challenges);
+        let challenges = (0..cs.num_challenges)
+            .map(|index| self.challenges.remove(&index).unwrap())
+            .collect::<Vec<_>>();
+
+        let theta: ChallengeTheta<_> = self.transcript.squeeze_challenge_scalar();
+
+        let permuted_lookups = self.gen_permuted_lookups(theta, &challenges)?;
+
+        let beta: ChallengeBeta<_> = self.transcript.squeeze_challenge_scalar();
+        let gamma: ChallengeGamma<_> = self.transcript.squeeze_challenge_scalar();
+
+        let permutations_committed = self.gen_committed_permutation_polys(beta, gamma)?;
+        let lookups_committed = self.gen_committed_lookups_polys(permuted_lookups, beta, gamma)?;
+        let shuffles_committed = self.gen_committed_shuffles(theta, gamma, &challenges)?;
+
+        let vanishing_committed = self.gen_committed_vanishing()?;
+
+        let advice = self.gen_advice_polys();
+
+        let y: ChallengeY<_> = self.transcript.squeeze_challenge_scalar();
+
+        let h_poly = self.pk.ev.evaluate_h(
+            self.pk,
+            &advice
+                .iter()
+                .map(|a| a.advice_polys.as_slice())
+                .collect::<Vec<_>>(),
+            &self
+                .instances
+                .iter()
+                .map(|i| i.instance_polys.as_slice())
+                .collect::<Vec<_>>(),
+            &challenges,
+            *y,
+            *beta,
+            *gamma,
+            *theta,
+            &lookups_committed,
+            &shuffles_committed,
+            &permutations_committed,
+        );
+
+        let vanishing = self.gen_constructed_vanishing(vanishing_committed, h_poly)?;
+
+        let x: ChallengeX<_> = self.transcript.squeeze_challenge_scalar();
+
+        let x_pow_n = x.pow([self.params.n()]);
+
+        self.write_instance_evals(x)?;
+
+        self.write_advice_evals(x, &advice)?;
+
+        self.write_fixed_evals(x)?;
+
+        let vanishing = vanishing.evaluate(x, x_pow_n, &self.pk.vk.domain, self.transcript)?;
+
+        self.pk.permutation.evaluate(x, self.transcript)?;
+
+        let permutations_evaluated = self.evaluate_permutations(x, permutations_committed)?;
+        let lookups_evaluated = self.evaluate_lookups(x, lookups_committed)?;
+        let shuffles_evaluated = self.evaluate_shuffles(x, shuffles_committed)?;
+
+        let instances = std::mem::take(&mut self.instances);
+        let queries = instances
+            // group the instance, advice, permutation, lookups and shuffles
+            .iter()
+            .zip(advice.iter())
+            .zip(permutations_evaluated.iter())
+            .zip(lookups_evaluated.iter())
+            .zip(shuffles_evaluated.iter())
+            .flat_map(|((((instance, advice), permutation), lookups), shuffles)| {
+                // Build a (an iterator) over a set of ProverQueries for each instance, advice, permutatiom, lookup and shuffle
+                iter::empty()
+                    // Instances
+                    .chain(
+                        P::QUERY_INSTANCE
+                            .then_some(self.pk.vk.cs.instance_queries.iter().map(
+                                move |&(column, at)| ProverQuery {
+                                    point: self.pk.vk.domain.rotate_omega(*x, at),
+                                    poly: &instance.instance_polys[column.index],
+                                    blind: Blind::default(),
+                                },
+                            ))
+                            .into_iter()
+                            .flatten(),
+                    )
+                    // Advices
+                    .chain(
+                        self.pk
+                            .vk
+                            .cs
+                            .advice_queries
+                            .iter()
+                            .map(move |&(column, at)| ProverQuery {
+                                point: self.pk.vk.domain.rotate_omega(*x, at),
+                                poly: &advice.advice_polys[column.index],
+                                blind: advice.advice_blinds[column.index],
+                            }),
+                    )
+                    // Permutations
+                    .chain(permutation.open(self.pk, x))
+                    // Lookups
+                    .chain(lookups.iter().flat_map(move |p| p.open(self.pk, x)))
+                    // Shuffles
+                    .chain(shuffles.iter().flat_map(move |p| p.open(self.pk, x)))
+            })
+            // Queries to fixed columns
+            .chain(
+                self.pk
+                    .vk
+                    .cs
+                    .fixed_queries
+                    .iter()
+                    .map(|&(column, at)| ProverQuery {
+                        point: self.pk.vk.domain.rotate_omega(*x, at),
+                        poly: &self.pk.fixed_polys[column.index],
+                        blind: Blind::default(),
+                    }),
+            )
+            // Copy constraints
+            .chain(self.pk.permutation.open(x))
+            // We query the h(X) polynomial at x
+            .chain(vanishing.open(x));
+
+        let prover = P::new(self.params);
+        prover
+            .create_proof_with_engine(&self.engine.msm_backend, self.rng, self.transcript, queries)
+            .map_err(|_| Error::ConstraintSystemFailure)?;
+
+        Ok(())
+    }
+
+    fn gen_permuted_lookups(
+        &mut self,
+        theta: ChallengeTheta<Scheme::Curve>,
+        challenges: &Vec<<Scheme as CommitmentScheme>::Scalar>,
+    ) -> Result<Vec<Vec<lookup::prover::Permuted<Scheme::Curve>>>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let mut lookups_fn =
+            |instance: &InstanceSingle<Scheme::Curve>,
+             advice: &AdviceSingle<Scheme::Curve, LagrangeCoeff>|
+             -> Result<Vec<lookup::prover::Permuted<Scheme::Curve>>, Error> {
+                self.pk
+                    .vk
+                    .cs
+                    .lookups
+                    .iter()
+                    .map(|lookup| {
+                        lookup_commit_permuted(
+                            &self.engine,
+                            lookup,
+                            self.pk,
+                            self.params,
+                            &self.pk.vk.domain,
+                            theta,
+                            &advice.advice_polys,
+                            &self.pk.fixed_values,
+                            &instance.instance_values,
+                            &challenges,
+                            &mut self.rng,
+                            self.transcript,
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            };
+        let permuted_lookups: Vec<Vec<lookup::prover::Permuted<Scheme::Curve>>> = self
+            .instances
+            .iter()
+            .zip(self.advices.iter())
+            .map(|(instance, advice)| -> Result<Vec<_>, Error> {
+                // Construct and commit to permuted values for each lookup
+                lookups_fn(instance, advice)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(permuted_lookups)
+    }
+
+    fn gen_committed_permutation_polys(
+        &mut self,
+        beta: ChallengeBeta<Scheme::Curve>,
+        gamma: ChallengeGamma<Scheme::Curve>,
+    ) -> Result<Vec<permutation::prover::Committed<Scheme::Curve>>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let permutations_committed = self
+            .instances
+            .iter()
+            .zip(self.advices.iter())
+            .map(|(instance, advice)| {
+                permutation_commit(
+                    &self.engine,
+                    &self.pk.vk.cs.permutation,
+                    self.params,
+                    self.pk,
+                    &self.pk.permutation,
+                    &advice.advice_polys,
+                    &self.pk.fixed_values,
+                    &instance.instance_values,
+                    beta,
+                    gamma,
+                    &mut self.rng,
+                    self.transcript,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(permutations_committed)
+    }
+
+    fn gen_committed_lookups_polys(
+        &mut self,
+        permuted_lookups: Vec<Vec<lookup::prover::Permuted<Scheme::Curve>>>,
+        beta: ChallengeBeta<Scheme::Curve>,
+        gamma: ChallengeGamma<Scheme::Curve>,
+    ) -> Result<Vec<Vec<lookup::prover::Committed<Scheme::Curve>>>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let lookups_committed: Vec<Vec<lookup::prover::Committed<Scheme::Curve>>> =
+            permuted_lookups
+                .into_iter()
+                .map(|lookups| -> Result<Vec<_>, _> {
+                    // Construct and commit to products for each lookup
+                    lookups
+                        .into_iter()
+                        .map(|lookup| {
+                            lookup.commit_product(
+                                &self.engine,
+                                self.pk,
+                                self.params,
+                                beta,
+                                gamma,
+                                &mut self.rng,
+                                self.transcript,
+                            )
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+        Ok(lookups_committed)
+    }
+
+    fn gen_committed_shuffles(
+        &mut self,
+        theta: ChallengeTheta<Scheme::Curve>,
+        gamma: ChallengeGamma<Scheme::Curve>,
+        challenges: &Vec<<Scheme as CommitmentScheme>::Scalar>,
+    ) -> Result<Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let shuffles_committed: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>> = self
+            .instances
+            .iter()
+            .zip(self.advices.iter())
+            .map(|(instance, advice)| -> Result<Vec<_>, _> {
+                // Compress expressions for each shuffle
+                self.pk
+                    .vk
+                    .cs
+                    .shuffles
+                    .iter()
+                    .map(|shuffle| {
+                        shuffle_commit_product(
+                            &self.engine,
+                            shuffle,
+                            self.pk,
+                            self.params,
+                            &self.pk.vk.domain,
+                            theta,
+                            gamma,
+                            &advice.advice_polys,
+                            &self.pk.fixed_values,
+                            &instance.instance_values,
+                            &challenges,
+                            &mut self.rng,
+                            self.transcript,
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(shuffles_committed)
+    }
+
+    fn gen_committed_vanishing(
+        &mut self,
+    ) -> Result<vanishing::prover::Committed<Scheme::Curve>, Error> {
+        let committed_vanishing = vanishing::Argument::commit(
+            &self.engine.msm_backend,
+            self.params,
+            &self.pk.vk.domain,
+            &mut self.rng,
+            self.transcript,
+        )?;
+        Ok(committed_vanishing)
+    }
+
+    fn gen_advice_polys(&mut self) -> Vec<AdviceSingle<Scheme::Curve, Coeff>>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let advices = std::mem::take(&mut self.advices);
+        advices
+            .into_iter()
+            .map(
+                |AdviceSingle {
+                     advice_polys,
+                     advice_blinds,
+                 }| {
+                    AdviceSingle {
+                        advice_polys: advice_polys
+                            .into_iter()
+                            .map(|poly| self.pk.vk.domain.lagrange_to_coeff(poly))
+                            .collect::<Vec<_>>(),
+                        advice_blinds,
+                    }
+                },
+            )
+            .collect()
+    }
+
+    fn gen_constructed_vanishing(
+        &mut self,
+        vanishing: vanishing::prover::Committed<Scheme::Curve>,
+        h_poly: Polynomial<
+            <<Scheme as CommitmentScheme>::Curve as CurveAffine>::ScalarExt,
+            crate::poly::ExtendedLagrangeCoeff,
+        >,
+    ) -> Result<vanishing::prover::Constructed<Scheme::Curve>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let vanishing = vanishing.construct(
+            &self.engine,
+            self.params,
+            &self.pk.vk.domain,
+            h_poly,
+            &mut self.rng,
+            self.transcript,
+        )?;
+        Ok(vanishing)
+    }
+
+    fn write_instance_evals(&mut self, x: ChallengeX<Scheme::Curve>) -> Result<(), Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        if P::QUERY_INSTANCE {
+            // Compute and hash instance evals for the circuit instance
+            for instance in self.instances.iter() {
+                // Evaluate polynomials at omega^i x
+                let instance_evals: Vec<_> = self
+                    .pk
+                    .vk
+                    .cs
+                    .instance_queries
+                    .iter()
+                    .map(|&(column, at)| {
+                        eval_polynomial(
+                            &instance.instance_polys[column.index],
+                            self.pk.vk.domain.rotate_omega(*x, at),
+                        )
+                    })
+                    .collect();
+
+                // Hash each instance column evaluation
+                for eval in instance_evals.iter() {
+                    self.transcript.write_scalar(*eval)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn write_advice_evals(
+        &mut self,
+        x: ChallengeX<Scheme::Curve>,
+        advice: &[AdviceSingle<Scheme::Curve, Coeff>],
+    ) -> Result<(), Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        for advice in advice.iter() {
+            // Evaluate polynomials at omega^i x
+            let advice_evals: Vec<_> = self
+                .pk
+                .vk
+                .cs
+                .advice_queries
+                .iter()
+                .map(|&(column, at)| {
+                    eval_polynomial(
+                        &advice.advice_polys[column.index],
+                        self.pk.vk.domain.rotate_omega(*x, at),
+                    )
+                })
+                .collect();
+
+            // Hash each advice column evaluation
+            for eval in advice_evals.iter() {
+                self.transcript.write_scalar(*eval)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn write_fixed_evals(&mut self, x: ChallengeX<Scheme::Curve>) -> Result<(), Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let fixed_evals: Vec<_> = self
+            .pk
+            .vk
+            .cs
+            .fixed_queries
+            .iter()
+            .map(|&(column, at)| {
+                eval_polynomial(
+                    &self.pk.fixed_polys[column.index],
+                    self.pk.vk.domain.rotate_omega(*x, at),
+                )
+            })
+            .collect();
+
+        // Hash each fixed column evaluation
+        // [TRANSCRIPT-18]
+        for eval in fixed_evals.iter() {
+            self.transcript.write_scalar(*eval)?;
+        }
+
+        Ok(())
+    }
+
+    fn evaluate_permutations(
+        &mut self,
+        x: ChallengeX<Scheme::Curve>,
+        permutations_committed: Vec<permutation::prover::Committed<Scheme::Curve>>,
+    ) -> Result<Vec<permutation::prover::Evaluated<Scheme::Curve>>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let permutations_evaluated: Vec<permutation::prover::Evaluated<Scheme::Curve>> =
+            permutations_committed
+                .into_iter()
+                .map(|permutation| -> Result<_, _> {
+                    permutation.evaluate(self.pk, x, self.transcript)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+        Ok(permutations_evaluated)
+    }
+
+    fn evaluate_lookups(
+        &mut self,
+        x: ChallengeX<Scheme::Curve>,
+        lookups_committed: Vec<Vec<lookup::prover::Committed<Scheme::Curve>>>,
+    ) -> Result<Vec<Vec<lookup::prover::Evaluated<Scheme::Curve>>>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let lookups_evaluated: Vec<Vec<lookup::prover::Evaluated<Scheme::Curve>>> =
+            lookups_committed
+                .into_iter()
+                .map(|lookups| -> Result<Vec<_>, _> {
+                    lookups
+                        .into_iter()
+                        .map(|p| p.evaluate(self.pk, x, self.transcript))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(lookups_evaluated)
+    }
+
+    fn evaluate_shuffles(
+        &mut self,
+        x: ChallengeX<Scheme::Curve>,
+        shuffles_committed: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>>,
+    ) -> Result<Vec<Vec<shuffle::prover::Evaluated<Scheme::Curve>>>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let shuffles_evaluated: Vec<Vec<shuffle::prover::Evaluated<Scheme::Curve>>> =
+            shuffles_committed
+                .into_iter()
+                .map(|shuffles| -> Result<Vec<_>, _> {
+                    shuffles
+                        .into_iter()
+                        .map(|p| p.evaluate(self.pk, x, self.transcript))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+        Ok(shuffles_evaluated)
+    }
+
     /// Finalizes the proof creation.
     /// The following steps are performed:
     /// - 1. Generate commited lookup polys
