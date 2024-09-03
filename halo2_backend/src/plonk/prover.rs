@@ -538,13 +538,13 @@ impl<
         // 3. Generate commited lookup polys ----------------------------------------------------------
         // [TRANSCRIPT-10]
         let lookups_committed = self.gen_committed_lookups_polys(permuted_lookups, beta, gamma)?;
-        
+
         // 4. Generate commited shuffle polys  -------------------------------------------------------
         // [TRANSCRIPT-11]
         let shuffles_committed = self.gen_committed_shuffles(theta, gamma, &challenges)?;
 
         // 5. Commit to the vanishing argument's random polynomial for blinding h(x_3) -------------------
-        // [TRANSCRIPT-12]        
+        // [TRANSCRIPT-12]
         let vanishing_committed = self.gen_committed_vanishing()?;
 
         // 6. Generate the advice polys ------------------------------------------------------------------
@@ -595,7 +595,7 @@ impl<
         self.write_advice_evals(x, &advice)?;
 
         // 11. Compute and hash fixed evals -----------------------------------------------------------
-        
+
         // Hash each fixed column evaluation
         // [TRANSCRIPT-18]
         self.write_fixed_evals(x)?;
@@ -612,11 +612,11 @@ impl<
         // Evaluate the permutations, if any, at omega^i x.
         // [TRANSCRIPT-21]
         let permutations_evaluated = self.evaluate_permutations(x, permutations_committed)?;
-            
+
         // Evaluate the lookups, if any, at omega^i x.
         // [TRANSCRIPT-22]
         let lookups_evaluated = self.evaluate_lookups(x, lookups_committed)?;
-        
+
         // Evaluate the shuffles, if any, at omega^i x.
         // [TRANSCRIPT-23]
         let shuffles_evaluated = self.evaluate_shuffles(x, shuffles_committed)?;
