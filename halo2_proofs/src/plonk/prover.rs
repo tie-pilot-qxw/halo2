@@ -67,7 +67,7 @@ where
         }
         challenges = prover.commit_phase(*phase, witnesses).unwrap();
     }
-    Ok(prover.create_proof_split()?)
+    Ok(prover.create_proof()?)
 }
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
