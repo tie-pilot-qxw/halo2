@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["keccak_hex","test_result","test_rng"],"mod":["display"]};
+window.SIDEBAR_ITEMS = {"fn":["check_witness","keccak_hex","test_result","test_rng"],"mod":["display"]};
