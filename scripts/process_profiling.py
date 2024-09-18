@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from typing import Literal, Tuple, List, Callable
-from sys import argv
+from typing import Literal, Tuple, List, Callable, Dict
+from sys import argv, setrecursionlimit
+
+setrecursionlimit(2 ** 16)
 
 @dataclass
 class Event:
@@ -56,26 +58,15 @@ class IntervalTree:
     
     @staticmethod
     def collapsed_children(children: List['IntervalTree']) -> List['IntervalTree']:
-        def recurse(children: List['IntervalTree'], collapsed: List['IntervalTree']):
-            if len(children) == 0:
-                return
-
-            if len(collapsed) == 0:
-                collapsed.append(children[0])
-                return recurse(children[1:], collapsed)
-            
-            if children[0].name == collapsed[-1].name and len(children[0].children) == 0 and len(collapsed[-1].children) == 0:
-                collapsed[-1].end = children[0].end
-                collapsed[-1].duration += children[0].duration
-                collapsed[-1].repeat += 1
-                return recurse(children[1:], collapsed)
-            
-            collapsed.append(children[0])
-            return recurse(children[1:], collapsed)
-
-        r = []
-        recurse(children, r)
-        return r
+        collapsed: Dict[str, 'IntervalTree'] = {}
+        for child in children:
+            if child.name in collapsed.keys():
+                collapsed[child.name].duration += child.duration
+                collapsed[child.name].end = max(collapsed[child.name].end, child.end)
+                collapsed[child.name].repeat += 1
+            else:
+                collapsed[child.name] = child
+        return list(collapsed.values())
 
 
     def print(self, total: int, f: Callable[[str], None]=print):
