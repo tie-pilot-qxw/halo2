@@ -147,8 +147,9 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
+    let start = std::time::Instant::now();
     let num_threads = multicore::current_num_threads();
-    if coeffs.len() > num_threads {
+    let res = if coeffs.len() > num_threads {
         let chunk = coeffs.len() / num_threads;
         let num_chunks = coeffs.chunks(chunk).len();
         let mut results = vec![C::Curve::identity(); num_chunks];
@@ -170,7 +171,9 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
         let mut acc = C::Curve::identity();
         multiexp_serial(coeffs, bases, &mut acc);
         acc
-    }
+    };
+    println!("Multiexp {} took: {}", coeffs.len().ilog2(), start.elapsed().as_micros());
+    res
 }
 
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
@@ -193,6 +196,7 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
         r
     }
 
+    let start = std::time::Instant::now();
     let threads = multicore::current_num_threads();
     let log_threads = log2_floor(threads);
     let n = a.len();
@@ -246,6 +250,7 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
     } else {
         recursive_butterfly_arithmetic(a, n, 1, &twiddles)
     }
+    println!("FFT {log_n} took: {}", start.elapsed().as_micros());
 }
 
 /// This perform recursive butterfly arithmetic
