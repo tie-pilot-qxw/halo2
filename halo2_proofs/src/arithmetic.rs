@@ -147,7 +147,8 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
-    let start = std::time::Instant::now();
+    let interval = crate::timer::Interval::begin("msm");
+
     let num_threads = multicore::current_num_threads();
     let res = if coeffs.len() > num_threads {
         let chunk = coeffs.len() / num_threads;
@@ -172,7 +173,9 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
         multiexp_serial(coeffs, bases, &mut acc);
         acc
     };
-    println!("Multiexp {} took: {}", coeffs.len().ilog2(), start.elapsed().as_micros());
+
+    interval.end();
+
     res
 }
 
@@ -196,7 +199,7 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
         r
     }
 
-    let start = std::time::Instant::now();
+    let interval = crate::timer::Interval::begin("ntt");
     let threads = multicore::current_num_threads();
     let log_threads = log2_floor(threads);
     let n = a.len();
@@ -250,7 +253,8 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
     } else {
         recursive_butterfly_arithmetic(a, n, 1, &twiddles)
     }
-    println!("FFT {log_n} took: {}", start.elapsed().as_micros());
+
+    interval.end();
 }
 
 /// This perform recursive butterfly arithmetic

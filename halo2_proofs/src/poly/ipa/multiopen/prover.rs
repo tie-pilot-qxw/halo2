@@ -37,6 +37,8 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
         I: IntoIterator<Item = ProverQuery<'com, C>> + Clone,
         R: RngCore,
     {
+        let interval = crate::timer::Interval::begin("multiopen");
+
         let x_1: ChallengeX1<_> = transcript.squeeze_challenge_scalar();
         let x_2: ChallengeX2<_> = transcript.squeeze_challenge_scalar();
 
@@ -116,6 +118,8 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
                 )
             },
         );
+
+        interval.end();
 
         commitment::create_proof(self.params, rng, transcript, &p_poly, p_poly_blind, *x_3)
     }

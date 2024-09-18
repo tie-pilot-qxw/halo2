@@ -296,16 +296,20 @@ fn plonk() {
         assert!(verify_proof(params, vk, strategy, &[&[]], &mut transcript).is_ok());
     }
 
-    let k_range = 16..=16;
+    let k= 16;
 
-    for k in k_range {
-        let (params, pk) = keygen(k);
-        println!("start creating proof for k = {}", k);
-        let start = std::time::Instant::now();
-        let proof = prover(k, &params, &pk);
-        println!("creating proof for k = {} took {}", k, start.elapsed().as_micros());
-        println!("start verifying proof for k = {}", k);
-        verifier(&params, pk.get_vk(), &proof);
-    }
+    use halo2_proofs::timer::Interval;
+
+    let interval0 = Interval::begin("main");
+
+    let (params, pk) = keygen(k);
+
+    let interval = Interval::begin("create_proof");
+    let proof = prover(k, &params, &pk);
+    interval.end();
+
+    verifier(&params, pk.get_vk(), &proof);
+
+    interval0.end();
 
 }

@@ -39,6 +39,8 @@ pub fn create_proof<
     p_blind: Blind<C::Scalar>,
     x_3: C::Scalar,
 ) -> io::Result<()> {
+    let interval = crate::timer::Interval::begin("ipa_polynomial_commitment");
+
     // We're limited to polynomials of degree n - 1.
     assert_eq!(p_poly.len(), params.n as usize);
 
@@ -148,6 +150,8 @@ pub fn create_proof<
 
     transcript.write_scalar(c)?;
     transcript.write_scalar(f)?;
+
+    interval.end();
 
     Ok(())
 }

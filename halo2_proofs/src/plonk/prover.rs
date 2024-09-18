@@ -28,6 +28,7 @@ use crate::{
     poly::batch_invert_assigned,
     transcript::{EncodedChallenge, TranscriptWrite},
 };
+use crate::timer::Interval;
 use group::prime::PrimeCurveAffine;
 
 /// This creates a proof for the provided `circuit` when given the public
@@ -81,6 +82,8 @@ where
         pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
         pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     }
+
+    let interval = Interval::begin("commit_and_ntt_instances");
 
     let instance: Vec<InstanceSingle<Scheme::Curve>> = instances
         .iter()
@@ -136,6 +139,8 @@ where
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
+    
+    interval.end();
 
     #[derive(Clone)]
     struct AdviceSingle<C: CurveAffine, B: Basis> {
@@ -288,6 +293,8 @@ where
         }
     }
 
+    let interval = Interval::begin("calculate_and_commit_advices");
+
     let (advice, challenges) = {
         let mut advice = vec![
             AdviceSingle::<Scheme::Curve, LagrangeCoeff> {
@@ -421,8 +428,12 @@ where
         (advice, challenges)
     };
 
+    interval.end();
+
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
+
+    let interval = Interval::begin("construct_permuted_polys_for_lookup");
 
     let lookups: Vec<Vec<lookup::prover::Permuted<Scheme::Curve>>> = instance
         .iter()
@@ -451,11 +462,15 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    interval.end();
+
     // Sample beta challenge
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
+
+    let interval = Interval::begin("construct_ppp_for_permutations");
 
     // Commit to permutations.
     let permutations: Vec<permutation::prover::Committed<Scheme::Curve>> = instance
@@ -477,6 +492,10 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    interval.end();
+
+    let interval = Interval::begin("construct_ppp_for_lookups");
+
     let lookups: Vec<Vec<lookup::prover::Committed<Scheme::Curve>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
@@ -487,6 +506,10 @@ where
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    interval.end();
+
+    let interval = Interval::begin("construct_ppp_for_shuffles");
 
     let shuffles: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>> = instance
         .iter()
@@ -516,11 +539,19 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    interval.end();
+
+    let interval = Interval::begin("generate_blind_for_vanishing");
+
     // Commit to the vanishing argument's random polynomial for blinding h(x_3)
     let vanishing = vanishing::Argument::commit(params, domain, &mut rng, transcript)?;
 
+    interval.end();
+
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
+
+    let interval = Interval::begin("ntt_advices_to_coef");
 
     // Calculate the advice polys
     let advice: Vec<AdviceSingle<Scheme::Curve, Coeff>> = advice
@@ -540,6 +571,10 @@ where
             },
         )
         .collect();
+
+    interval.end();
+
+    let interval = Interval::begin("construct_primary_constrain_polynomial");
 
     // Evaluate the h(X) polynomial
     let h_poly = pk.ev.evaluate_h(
@@ -562,8 +597,14 @@ where
         &permutations,
     );
 
+    interval.end();
+
+    let interval = Interval::begin("construct_vanishing_polynomial");
+
     // Construct the vanishing argument's h(X) commitments
     let vanishing = vanishing.construct(params, domain, h_poly, &mut rng, transcript)?;
+
+    interval.end();
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow([params.n()]);
@@ -589,6 +630,8 @@ where
             }
         }
     }
+
+    let interval = Interval::begin("evaluate_many_polynomials");
 
     // Compute and hash advice evals for each circuit instance
     for advice in advice.iter() {
@@ -656,6 +699,8 @@ where
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    interval.end();
 
     let instances = instance
         .iter()
