@@ -373,6 +373,8 @@ pub fn kate_division<'a, F: Field, I: IntoIterator<Item = &'a F>>(a: I, mut b: F
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
+    let interval = crate::timer::Interval::begin("kate_division");
+
     b = -b;
     let a = a.into_iter();
 
@@ -386,6 +388,8 @@ where
         tmp = lead_coeff;
         tmp.mul_assign(&b);
     }
+
+    interval.end();
 
     q
 }
