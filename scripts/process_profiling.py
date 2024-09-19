@@ -73,10 +73,21 @@ class IntervalTree:
         def recurse(depth: int, interval: 'IntervalTree'):
             percentage = float(interval.duration) / float(total)
             repeat = "" if interval.repeat == 1 else f"(x{interval.repeat})"
-            f(f"{'    ' * depth}{interval.name}{repeat} {interval.duration} ({percentage * 100:.2f}%)")
+            intendation = '    ' * depth
+            f(f"{intendation}{interval.name}{repeat} {interval.duration} ({percentage * 100:.2f}%)")
 
-            for child in IntervalTree.collapsed_children(interval.children):
+            collapsed_children = IntervalTree.collapsed_children(interval.children)
+            for child in collapsed_children:
                 recurse(depth + 1, child)
+
+            child_sum = sum((child.duration for child in collapsed_children))
+            other = interval.duration - child_sum
+            if other < interval.duration:
+                intendation = '    ' * (depth + 1)
+                percentage = float(other) / float(total)
+                f(f"{intendation}other {other} ({percentage * 100:.2f}%)")
+
+           
         recurse(0, self)
 
             
