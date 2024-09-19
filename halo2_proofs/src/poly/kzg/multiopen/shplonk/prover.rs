@@ -133,6 +133,8 @@ where
         I: IntoIterator<Item = ProverQuery<'com, E::G1Affine>> + Clone,
         R: RngCore,
     {
+        let interval = crate::timer::Interval::begin("shplonk_polynomial_commitment");
+
         // TODO: explore if it is safe to use same challenge
         // for different sets that are already combined with another challenge
         let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
@@ -292,6 +294,8 @@ where
 
         let h = self.params.commit(&h_x, Blind::default()).to_affine();
         transcript.write_point(h)?;
+
+        interval.end();
 
         Ok(())
     }

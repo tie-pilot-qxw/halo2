@@ -346,6 +346,8 @@ where
                     meta.constants.clone(),
                 )?;
 
+                let interval = Interval::begin("calculate_advices");
+
                 let mut advice_values = batch_invert_assigned::<Scheme::Scalar>(
                     witness
                         .advice
@@ -361,6 +363,10 @@ where
                         .collect(),
                 );
 
+                interval.end();
+
+                let interval = Interval::begin("add_blinding_to_advice_columns");
+
                 // Add blinding factors to advice columns
                 for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
                     if !witness.unblinded_advice.contains(column_index) {
@@ -374,6 +380,10 @@ where
                         }
                     }
                 }
+
+                interval.end();
+
+                let interval = Interval::begin("commit_advices");
 
                 // Compute commitments to advice column polynomials
                 let blinds: Vec<_> = column_indices
@@ -403,6 +413,9 @@ where
                 for commitment in &advice_commitments {
                     transcript.write_point(*commitment)?;
                 }
+                
+                interval.end();
+
                 for ((column_index, advice_values), blind) in
                     column_indices.iter().zip(advice_values).zip(blinds)
                 {

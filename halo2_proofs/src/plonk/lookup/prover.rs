@@ -107,11 +107,17 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
             compressed_expression
         };
 
+        let interval = crate::timer::Interval::begin("compress_input_and_table_expressions");
+
         // Get values of input expressions involved in the lookup and compress them
         let compressed_input_expression = compress_expressions(&self.input_expressions);
 
         // Get values of table expressions involved in the lookup and compress them
         let compressed_table_expression = compress_expressions(&self.table_expressions);
+
+        interval.end();
+
+        let interval = crate::timer::Interval::begin("permute_expression_pair");
 
         // Permute compressed (InputExpression, TableExpression) pair
         let (permuted_input_expression, permuted_table_expression) = permute_expression_pair(
@@ -122,6 +128,10 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
             &compressed_input_expression,
             &compressed_table_expression,
         )?;
+
+        interval.end();
+
+        let interval = crate::timer::Interval::begin("commit_permuted_polynomials");
 
         // Closure to construct commitment to vector of values
         let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
@@ -144,6 +154,8 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
 
         // Hash permuted table commitment
         transcript.write_point(permuted_table_commitment)?;
+
+        interval.end();
 
         Ok(Permuted {
             compressed_input_expression,

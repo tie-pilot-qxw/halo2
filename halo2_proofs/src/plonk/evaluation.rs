@@ -322,6 +322,8 @@ impl<C: CurveAffine> Evaluator<C> {
         let l_active_row = &pk.l_active_row;
         let p = &pk.vk.cs.permutation;
 
+        let interval = crate::timer::Interval::begin("ntt_polynomials_to_extended_lagrange");
+
         // Calculate the advice and instance cosets
         let advice: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>> = advice_polys
             .iter()
@@ -342,7 +344,10 @@ impl<C: CurveAffine> Evaluator<C> {
             })
             .collect();
 
+        interval.end();
+
         let mut values = domain.empty_extended();
+        
 
         // Core expression evaluations
         let num_threads = multicore::current_num_threads();
@@ -353,6 +358,8 @@ impl<C: CurveAffine> Evaluator<C> {
             .zip(shuffles.iter())
             .zip(permutations.iter())
         {
+            let interval = crate::timer::Interval::begin("construct_constrains_for_custom_gates");
+
             // Custom gates
             multicore::scope(|scope| {
                 let chunk_size = (size + num_threads - 1) / num_threads;
@@ -381,6 +388,10 @@ impl<C: CurveAffine> Evaluator<C> {
                     });
                 }
             });
+
+            interval.end();
+
+            let interval = crate::timer::Interval::begin("construct_constrains_for_permuitations");
 
             // Permutations
             let sets = &permutation.sets;
@@ -464,6 +475,10 @@ impl<C: CurveAffine> Evaluator<C> {
                 });
             }
 
+            interval.end();
+
+            let interval = crate::timer::Interval::begin("construct_constrains_for_lookups");
+
             // Lookups
             for (n, lookup) in lookups.iter().enumerate() {
                 // Polynomials required for this lookup.
@@ -539,6 +554,10 @@ impl<C: CurveAffine> Evaluator<C> {
                 });
             }
 
+            interval.end();
+
+            let interval = crate::timer::Interval::begin("construct_constrains_for_shuffles");
+
             // Shuffle constraints
             for (n, shuffle) in shuffles.iter().enumerate() {
                 let product_coset = pk.vk.domain.coeff_to_extended(shuffle.product_poly.clone());
@@ -600,6 +619,8 @@ impl<C: CurveAffine> Evaluator<C> {
                     }
                 });
             }
+
+            interval.end();
         }
         values
     }
