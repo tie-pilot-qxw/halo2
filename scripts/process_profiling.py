@@ -99,7 +99,14 @@ if __name__ == "__main__":
         s = rf.read()
     
     lines = s.split('\n')
-    events = [parse_event(line) for line in lines]
+
+    events = []
+    for line in lines:
+        try:
+            events.append(parse_event(line))
+        except Exception as e:
+            pass
+
     interval = IntervalTree.build(events)
     interval.print(total = interval.duration)
 

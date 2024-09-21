@@ -147,7 +147,8 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
-    let interval = crate::timer::Interval::begin("msm");
+    let name = format!("msm on {}", std::any::type_name::<C>());
+    let interval = crate::timer::Interval::begin(name.as_str());
 
     let num_threads = multicore::current_num_threads();
     let res = if coeffs.len() > num_threads {
@@ -198,8 +199,8 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
         }
         r
     }
-
-    let interval = crate::timer::Interval::begin("ntt");
+    let name = format!("ntt on {}", std::any::type_name::<G>());
+    let interval = crate::timer::Interval::begin(name.as_str());
     let threads = multicore::current_num_threads();
     let log_threads = log2_floor(threads);
     let n = a.len();

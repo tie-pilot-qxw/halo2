@@ -10,11 +10,11 @@ lazy_static! {
 
 /// An interval for intrusive profiling
 #[derive(Clone, Copy, Debug)]
-pub struct Interval(&'static str);
+pub struct Interval<'a>(&'a str);
 
-impl Interval {
+impl<'a> Interval<'_> {
   /// Print beginning instant for an interval
-  pub fn begin(name: &'static str) -> Self {
+  pub fn begin(name: &'a str) -> Interval<'a> {
     println!("Begin {}: {}", name, ZERO.elapsed().as_micros());
     Interval(name)
   }
