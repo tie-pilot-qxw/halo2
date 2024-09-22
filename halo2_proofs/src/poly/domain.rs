@@ -351,6 +351,8 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     }
 
     fn ifft(a: &mut [F], omega_inv: F, log_n: u32, divisor: F) {
+        let name = format!("inverse ntt on {}", std::any::type_name::<F>());
+        let interval = crate::timer::Interval::begin(name.as_str());
         best_fft(a, omega_inv, log_n);
         parallelize(a, |a, _| {
             for a in a {
@@ -358,6 +360,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
                 *a *= &divisor;
             }
         });
+        interval.end();
     }
 
     /// Get the size of the domain
