@@ -9,6 +9,7 @@ use group::{
 };
 
 pub use halo2curves::{CurveAffine, CurveExt};
+use zk0d99c_ntt::gpu_ntt;
 
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate
@@ -201,6 +202,14 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
     }
     let name = format!("ntt on {}", std::any::type_name::<G>());
     let interval = crate::timer::Interval::begin(name.as_str());
+    let gpu_res = gpu_ntt(a, omega, log_n);
+    match gpu_res {
+        Ok(_) => {
+            interval.end();
+            return;
+        }
+        Err(_) => {}
+    }
     let threads = multicore::current_num_threads();
     let log_threads = log2_floor(threads);
     let n = a.len();
