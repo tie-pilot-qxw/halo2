@@ -3,7 +3,7 @@
 
 use crate::{
     arithmetic::{best_fft, parallelize},
-    plonk::Assigned,
+    plonk::Assigned, timer::Interval,
 };
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
@@ -11,6 +11,8 @@ use ff::WithSmallOrderMulGroup;
 use group::ff::{BatchInvert, Field};
 
 use std::marker::PhantomData;
+
+use zk0d99c_ntt::{gpu_intt, gpu_coeff_to_extended, gpu_extended_to_coeff};
 
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
@@ -225,10 +227,26 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// length.
     pub fn lagrange_to_coeff(&self, mut a: Polynomial<F, LagrangeCoeff>) -> Polynomial<F, Coeff> {
         assert_eq!(a.values.len(), 1 << self.k);
+        let interval = Interval::begin("ntt_lagrange_to_coeff");
+        let gpu_res = gpu_intt(
+            &mut a.values,
+            self.omega_inv,
+            self.k,
+            self.ifft_divisor);
 
+        match gpu_res {
+            Ok(_) => {
+                interval.end();
+                return Polynomial {
+                    values: a.values,
+                    _marker: PhantomData,
+                };
+            }
+            Err(_) => {}
+        }
         // Perform inverse FFT to obtain the polynomial in coefficient form
         Self::ifft(&mut a.values, self.omega_inv, self.k, self.ifft_divisor);
-
+        interval.end();
         Polynomial {
             values: a.values,
             _marker: PhantomData,
@@ -242,11 +260,29 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         mut a: Polynomial<F, Coeff>,
     ) -> Polynomial<F, ExtendedLagrangeCoeff> {
         assert_eq!(a.values.len(), 1 << self.k);
+        let interval = Interval::begin("ntt_coeff_to_extended");
+        let gpu_res = gpu_coeff_to_extended(
+            &mut a.values,
+            self.extended_len(),
+            self.extended_omega,
+            self.extended_k,
+            &[self.g_coset, self.g_coset_inv]);
+
+        match gpu_res {
+            Ok(_) => {
+                interval.end();
+                return Polynomial {
+                    values: a.values,
+                    _marker: PhantomData,
+                };
+            }
+            Err(_) => {}
+        }
 
         self.distribute_powers_zeta(&mut a.values, true);
         a.values.resize(self.extended_len(), F::ZERO);
         best_fft(&mut a.values, self.extended_omega, self.extended_k);
-
+        interval.end();
         Polynomial {
             values: a.values,
             _marker: PhantomData,
@@ -280,6 +316,23 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     // TODO/FIXME: caller should be responsible for truncating
     pub fn extended_to_coeff(&self, mut a: Polynomial<F, ExtendedLagrangeCoeff>) -> Vec<F> {
         assert_eq!(a.values.len(), self.extended_len());
+        let interval = Interval::begin("ntt_extended_to_coeff");
+        let gpu_res = gpu_extended_to_coeff(
+            &mut a.values,
+            self.extended_omega_inv,
+            self.extended_k,
+            self.extended_ifft_divisor,
+            &[self.g_coset_inv, self.g_coset],
+            (&self.n * self.quotient_poly_degree) as usize,
+        );
+
+        match gpu_res {
+            Ok(_) => {
+                interval.end();
+                return a.values;
+            }
+            Err(_) => {}
+        }
 
         // Inverse FFT
         Self::ifft(
@@ -298,7 +351,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         // it always lies on a power-of-two boundary.
         a.values
             .truncate((&self.n * self.quotient_poly_degree) as usize);
-
+        interval.end();
         a.values
     }
 
