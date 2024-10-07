@@ -6,6 +6,7 @@ use crate::{
     poly::{Coeff, ExtendedLagrangeCoeff, Polynomial, Rotation},
 };
 use group::ff::{Field, PrimeField, WithSmallOrderMulGroup};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::{shuffle, ConstraintSystem, Expression};
 
@@ -329,7 +330,7 @@ impl<C: CurveAffine> Evaluator<C> {
             .iter()
             .map(|advice_polys| {
                 advice_polys
-                    .iter()
+                    .par_iter()
                     .map(|poly| domain.coeff_to_extended(poly.clone()))
                     .collect()
             })
@@ -338,7 +339,7 @@ impl<C: CurveAffine> Evaluator<C> {
             .iter()
             .map(|instance_polys| {
                 instance_polys
-                    .iter()
+                    .par_iter()
                     .map(|poly| domain.coeff_to_extended(poly.clone()))
                     .collect()
             })
