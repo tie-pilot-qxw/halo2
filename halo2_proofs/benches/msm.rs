@@ -23,8 +23,8 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::time::SystemTime;
 
 const SAMPLE_SIZE: usize = 10;
-const SINGLECORE_RANGE: [u8; 6] = [3, 8, 10, 12, 14, 16];
-const MULTICORE_RANGE: [u8; 9] = [3, 8, 10, 12, 14, 16, 18, 20, 22];
+const SINGLECORE_RANGE: [u8; 1] = [20];
+const MULTICORE_RANGE: [u8; 1] = [10];
 const SEED: [u8; 16] = [
     0x59, 0x62, 0xbe, 0x5d, 0x76, 0x3d, 0x31, 0x8d, 0x17, 0xdb, 0x37, 0x32, 0x54, 0x06, 0xbc, 0xe5,
 ];

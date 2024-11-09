@@ -10,6 +10,7 @@ use group::{
 
 pub use halo2curves::{CurveAffine, CurveExt};
 use zk0d99c_ntt::gpu_ntt;
+use zk0d99c_msm::gpu_msm;
 
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate
@@ -150,6 +151,17 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
 
     let name = format!("msm on {}", std::any::type_name::<C>());
     let interval = crate::timer::Interval::begin(name.as_str());
+
+    let mut acc = C::Curve::identity();
+
+    let gpu_res = gpu_msm(coeffs, bases, &mut acc);
+    match gpu_res {
+        Ok(_) => {
+            interval.end();
+            return acc;
+        }
+        Err(_) => {}
+    }
 
     let num_threads = multicore::current_num_threads();
     let res = if coeffs.len() > num_threads {
