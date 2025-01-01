@@ -69,6 +69,16 @@ pub struct Polynomial<F, B> {
     _marker: PhantomData<B>,
 }
 
+impl<F: Field> Polynomial<F, LagrangeCoeff> {
+    /// Create a zero polynomial with its elements being [`Assigned`]
+    pub fn empty_lagrange_assigned(degree: usize) -> Polynomial<Assigned<F>, LagrangeCoeff> {
+        Polynomial {
+            values: vec![Assigned::Trivial(F::ZERO); degree + 1],
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<F, B> Index<usize> for Polynomial<F, B> {
     type Output = F;
 

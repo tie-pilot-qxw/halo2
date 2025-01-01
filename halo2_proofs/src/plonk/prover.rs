@@ -778,3 +778,5 @@ fn test_create_proof() {
     )
     .expect("proof generation should not fail");
 }
+
+pub mod gen;
