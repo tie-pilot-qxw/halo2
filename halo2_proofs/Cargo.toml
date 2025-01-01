@@ -68,6 +68,10 @@ tabbycat = { version = "0.1", features = ["attributes"], optional = true }
 # Legacy circuit compatibility
 halo2_legacy_pdqsort = { version = "0.1.0", optional = true }
 
+# Generator
+zkpoly-compiler = { path = "../zkpoly-compiler/compiler" }
+zkpoly-runtime = { path = "../zkpoly-compiler/runtime" }
+
 [dev-dependencies]
 assert_matches = "1.5"
 criterion = "0.3"
