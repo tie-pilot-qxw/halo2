@@ -330,7 +330,7 @@ impl<C: CurveAffine> Evaluator<C> {
             .iter()
             .map(|advice_polys| {
                 advice_polys
-                    .par_iter()
+                    .iter()
                     .map(|poly| domain.coeff_to_extended(poly.clone()))
                     .collect()
             })
@@ -339,7 +339,7 @@ impl<C: CurveAffine> Evaluator<C> {
             .iter()
             .map(|instance_polys| {
                 instance_polys
-                    .par_iter()
+                    .iter()
                     .map(|poly| domain.coeff_to_extended(poly.clone()))
                     .collect()
             })
