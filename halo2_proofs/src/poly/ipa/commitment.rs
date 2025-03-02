@@ -102,6 +102,10 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
         best_multiexp::<C>(&tmp_scalars, &tmp_bases)
     }
 
+    fn lagrange_points(&self) -> &[C] {
+        &self.g_lagrange
+    }
+
     /// Writes params to a buffer.
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         writer.write_all(&self.k.to_le_bytes())?;
@@ -220,6 +224,10 @@ impl<'params, C: CurveAffine> ParamsProver<'params, C> for ParamsIPA<C> {
         tmp_bases.push(self.w);
 
         best_multiexp::<C>(&tmp_scalars, &tmp_bases)
+    }
+
+    fn coef_points(&self) -> &[C] {
+        &self.g
     }
 
     fn get_g(&self) -> &[C] {

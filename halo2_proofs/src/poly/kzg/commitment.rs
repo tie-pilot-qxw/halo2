@@ -311,6 +311,10 @@ where
         best_multiexp(&scalars, &bases[0..size])
     }
 
+    fn lagrange_points(&self) -> &[E::G1Affine] {
+        &self.g_lagrange
+    }
+
     /// Writes params to a buffer.
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         self.write_custom(writer, SerdeFormat::RawBytes)
@@ -353,6 +357,10 @@ where
         let size = scalars.len();
         assert!(bases.len() >= size);
         best_multiexp(&scalars, &bases[0..size])
+    }
+
+    fn coef_points(&self) -> &[E::G1Affine] {
+        &self.g
     }
 
     fn get_g(&self) -> &[E::G1Affine] {

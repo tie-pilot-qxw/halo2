@@ -144,6 +144,21 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         }
     }
 
+    /// Getter for g_coset
+    pub fn get_g_coset(&self) -> &F {
+        &self.g_coset
+    }
+
+    /// Getter for g_coset_inv
+    pub fn get_g_coset_inv(&self) -> &F {
+        &self.g_coset_inv
+    }
+
+    /// Getter for t_evaluations
+    pub fn get_t_evaluations(&self) -> &[F] {
+        &self.t_evaluations
+    }
+
     /// Obtains a polynomial in Lagrange form when given a vector of Lagrange
     /// coefficients of size `n`; panics if the provided vector is the wrong
     /// length.
@@ -363,6 +378,11 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// Get the size of the domain
     pub fn k(&self) -> u32 {
         self.k
+    }
+
+    /// Get n
+    pub fn n(&self) -> u64 {
+        self.n
     }
 
     /// Get the size of the extended domain

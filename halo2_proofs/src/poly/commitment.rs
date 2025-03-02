@@ -66,6 +66,9 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone {
         r: Blind<C::ScalarExt>,
     ) -> C::CurveExt;
 
+    /// Take the points needed for commiting a lagrange polynomial
+    fn lagrange_points(&self) -> &[C];
+
     /// Writes params to a buffer.
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>;
 
@@ -86,6 +89,9 @@ pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
     /// factor `r`.
     fn commit(&self, poly: &Polynomial<C::ScalarExt, Coeff>, r: Blind<C::ScalarExt>)
         -> C::CurveExt;
+
+    /// Take the points needed for commiting a polynomial
+    fn coef_points(&self) -> &[C];
 
     /// Getter for g generators
     fn get_g(&self) -> &[C];
