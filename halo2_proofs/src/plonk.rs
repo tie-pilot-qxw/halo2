@@ -33,6 +33,8 @@ mod vanishing;
 mod prover;
 mod verifier;
 
+pub use prover::gen as prover_gen;
+
 pub use assigned::*;
 pub use circuit::*;
 pub use error::*;
