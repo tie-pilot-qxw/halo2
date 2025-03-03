@@ -1237,7 +1237,6 @@ pub fn create_proof<
     Scheme: CommitmentScheme + 'static,
     P: Prover<'params, Scheme>,
     E: zkpoly_runtime::transcript::EncodedChallenge<Scheme::Curve> + 'static,
-    R: RngCore,
     T: zkpoly_runtime::transcript::TranscriptWrite<Scheme::Curve, E> + 'static,
     ConcreteCircuit: Circuit<Scheme::Scalar> + 'static + Send + Sync,
 >(
@@ -1269,12 +1268,12 @@ where
     let extended_omega_powers = {
         let mut power = Scheme::Scalar::ONE;
         ast::PolyLagrange::constant_from_iter(
-            (0..domain.n()).map(|_| {
+            (0..extended_n).map(|_| {
                 let r = power;
                 power = power * domain.get_extended_omega();
                 r
             }),
-            domain.n(),
+            extended_n,
             allocator,
         )
     };
