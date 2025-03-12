@@ -72,6 +72,7 @@ halo2_legacy_pdqsort = { version = "0.1.0", optional = true }
 zkpoly_compiler = { path = "../zkpoly-compiler/compiler" }
 zkpoly_runtime = { path = "../zkpoly-compiler/runtime" }
 zkpoly_memory_pool = { path = "../zkpoly-compiler/memory_pool" }
+zkpoly_cuda_api = { path = "../zkpoly-compiler/cuda_api" }
 
 [dev-dependencies]
 assert_matches = "1.5"

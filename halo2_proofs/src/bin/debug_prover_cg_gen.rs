@@ -12,6 +12,7 @@ use halo2_proofs::poly::kzg::{
 };
 
 use zkpoly_memory_pool::PinnedMemoryPool;
+use zkpoly_runtime::runtime::Runtime;
 use zkpoly_runtime::transcript::{self, TranscriptWriterBuffer};
 
 use std::marker::PhantomData;
@@ -277,13 +278,15 @@ fn main() {
 
         let mut allocator = PinnedMemoryPool::new(30, std::mem::size_of::<u32>());
 
-        let cg_ret = prover_gen::create_proof::<
+        println!("[Test] Begin Computation Graph Generation");
+        let (cg_ret, cg_inputs_shape) = prover_gen::create_proof::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
             E,
             Tr,
             _,
         >(params, pk, vec![circuit], &mut allocator);
+        println!("[Test] End Computation Graph Generation");
 
         use zkpoly_compiler::driver;
 
@@ -293,7 +296,29 @@ fn main() {
             gpu_memory_limit: 20 * 2u64.pow(30),
         };
 
-        let _ = driver::ast2inst(cg_ret, allocator, &options, &hd_info).unwrap();
+        println!("[Test] Begin Compiling to Runtime Instructions");
+        let (rt_chunk, rt_const_tab, mem_allocator) =
+            driver::ast2inst(cg_ret, allocator, &options, &hd_info).unwrap();
+        println!("[Test] End Compiling to Runtime Instructions");
+
+        let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
+
+        let runtime = driver::prepare_vm(
+            rt_chunk,
+            rt_const_tab,
+            mem_allocator,
+            inputs,
+            zkpoly_runtime::runtime::ThreadPool::new(8),
+            vec![zkpoly_cuda_api::mem::CudaAllocator::new(
+                0,
+                hd_info.gpu_memory_limit as usize,
+            )],
+            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
+        );
+
+        println!("[Test] Launch VM");
+        let (r, _) = runtime.run();
+        dbg!(r);
     }
 
     let k = 8;
@@ -302,6 +327,5 @@ fn main() {
     let (params, pk) = keygen(k);
     println!("Done");
 
-    println!("[Test] Begin Computation Graph Generation");
     prover(k, &params, &pk);
 }

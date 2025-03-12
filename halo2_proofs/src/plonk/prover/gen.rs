@@ -1231,6 +1231,14 @@ where
     type Trans = T;
 }
 
+/// Shape of inputs of the computation graph
+#[derive(Debug, Clone)]
+pub struct InputsShape {
+    n_circuits: usize,
+    n_columns: usize,
+    n: u64,
+}
+
 /// The generator for [`super::create_proof`].
 pub fn create_proof<
     'params,
@@ -1244,7 +1252,7 @@ pub fn create_proof<
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
     allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
-) -> ast::Transcript<RtInstance<Scheme, E, T>>
+) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
     ConcreteCircuit::Config: 'static + Send + Sync,
@@ -1329,6 +1337,12 @@ where
     };
 
     // Declare inputs
+    let inputs_shape = InputsShape {
+        n_circuits: circuits.len(),
+        n_columns: pk.vk.cs.num_instance_columns,
+        n: params.n(),
+    };
+
     let instances: Vec<Vec<ast::PolyLagrange<RtInstance<Scheme, E, T>>>> = (0..circuits.len())
         .map(|i| {
             (0..pk.vk.cs.num_instance_columns)
@@ -1807,5 +1821,32 @@ where
         params.n(),
     );
 
-    transcript
+    (transcript, inputs_shape)
+}
+
+impl InputsShape {
+    /// Serialize the inputs to the entry table.
+    pub fn serialize<Rt: RuntimeType>(
+        &self,
+        instances: Vec<Vec<rt::scalar::ScalarArray<Rt::Field>>>,
+        transcript: Rt::Trans,
+    ) -> rt::args::EntryTable<Rt> {
+        assert!(instances.len() == self.n_circuits);
+        instances.iter().for_each(|ins| {
+            assert!(ins.len() == self.n_columns);
+            ins.iter().for_each(|c| assert!(c.len() == self.n as usize))
+        });
+
+        let mut entry_table = rt::args::EntryTable::new();
+
+        instances.into_iter().for_each(|instances| {
+            instances.into_iter().for_each(|col| {
+                rt::args::add_entry(&mut entry_table, rt::args::Variable::ScalarArray(col));
+            });
+        });
+
+        rt::args::add_entry(&mut entry_table, rt::args::Variable::Transcript(transcript));
+
+        entry_table
+    }
 }
