@@ -1682,7 +1682,7 @@ where
 
     let x = transcript.squeeze_challenge_scalar();
     // for n < 2^30, this will do
-    let xn = x.pow(params.n() as u32);
+    let xn = x.pow(params.n() );
 
     assert!(P::QUERY_INSTANCE == false);
 
@@ -1692,9 +1692,9 @@ where
             .entry(power)
             .or_insert_with(|| {
                 if power > 0 {
-                    x.clone() * omega.pow(power as u32)
+                    x.clone() * omega.pow(power as u64)
                 } else if power < 0 {
-                    x.clone() * omega_inv.pow(-power as u32)
+                    x.clone() * omega_inv.pow((-power) as u64)
                 } else {
                     x.clone()
                 }
