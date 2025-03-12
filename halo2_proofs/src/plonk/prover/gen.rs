@@ -1682,7 +1682,7 @@ where
 
     let x = transcript.squeeze_challenge_scalar();
     // for n < 2^30, this will do
-    let xn = x.pow(params.n() );
+    let xn = x.pow(params.n());
 
     assert!(P::QUERY_INSTANCE == false);
 
