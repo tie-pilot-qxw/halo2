@@ -1,6 +1,7 @@
 use group::ff::Field;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
+use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 use rand_core::OsRng;
@@ -318,7 +319,30 @@ fn main() {
 
         println!("[Test] Launch VM");
         let (r, _) = runtime.run();
-        dbg!(r);
+        println!("[Test] VM Exited");
+
+        let proof = r.unwrap().unwrap_transcript_move().take().finalize();
+
+        println!("[Test] Begin Verify Proof");
+        let strategy = SingleStrategy::new(params);
+        use halo2_proofs::transcript::TranscriptReadBuffer;
+        let mut transcript = halo2_proofs::transcript::Blake2bRead::<
+            _,
+            _,
+            halo2_proofs::transcript::Challenge255<_>,
+        >::init(&proof[..]);
+        let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
+            params,
+            pk.get_vk(),
+            strategy,
+            &[&[]],
+            &mut transcript,
+        );
+
+        match verify_result {
+            Ok(_) => println!("[Test] Verify Proof Success"),
+            Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
+        }
     }
 
     let k = 8;
