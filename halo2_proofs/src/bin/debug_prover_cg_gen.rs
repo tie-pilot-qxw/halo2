@@ -293,7 +293,7 @@ fn main() {
         let options =
             driver::DebugOptions::all(PathBuf::from("target/debug/transit")).with_log(true);
         let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 20 * 2u64.pow(30),
+            gpu_memory_limit: 4 * 2u64.pow(30),
         };
 
         println!("[Test] Begin Compiling to Runtime Instructions");

@@ -1845,7 +1845,12 @@ impl InputsShape {
             });
         });
 
-        rt::args::add_entry(&mut entry_table, rt::args::Variable::Transcript(transcript));
+        rt::args::add_entry(
+            &mut entry_table,
+            rt::args::Variable::Transcript(zkpoly_runtime::transcript::TranscriptObject::new(
+                transcript,
+            )),
+        );
 
         entry_table
     }
