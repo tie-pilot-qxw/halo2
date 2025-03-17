@@ -227,6 +227,10 @@ where
         transcript.write_point(h)?;
         let u: ChallengeU<_> = transcript.squeeze_challenge_scalar();
 
+        if let Some(trace) = &mut trace {
+            trace.shplonk_u = u.deref().clone();
+        }
+
         let linearisation_contribution = |rotation_set: RotationSetExtension<E::G1Affine>| {
             let mut diffs = super_point_set.clone();
             for point in rotation_set.points.iter() {

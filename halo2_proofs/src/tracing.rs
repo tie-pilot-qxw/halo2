@@ -48,6 +48,7 @@ pub struct Trace<C: CurveAffine> {
     pub(crate) lookup_evals: Vec<Vec<Vec<C::ScalarExt>>>,
     pub(crate) shplonk_y: C::ScalarExt,
     pub(crate) shplonk_v: C::ScalarExt,
+    pub(crate) shplonk_u: C::ScalarExt,
     pub(crate) shplonk_h: Polynomial<C::ScalarExt, Coeff>,
     pub(crate) shplonk_h1: Polynomial<C::ScalarExt, Coeff>,
 }

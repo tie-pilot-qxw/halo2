@@ -26,14 +26,14 @@ use std::{
 
 #[derive(Debug, Clone)]
 pub(crate) struct Permuted<C: CurveAffine> {
-    compressed_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
-    permuted_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
-    permuted_input_poly: Polynomial<C::Scalar, Coeff>,
-    permuted_input_blind: Blind<C::Scalar>,
-    compressed_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
-    permuted_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
-    permuted_table_poly: Polynomial<C::Scalar, Coeff>,
-    permuted_table_blind: Blind<C::Scalar>,
+    pub(crate) compressed_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    pub(crate) permuted_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    pub(crate) permuted_input_poly: Polynomial<C::Scalar, Coeff>,
+    pub(crate) permuted_input_blind: Blind<C::Scalar>,
+    pub(crate) compressed_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    pub(crate) permuted_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    pub(crate) permuted_table_poly: Polynomial<C::Scalar, Coeff>,
+    pub(crate) permuted_table_blind: Blind<C::Scalar>,
 }
 
 #[derive(Debug)]

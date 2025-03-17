@@ -1,6 +1,7 @@
 //! Generator for [`create_proof`]
 use crate::plonk::{evaluation::EvaluationData, ColumnType, Expression};
 use crate::poly::commitment::ParamsProver;
+use crate::tracing::Trace;
 
 use super::*;
 use ff::PrimeField;
@@ -572,6 +573,34 @@ struct PermutedPlookupArgument<Rt: RuntimeType> {
     pt_coef: ast::PolyCoef<Rt>,
 }
 
+impl<Rt: RuntimeType> PermutedPlookupArgument<Rt> {
+    fn validate(
+        &self,
+        ans: &lookup::prover::Permuted<Rt::PointAffine>,
+        allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    ) -> Self {
+        let ci_values_ans =
+            ast::PolyLagrange::constant(&ans.compressed_input_expression.values, allocator);
+        let ct_values_ans =
+            ast::PolyLagrange::constant(&ans.compressed_table_expression.values, allocator);
+        let pi_values_ans =
+            ast::PolyLagrange::constant(&ans.permuted_input_expression.values, allocator);
+        let pt_values_ans =
+            ast::PolyLagrange::constant(&ans.permuted_table_expression.values, allocator);
+        let pi_coef_ans = ast::PolyCoef::constant(&ans.permuted_input_poly, allocator);
+        let pt_coef_ans = ast::PolyCoef::constant(&ans.permuted_table_poly, allocator);
+
+        PermutedPlookupArgument {
+            ci_values: self.ci_values.assert_eq(&ci_values_ans),
+            ct_values: self.ct_values.assert_eq(&ct_values_ans),
+            pi_values: self.pi_values.assert_eq(&pi_values_ans),
+            pt_values: self.pt_values.assert_eq(&pt_values_ans),
+            pi_coef: self.pi_coef.assert_eq(&pi_coef_ans),
+            pt_coef: self.pt_coef.assert_eq(&pt_coef_ans),
+        }
+    }
+}
+
 fn compute_permuted_for_plookup<Rt: RuntimeType>(
     pa: &lookup::Argument<Rt::Field>,
     theta: &ast::Scalar<Rt>,
@@ -698,6 +727,9 @@ fn construct_primary_constraint<Rt: RuntimeType>(
     beta_mul_zeta: &ast::Scalar<Rt>,
     delta: &ast::Scalar<Rt>,
     theta: &ast::Scalar<Rt>,
+    custom_gates_answer: Option<ast::PolyLagrange<Rt>>,
+    permutation_constraint_answer: Option<ast::PolyLagrange<Rt>>,
+    lookup_constraint_answer: Option<ast::PolyLagrange<Rt>>,
 ) where
     Rt::Field: WithSmallOrderMulGroup<3>,
 {
@@ -705,7 +737,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
     let rot_scale = 1 << (domain.extended_k() - domain.k());
     let extended_n = domain.extended_len() as u64;
 
-    let mut add_constraint = |p: ast::PolyLagrange<Rt>| {
+    let add_constraint = |p: ast::PolyLagrange<Rt>, h: &mut ast::PolyLagrange<Rt>| {
         *h = h.clone() * y.clone() + p;
     };
 
@@ -719,7 +751,13 @@ fn construct_primary_constraint<Rt: RuntimeType>(
                 evaluate_expression::<_, true>(expr, table, challenges, rot_scale).unwrap_poly()
             })
         })
-        .for_each(|p| add_constraint(p));
+        .for_each(|p| add_constraint(p, h));
+
+    *h = if let Some(answer) = custom_gates_answer {
+        h.assert_eq(&answer)
+    } else {
+        h.clone()
+    };
 
     // Premutation constraints
     if !permutation_ppps.is_empty() {
@@ -734,14 +772,19 @@ fn construct_primary_constraint<Rt: RuntimeType>(
             .collect();
         add_constraint(
             (ast::Scalar::one() - permutation_ppps.first().unwrap().clone()) * l0.clone(),
+            h,
         );
         let last = permutation_ppps.last().unwrap().clone();
-        add_constraint((last.clone() * last.clone() - last.clone()) * l_last.clone());
+        add_constraint(
+            (last.clone() * last.clone() - last.clone()) * l_last.clone(),
+            h,
+        );
 
         for (i, ppp) in permutation_ppps.iter().skip(1).enumerate() {
             add_constraint(
                 (ppp.clone() - permutation_ppps[i - 1].rotate(rot_scale * last_rotation))
                     * l0.clone(),
+                h,
             );
         }
 
@@ -771,9 +814,15 @@ fn construct_primary_constraint<Rt: RuntimeType>(
                 delta_power = delta_power * delta.clone();
             }
 
-            add_constraint((left - right) * l_active_row.clone());
+            add_constraint((left - right) * l_active_row.clone(), h);
         }
     }
+
+    *h = if let Some(answer) = permutation_constraint_answer {
+        h.assert_eq(&answer)
+    } else {
+        h.clone()
+    };
 
     for ((ppa, ppp), pa) in plas.iter().zip(lookup_ppp_coefs.iter()).zip(las.iter()) {
         let ppp_ext = coef_to_extended(ppp, extended_n, zetas);
@@ -799,15 +848,25 @@ fn construct_primary_constraint<Rt: RuntimeType>(
 
         let t = (ct_ext + gamma.clone()) * (ci_ext + beta.clone());
 
-        add_constraint((ast::Scalar::one() - ppp_ext.clone()) * l0.clone());
-        add_constraint((ppp_ext.clone() * ppp_ext.clone() - ppp_ext.clone()) * l_last.clone());
+        add_constraint((ast::Scalar::one() - ppp_ext.clone()) * l0.clone(), h);
+        add_constraint(
+            (ppp_ext.clone() * ppp_ext.clone() - ppp_ext.clone()) * l_last.clone(),
+            h,
+        );
 
         add_constraint(
             (ppp_ext.rotate(rot_scale) * (pi_ext + beta.clone()) * (pt_ext + gamma.clone())
                 - ppp_ext * t)
                 * l_active_row.clone(),
+            h,
         );
     }
+
+    *h = if let Some(answer) = lookup_constraint_answer {
+        h.assert_eq(&answer)
+    } else {
+        h.clone()
+    };
 
     // Shuffle not implemented yet
 }
@@ -889,6 +948,26 @@ fn extended_to_coef<Rt: RuntimeType>(
     let extended_coef = values.to_coef();
     let extended_coef = extended_coef.distribute_powers(zetas_inv);
     extended_coef.slice(0, len)
+}
+
+fn kzg_commit_lagrange_validated<Rt: RuntimeType>(
+    poly: impl Iterator<Item = ast::PolyLagrange<Rt>>,
+    points: &ast::PrecomputedPoints<Rt>,
+    transcript: &mut ast::Transcript<Rt>,
+    answers: Option<Vec<ast::Point<Rt>>>,
+) {
+    let points = ast::point::msm_lagrange(poly, points);
+
+    if let Some(answers) = &answers {
+        assert!(points.len().unwrap() == answers.len());
+    }
+
+    points.iter().enumerate().for_each(|(i, point)| {
+        let point = answers
+            .as_ref()
+            .map_or_else(|| point.clone(), |answers| point.assert_eq(&answers[i]));
+        transcript.hash_point(&point, HashTyp::WriteProof);
+    })
 }
 
 fn kzg_commit_lagrange<Rt: RuntimeType>(
@@ -1092,9 +1171,16 @@ fn shplonk_commit<Rt: RuntimeType>(
     coef_points: &ast::PrecomputedPoints<Rt>,
     evaluate_vanishing_polynomail_f: user_functions::EvaluateVanishingPolynomailF<Rt>,
     n: u64,
+    allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    trace: Option<&Trace<Rt::PointAffine>>,
 ) {
     let y = transcript.squeeze_challenge_scalar();
     let (super_point_set, rotation_sets) = construct_intermediate_sets(queries);
+
+    let y = trace.as_ref().map_or_else(
+        || y.clone(),
+        |trace| y.assert_eq(&ast::Scalar::constant(trace.shplonk_y)),
+    );
 
     let points_complement: Vec<Vec<_>> = rotation_sets
         .iter()
@@ -1142,6 +1228,11 @@ fn shplonk_commit<Rt: RuntimeType>(
 
     let v = transcript.squeeze_challenge_scalar();
 
+    let v = trace.as_ref().map_or_else(
+        || v.clone(),
+        |trace| v.assert_eq(&ast::Scalar::constant(trace.shplonk_v)),
+    );
+
     let his = rotation_sets.iter().zip(rs.iter()).map(|(rot_set, rs)| {
         let numerator = rot_set
             .commitments
@@ -1158,9 +1249,20 @@ fn shplonk_commit<Rt: RuntimeType>(
         .into_iter()
         .rev()
         .fold(ast::PolyCoef::zero(n), |acc, hi| acc * v.clone() + hi);
+
+    let h = trace.as_ref().map_or_else(
+        || h.clone(),
+        |trace| h.assert_eq(&ast::PolyCoef::constant(&trace.shplonk_h.values, allocator)),
+    );
+
     kzg_commit_coef(std::iter::once(h.clone()), coef_points, transcript);
 
     let u = transcript.squeeze_challenge_scalar();
+
+    let u = trace.as_ref().map_or_else(
+        || u.clone(),
+        |trace| u.assert_eq(&ast::Scalar::constant(trace.shplonk_u)),
+    );
 
     let lis = rotation_sets
         .iter()
@@ -1198,6 +1300,17 @@ fn shplonk_commit<Rt: RuntimeType>(
     let h1 = l.kate_div(&u);
     let alpha = h1.index(0).invert();
     let h1 = h1 * alpha;
+
+    let h1 = trace.as_ref().map_or_else(
+        || h1.clone(),
+        |trace| {
+            h1.assert_eq(&ast::PolyCoef::constant(
+                &trace.shplonk_h1.values,
+                allocator,
+            ))
+        },
+    );
+
     kzg_commit_coef(std::iter::once(h1), coef_points, transcript);
 }
 
@@ -1252,6 +1365,30 @@ pub fn create_proof<
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
     allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
+    ConcreteCircuit::Config: 'static + Send + Sync,
+{
+    create_proof_validated::<Scheme, P, E, T, ConcreteCircuit>(
+        params, pk, circuits, allocator, None,
+    )
+}
+
+/// The generator for [`super::create_proof`].
+pub fn create_proof_validated<
+    'params,
+    Scheme: CommitmentScheme + 'static,
+    P: Prover<'params, Scheme>,
+    E: zkpoly_runtime::transcript::EncodedChallenge<Scheme::Curve> + 'static,
+    T: zkpoly_runtime::transcript::TranscriptWrite<Scheme::Curve, E> + 'static,
+    ConcreteCircuit: Circuit<Scheme::Scalar> + 'static + Send + Sync,
+>(
+    params: &Scheme::ParamsProver,
+    pk: &ProvingKey<Scheme::Curve>,
+    circuits: Vec<ConcreteCircuit>,
+    allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    trace: Option<&Trace<Scheme::Curve>>,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
@@ -1393,7 +1530,7 @@ where
         .collect::<Vec<_>>();
 
     let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
-    for current_phase in pk.vk.cs.phases() {
+    for (phase_i, current_phase) in pk.vk.cs.phases().enumerate() {
         let column_indices = meta
             .advice_column_phase
             .iter()
@@ -1453,7 +1590,7 @@ where
                 .iter()
                 .zip(advice_values.iter())
                 .map(|(j, advice_value)| {
-                    if meta.unblinded_advice_columns.contains(j) {
+                    if meta.unblinded_advice_columns.contains(j) || trace.is_some() {
                         advice_value.clone()
                     } else {
                         advice_value.blind(unusable_rows_start as u64, params.n())
@@ -1461,10 +1598,16 @@ where
                 })
                 .collect();
 
-            kzg_commit_lagrange(
+            kzg_commit_lagrange_validated(
                 advice_values_blinded.into_iter(),
                 &lagrange_points,
                 &mut transcript,
+                trace.as_ref().map(|trace| {
+                    trace.advice_commitments[phase_i]
+                        .iter()
+                        .map(|c| ast::Point::constant(c.clone()))
+                        .collect::<Vec<_>>()
+                }),
             );
 
             for (&i, p) in column_indices.iter().zip(advice_values.into_iter()) {
@@ -1488,19 +1631,88 @@ where
         .collect::<Vec<_>>();
     let collect_challenges_f = user_functions::collect_challenges(meta.num_challenges);
     let challenges = collect_challenges_f.call(challenges);
-    let challenges: Vec<_> = challenges.iter().collect();
+
+    let challenges: Vec<_> = trace.as_ref().map_or_else(
+        || challenges.iter().collect(),
+        |trace| {
+            assert!(challenges.len().unwrap() == trace.challenges.len());
+            challenges
+                .iter()
+                .zip(trace.challenges.iter())
+                .map(|(c, ans)| {
+                    let ans = ast::Scalar::constant(ans.clone());
+                    c.assert_eq(&ans)
+                })
+                .collect()
+        },
+    );
+
+    let advices = advices
+        .into_iter()
+        .enumerate()
+        .map(|(i, advices)| {
+            advices
+                .into_iter()
+                .enumerate()
+                .map(|(j, p)| {
+                    trace.as_ref().map_or_else(
+                        || p.clone(),
+                        |trace| {
+                            let ans = ast::PolyLagrange::constant(
+                                &trace.advice_values[i][j].values,
+                                allocator,
+                            );
+                            p.assert_eq(&ans)
+                        },
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
 
     let tables = instances
         .into_iter()
         .zip(advices.into_iter())
         .enumerate()
         .map(|(i, (instance, advice))| {
-            let instance_coefs: Vec<_> = instance.iter().map(|p| p.to_coef()).collect();
+            let instance_coefs: Vec<_> = instance
+                .iter()
+                .enumerate()
+                .map(|(j, p)| {
+                    let p = p.to_coef();
+                    trace.as_ref().map_or_else(
+                        || p.clone(),
+                        |trace| {
+                            let correct = ast::PolyCoef::constant(
+                                &trace.instance_coefs[i][j].values,
+                                allocator,
+                            );
+                            p.clone().assert_eq(&correct)
+                        },
+                    )
+                })
+                .collect();
             let instance_exts: Vec<_> = instance_coefs
                 .iter()
                 .map(|p| coef_to_extended(p, extended_n, &zetas))
                 .collect();
-            let advice_coefs: Vec<_> = advice.iter().map(|p| p.to_coef()).collect();
+            let advice_coefs: Vec<_> = advice
+                .iter()
+                .enumerate()
+                .map(|(j, p)| {
+                    let p = p.to_coef();
+                    trace.as_ref().map_or_else(
+                        || p.clone(),
+                        |trace| {
+                            let correct = ast::PolyCoef::constant(
+                                &trace.advice_coefs[i][j].values,
+                                allocator,
+                            );
+                            p.clone().assert_eq(&correct)
+                        },
+                    )
+                })
+                .collect();
             let advice_exts: Vec<_> = advice_coefs
                 .iter()
                 .map(|p| coef_to_extended(p, extended_n, &zetas))
@@ -1526,13 +1738,15 @@ where
 
     let lookup_permuteds: Vec<Vec<_>> = tables
         .iter()
-        .map(|table| {
+        .enumerate()
+        .map(|(i, table)| {
             pk.vk
                 .cs
                 .lookups
                 .iter()
-                .map(|argument| {
-                    compute_permuted_for_plookup(
+                .enumerate()
+                .map(|(j, argument)| {
+                    let ppa = compute_permuted_for_plookup(
                         argument,
                         &theta,
                         table,
@@ -1540,7 +1754,12 @@ where
                         params.n(),
                         unusable_rows_start as u64,
                         &permute_expression_pair_f,
-                    )
+                    );
+                    if let Some(trace) = &trace {
+                        ppa.validate(&trace.lookup_permuted[i][j], allocator)
+                    } else {
+                        ppa
+                    }
                 })
                 .collect()
         })
@@ -1561,6 +1780,22 @@ where
     let beta = transcript.squeeze_challenge_scalar();
     let gamma = transcript.squeeze_challenge_scalar();
 
+    let beta = trace.as_ref().map_or_else(
+        || beta.clone(),
+        |trace| {
+            let ans = ast::Scalar::constant(trace.beta.clone());
+            beta.assert_eq(&ans)
+        },
+    );
+
+    let gamma = trace.as_ref().map_or_else(
+        || gamma.clone(),
+        |trace| {
+            let ans = ast::Scalar::constant(trace.gamma.clone());
+            gamma.assert_eq(&ans)
+        },
+    );
+
     let pk_permutations: Vec<_> = pk
         .permutation
         .permutations
@@ -1569,7 +1804,8 @@ where
         .collect();
     let permutation_ppps: Vec<_> = tables
         .iter()
-        .map(|table| {
+        .enumerate()
+        .map(|(i, table)| {
             let sets = compute_permutation_ppp(
                 &pk.vk.cs.permutation.columns,
                 pk,
@@ -1581,6 +1817,24 @@ where
                 &omega_powers,
                 &delta,
             );
+
+            let sets = trace.as_ref().map_or_else(
+                || sets.clone(),
+                |trace| {
+                    assert_eq!(sets.len(), trace.permutation_ppps[i].sets.len());
+                    sets.iter()
+                        .zip(trace.permutation_ppps[i].sets.iter())
+                        .map(|(p, ans)| {
+                            let ans = ast::PolyLagrange::constant(
+                                &ans.permutation_product_values.values,
+                                allocator,
+                            );
+                            p.assert_eq(&ans)
+                        })
+                        .collect()
+                },
+            );
+
             kzg_commit_lagrange(sets.iter().cloned(), &lagrange_points, &mut transcript);
             sets
         })
@@ -1594,10 +1848,28 @@ where
 
     let plookup_ppps: Vec<Vec<_>> = lookup_permuteds
         .iter()
-        .map(|ppas| {
+        .enumerate()
+        .map(|(i, ppas)| {
             ppas.iter()
-                .map(|ppa| {
-                    compute_lookup_ppp(ppa, &beta, &gamma, unusable_rows_start as u64, params.n())
+                .enumerate()
+                .map(|(j, ppa)| {
+                    let p = compute_lookup_ppp(
+                        ppa,
+                        &beta,
+                        &gamma,
+                        unusable_rows_start as u64,
+                        params.n(),
+                    );
+                    trace.as_ref().map_or_else(
+                        || p.clone(),
+                        |trace| {
+                            let ans = ast::PolyLagrange::constant(
+                                &trace.lookup_ppp[i][j].values,
+                                allocator,
+                            );
+                            p.assert_eq(&ans)
+                        },
+                    )
                 })
                 .collect()
         })
@@ -1622,11 +1894,12 @@ where
     // Shuffles are not used in zkevm-circuits, skipping here
     assert!(pk.vk.cs.shuffles.len() == 0);
 
-    let random_poly = ast::PolyLagrange::random(params.n());
-    let random_poly = random_poly.to_coef();
-    kzg_commit_coef([random_poly].into_iter(), &coef_points, &mut transcript);
+    let random_poly = if trace.is_some() {
+        ast::PolyLagrange::zeros(params.n())
+    } else {
+        ast::PolyLagrange::random(params.n())
+    };
 
-    let random_poly = ast::PolyLagrange::random(params.n());
     let random_poly = random_poly.to_coef();
     kzg_commit_coef(
         [random_poly.clone()].into_iter(),
@@ -1635,6 +1908,14 @@ where
     );
 
     let y = transcript.squeeze_challenge_scalar();
+
+    trace.as_ref().map_or_else(
+        || y.clone(),
+        |trace| {
+            let ans = ast::Scalar::constant(trace.y.clone());
+            y.assert_eq(&ans)
+        },
+    );
 
     let pk_permutation_exts: Vec<_> = pk
         .permutation
@@ -1648,33 +1929,45 @@ where
     let mut h = ast::PolyLagrange::zeros(extended_n);
     tables
         .iter()
+        .enumerate()
         .zip(permutation_ppps.iter())
         .zip(lookup_permuteds.iter())
         .zip(plookup_ppp_coefs.iter())
-        .for_each(|(((table, permutation_ppps), plas), lookup_ppp_coefs)| {
-            construct_primary_constraint(
-                &mut h,
-                &pk_permutation_exts,
-                permutation_ppps,
-                &pk.vk.cs.lookups,
-                plas,
-                lookup_ppp_coefs,
-                table,
-                pk,
-                &challenges,
-                &zetas,
-                &l0,
-                &l_last,
-                &l_active_row,
-                &extended_omega_powers,
-                &beta,
-                &gamma,
-                &y,
-                &beta_mul_zeta,
-                &delta,
-                &theta,
-            );
-        });
+        .for_each(
+            |((((i, table), permutation_ppps), plas), lookup_ppp_coefs)| {
+                construct_primary_constraint(
+                    &mut h,
+                    &pk_permutation_exts,
+                    permutation_ppps,
+                    &pk.vk.cs.lookups,
+                    plas,
+                    lookup_ppp_coefs,
+                    table,
+                    pk,
+                    &challenges,
+                    &zetas,
+                    &l0,
+                    &l_last,
+                    &l_active_row,
+                    &extended_omega_powers,
+                    &beta,
+                    &gamma,
+                    &y,
+                    &beta_mul_zeta,
+                    &delta,
+                    &theta,
+                    trace.as_ref().map(|t| {
+                        ast::PolyLagrange::constant(&t.custom_gates_constraint[i].values, allocator)
+                    }),
+                    trace.as_ref().map(|t| {
+                        ast::PolyLagrange::constant(&t.permutation_constraint[i].values, allocator)
+                    }),
+                    trace.as_ref().map(|t| {
+                        ast::PolyLagrange::constant(&t.lookup_constraint[i].values, allocator)
+                    }),
+                );
+            },
+        );
 
     let h_pieces = construct_vanishing(
         &h,
@@ -1684,15 +1977,20 @@ where
         params.n(),
     );
 
-    kzg_commit_coef(h_pieces.iter().cloned(), &coef_points, &mut transcript);
+    let h_pieces = if let Some(trace) = &trace {
+        h_pieces
+            .into_iter()
+            .zip(trace.vanishing_pieces.iter())
+            .map(|(p, ans)| {
+                let ans = ast::PolyCoef::constant(&ans.values, allocator);
+                p.assert_eq(&ans)
+            })
+            .collect::<Vec<_>>()
+    } else {
+        h_pieces
+    };
 
-    let random_poly = ast::PolyLagrange::random(params.n());
-    let random_poly = random_poly.to_coef();
-    kzg_commit_coef(
-        [random_poly.clone()].into_iter(),
-        &coef_points,
-        &mut transcript,
-    );
+    kzg_commit_coef(h_pieces.iter().cloned(), &coef_points, &mut transcript);
 
     let x = transcript.squeeze_challenge_scalar();
     // for n < 2^30, this will do
@@ -1819,6 +2117,8 @@ where
         &coef_points,
         user_functions::evaluate_vanishing_polynomial(),
         params.n(),
+        allocator,
+        trace,
     );
 
     (transcript, inputs_shape)
