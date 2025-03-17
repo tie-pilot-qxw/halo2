@@ -5,6 +5,7 @@ use crate::poly::commitment::{Blind, Prover};
 use crate::poly::ipa::commitment::{self, IPACommitmentScheme, ParamsIPA};
 use crate::poly::query::ProverQuery;
 use crate::poly::{Coeff, Polynomial};
+use crate::tracing::Trace;
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
@@ -32,6 +33,7 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
         mut rng: R,
         transcript: &mut T,
         queries: I,
+        _trace: Option<&mut Trace<C>>
     ) -> io::Result<()>
     where
         I: IntoIterator<Item = ProverQuery<'com, C>> + Clone,

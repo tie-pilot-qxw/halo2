@@ -290,7 +290,7 @@ mod test {
 
         let prover = P::new(params);
         prover
-            .create_proof(&mut OsRng, &mut transcript, queries)
+            .create_proof(&mut OsRng, &mut transcript, queries, None)
             .unwrap();
 
         transcript.finalize()

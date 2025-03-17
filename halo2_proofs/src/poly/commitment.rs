@@ -3,7 +3,7 @@ use super::{
     strategy::Guard,
     Coeff, LagrangeCoeff, Polynomial,
 };
-use crate::poly::Error;
+use crate::{poly::Error, tracing::Trace};
 use crate::transcript::{EncodedChallenge, TranscriptRead, TranscriptWrite};
 use ff::Field;
 use halo2curves::CurveAffine;
@@ -149,6 +149,7 @@ pub trait Prover<'params, Scheme: CommitmentScheme> {
         rng: R,
         transcript: &mut T,
         queries: I,
+        trace: Option<&mut Trace<Scheme::Curve>>,
     ) -> io::Result<()>
     where
         I: IntoIterator<Item = ProverQuery<'com, Scheme::Curve>> + Clone,

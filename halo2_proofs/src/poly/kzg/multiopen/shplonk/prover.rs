@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use super::{
     construct_intermediate_sets, ChallengeU, ChallengeV, ChallengeY, Commitment, RotationSet,
 };
@@ -10,6 +11,7 @@ use crate::poly::commitment::{Blind, ParamsProver, Prover};
 use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use crate::poly::query::{PolynomialPointer, ProverQuery};
 use crate::poly::{Coeff, Polynomial};
+use crate::tracing::Trace;
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use crate::multicore::{IntoParallelIterator, ParallelIterator};
@@ -128,6 +130,7 @@ where
         _: R,
         transcript: &mut T,
         queries: I,
+        mut trace: Option<&mut Trace<E::G1Affine>>,
     ) -> io::Result<()>
     where
         I: IntoIterator<Item = ProverQuery<'com, E::G1Affine>> + Clone,
@@ -136,6 +139,10 @@ where
         // TODO: explore if it is safe to use same challenge
         // for different sets that are already combined with another challenge
         let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
+
+        if let Some(trace) = &mut trace {
+            trace.shplonk_y = y.deref().clone();
+        }
 
         let quotient_contribution = |rotation_set: &RotationSetExtension<E::G1Affine>| {
             // [P_i_0(X) - R_i_0(X), P_i_1(X) - R_i_1(X), ... ]
@@ -194,6 +201,10 @@ where
 
         let v: ChallengeV<_> = transcript.squeeze_challenge_scalar();
 
+        if let Some(trace) = &mut trace {
+            trace.shplonk_v = v.deref().clone();
+        }
+
         #[allow(clippy::needless_collect)]
         let quotient_polynomials = rotation_sets
             .as_slice()
@@ -207,6 +218,10 @@ where
             .map(|(poly, power_of_v)| poly * power_of_v)
             .reduce(|acc, poly| acc + &poly)
             .unwrap();
+        
+        if let Some(trace) = &mut trace {
+            trace.shplonk_h = h_x.clone();
+        }
 
         let h = self.params.commit(&h_x, Blind::default()).to_affine();
         transcript.write_point(h)?;
@@ -289,6 +304,10 @@ where
             values: h_x,
             _marker: PhantomData,
         };
+
+        if let Some(trace) = &mut trace {
+            trace.shplonk_h1 = h_x.clone();
+        }
 
         let h = self.params.commit(&h_x, Blind::default()).to_affine();
         transcript.write_point(h)?;

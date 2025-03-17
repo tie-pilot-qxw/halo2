@@ -6,6 +6,7 @@ use crate::poly::commitment::Prover;
 use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use crate::poly::query::ProverQuery;
 use crate::poly::{commitment::Blind, Polynomial};
+use crate::tracing::Trace;
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use group::Curve;
@@ -47,6 +48,7 @@ where
         _: R,
         transcript: &mut T,
         queries: I,
+        _trace: Option<&mut Trace<E::G1Affine>>
     ) -> io::Result<()>
     where
         I: IntoIterator<Item = ProverQuery<'com, E::G1Affine>> + Clone,

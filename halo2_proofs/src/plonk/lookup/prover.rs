@@ -24,8 +24,8 @@ use std::{
     ops::{Mul, MulAssign},
 };
 
-#[derive(Debug)]
-pub(in crate::plonk) struct Permuted<C: CurveAffine> {
+#[derive(Debug, Clone)]
+pub(crate) struct Permuted<C: CurveAffine> {
     compressed_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
@@ -43,6 +43,7 @@ pub(in crate::plonk) struct Committed<C: CurveAffine> {
     pub(in crate::plonk) permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_blind: Blind<C::Scalar>,
     pub(in crate::plonk) product_poly: Polynomial<C::Scalar, Coeff>,
+    pub(in crate::plonk) product_values: Polynomial<C::Scalar, LagrangeCoeff>,
     product_blind: Blind<C::Scalar>,
 }
 
@@ -289,7 +290,7 @@ impl<C: CurveAffine> Permuted<C> {
 
         let product_blind = Blind(C::Scalar::random(rng));
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
-        let z = pk.vk.domain.lagrange_to_coeff(z);
+        let z_poly = pk.vk.domain.lagrange_to_coeff(z.clone());
 
         // Hash product commitment
         transcript.write_point(product_commitment)?;
@@ -299,7 +300,8 @@ impl<C: CurveAffine> Permuted<C> {
             permuted_input_blind: self.permuted_input_blind,
             permuted_table_poly: self.permuted_table_poly,
             permuted_table_blind: self.permuted_table_blind,
-            product_poly: z,
+            product_poly: z_poly,
+            product_values: z,
             product_blind,
         })
     }
@@ -311,6 +313,7 @@ impl<C: CurveAffine> Committed<C> {
         pk: &ProvingKey<C>,
         x: ChallengeX<C>,
         transcript: &mut T,
+        mut trace: Option<&mut Vec<C::ScalarExt>>
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let x_inv = domain.rotate_omega(*x, Rotation::prev());
@@ -330,6 +333,10 @@ impl<C: CurveAffine> Committed<C> {
             .chain(Some(permuted_input_inv_eval))
             .chain(Some(permuted_table_eval))
         {
+            if let Some(trace) = &mut trace {
+                trace.push(eval);
+            }
+
             transcript.write_scalar(eval)?;
         }
 

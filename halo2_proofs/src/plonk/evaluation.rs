@@ -1,6 +1,7 @@
 use crate::multicore;
 use crate::plonk::{lookup, permutation, Any, ProvingKey};
 use crate::poly::Basis;
+use crate::tracing::Trace;
 use crate::{
     arithmetic::{parallelize, CurveAffine},
     poly::{Coeff, ExtendedLagrangeCoeff, Polynomial, Rotation},
@@ -309,6 +310,7 @@ impl<C: CurveAffine> Evaluator<C> {
         lookups: &[Vec<lookup::prover::Committed<C>>],
         shuffles: &[Vec<shuffle::prover::Committed<C>>],
         permutations: &[permutation::prover::Committed<C>],
+        mut trace: Option<&mut Trace<C>>,
     ) -> Polynomial<C::ScalarExt, ExtendedLagrangeCoeff> {
         let domain = &pk.vk.domain;
         let size = domain.extended_len();
@@ -381,6 +383,10 @@ impl<C: CurveAffine> Evaluator<C> {
                     });
                 }
             });
+
+            if let Some(trace) = &mut trace {
+                trace.custom_gates_constraint.push(values.clone());
+            }
 
             // Permutations
             let sets = &permutation.sets;
@@ -464,6 +470,10 @@ impl<C: CurveAffine> Evaluator<C> {
                 });
             }
 
+            if let Some(trace) = &mut trace {
+                trace.permutation_constraint.push(values.clone());
+            }
+
             // Lookups
             for (n, lookup) in lookups.iter().enumerate() {
                 // Polynomials required for this lookup.
@@ -537,6 +547,10 @@ impl<C: CurveAffine> Evaluator<C> {
                                 * l_active_row[idx]);
                     }
                 });
+            }
+
+            if let Some(trace) = &mut trace {
+                trace.lookup_constraint.push(values.clone());
             }
 
             // Shuffle constraints

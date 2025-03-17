@@ -15,15 +15,18 @@ use crate::{
         commitment::{Blind, Params},
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
     },
+    tracing::Trace,
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
+#[derive(Debug, Clone)]
 pub(crate) struct CommittedSet<C: CurveAffine> {
     pub(crate) permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     pub(crate) permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permutation_product_blind: Blind<C::Scalar>,
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct Committed<C: CurveAffine> {
     pub(crate) sets: Vec<CommittedSet<C>>,
 }
@@ -223,9 +226,13 @@ impl<C: CurveAffine> super::ProvingKey<C> {
         &self,
         x: ChallengeX<C>,
         transcript: &mut T,
+        mut trace: Option<&mut Trace<C>>,
     ) -> Result<(), Error> {
         // Hash permutation evals
         for eval in self.polys.iter().map(|poly| eval_polynomial(poly, *x)) {
+            if let Some(trace) = &mut trace {
+                trace.common_permutation_evals.push(eval);
+            }
             transcript.write_scalar(eval)?;
         }
 
@@ -239,6 +246,7 @@ impl<C: CurveAffine> Constructed<C> {
         pk: &plonk::ProvingKey<C>,
         x: ChallengeX<C>,
         transcript: &mut T,
+        mut trace: Option<&mut Vec<Vec<C::ScalarExt>>>,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let blinding_factors = pk.vk.cs.blinding_factors();
@@ -247,6 +255,8 @@ impl<C: CurveAffine> Constructed<C> {
             let mut sets = self.sets.iter();
 
             while let Some(set) = sets.next() {
+                let mut traced_evals = Vec::new();
+
                 let permutation_product_eval = eval_polynomial(&set.permutation_product_poly, *x);
 
                 let permutation_product_next_eval = eval_polynomial(
@@ -259,6 +269,10 @@ impl<C: CurveAffine> Constructed<C> {
                     .chain(Some(&permutation_product_eval))
                     .chain(Some(&permutation_product_next_eval))
                 {
+                    if trace.is_some() {
+                        traced_evals.push(*eval);
+                    }
+
                     transcript.write_scalar(*eval)?;
                 }
 
@@ -271,7 +285,15 @@ impl<C: CurveAffine> Constructed<C> {
                         domain.rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32))),
                     );
 
+                    if trace.is_some() {
+                        traced_evals.push(permutation_product_last_eval);
+                    }
+
                     transcript.write_scalar(permutation_product_last_eval)?;
+                }
+
+                if let Some(trace) = &mut trace {
+                    trace.push(traced_evals);
                 }
             }
         }

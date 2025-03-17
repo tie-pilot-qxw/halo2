@@ -2,7 +2,7 @@ use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
 use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
-use std::ops::RangeTo;
+use std::ops::{Deref, DerefMut, RangeTo};
 use std::{collections::HashMap, iter};
 
 use super::{
@@ -15,6 +15,7 @@ use super::{
     ChallengeX, ChallengeY, Error, ProvingKey,
 };
 
+use crate::tracing::Trace;
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
     circuit::Value,
@@ -49,6 +50,31 @@ pub fn create_proof<
     instances: &[&[&[Scheme::Scalar]]],
     mut rng: R,
     transcript: &mut T,
+) -> Result<(), Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
+        params, pk, circuits, instances, rng, transcript, None,
+    )
+}
+
+fn create_proof_traced<
+    'params,
+    Scheme: CommitmentScheme,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E>,
+    ConcreteCircuit: Circuit<Scheme::Scalar>,
+>(
+    params: &'params Scheme::ParamsProver,
+    pk: &ProvingKey<Scheme::Curve>,
+    circuits: &[ConcreteCircuit],
+    instances: &[&[&[Scheme::Scalar]]],
+    mut rng: R,
+    transcript: &mut T,
+    mut trace: Option<&mut Trace<Scheme::Curve>>,
 ) -> Result<(), Error>
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
@@ -136,6 +162,13 @@ where
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    if let Some(trace) = &mut trace {
+        trace.instance_coefs = instance
+            .iter()
+            .map(|instance| instance.instance_polys.clone())
+            .collect();
+    }
 
     #[derive(Clone)]
     struct AdviceSingle<C: CurveAffine, B: Basis> {
@@ -358,7 +391,11 @@ where
                 for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
                     if !witness.unblinded_advice.contains(column_index) {
                         for cell in &mut advice_values[unusable_rows_start..] {
-                            *cell = Scheme::Scalar::random(&mut rng);
+                            if trace.is_some() {
+                                *cell = Scheme::Scalar::ZERO;
+                            } else {
+                                *cell = Scheme::Scalar::random(&mut rng);
+                            }
                         }
                     } else {
                         #[cfg(feature = "sanity-checks")]
@@ -393,6 +430,10 @@ where
                 let advice_commitments = advice_commitments;
                 drop(advice_commitments_projective);
 
+                if let Some(trace) = &mut trace {
+                    trace.advice_commitments.push(advice_commitments.clone());
+                }
+
                 for commitment in &advice_commitments {
                     transcript.write_point(*commitment)?;
                 }
@@ -421,8 +462,20 @@ where
         (advice, challenges)
     };
 
+    if let Some(trace) = &mut trace {
+        trace.challenges = challenges.clone();
+        trace.advice_values = advice
+            .iter()
+            .map(|advice| advice.advice_polys.clone())
+            .collect();
+    }
+
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
+
+    if let Some(trace) = &mut trace {
+        trace.theta = theta.deref().clone();
+    }
 
     let lookups: Vec<Vec<lookup::prover::Permuted<Scheme::Curve>>> = instance
         .iter()
@@ -451,11 +504,20 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    if let Some(trace) = &mut trace {
+        trace.lookup_permuted = lookups.clone();
+    }
+
     // Sample beta challenge
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
+
+    if let Some(trace) = &mut trace {
+        trace.beta = beta.deref().clone();
+        trace.gamma = gamma.deref().clone();
+    }
 
     // Commit to permutations.
     let permutations: Vec<permutation::prover::Committed<Scheme::Curve>> = instance
@@ -477,6 +539,10 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    if let Some(trace) = &mut trace {
+        trace.permutation_ppps = permutations.clone();
+    }
+
     let lookups: Vec<Vec<lookup::prover::Committed<Scheme::Curve>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
@@ -487,6 +553,13 @@ where
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    if let Some(trace) = &mut trace {
+        trace.lookup_ppp = lookups
+            .iter()
+            .map(|lookups| lookups.iter().map(|la| la.product_values.clone()).collect())
+            .collect();
+    }
 
     let shuffles: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>> = instance
         .iter()
@@ -517,10 +590,18 @@ where
         .collect::<Result<Vec<_>, _>>()?;
 
     // Commit to the vanishing argument's random polynomial for blinding h(x_3)
-    let vanishing = vanishing::Argument::commit(params, domain, &mut rng, transcript)?;
+    let vanishing = if trace.is_some() {
+        vanishing::Argument::commit_no_random(params, domain, &mut rng, transcript)?
+    } else {
+        vanishing::Argument::commit(params, domain, &mut rng, transcript)?
+    };
 
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
+
+    if let Some(trace) = &mut trace {
+        trace.y = y.deref().clone();
+    }
 
     // Calculate the advice polys
     let advice: Vec<AdviceSingle<Scheme::Curve, Coeff>> = advice
@@ -541,6 +622,13 @@ where
         )
         .collect();
 
+    if let Some(trace) = &mut trace {
+        trace.advice_coefs = advice
+            .iter()
+            .map(|advice| advice.advice_polys.clone())
+            .collect();
+    }
+
     // Evaluate the h(X) polynomial
     let h_poly = pk.ev.evaluate_h(
         pk,
@@ -560,10 +648,15 @@ where
         &lookups,
         &shuffles,
         &permutations,
+        trace.as_mut().map(DerefMut::deref_mut),
     );
 
     // Construct the vanishing argument's h(X) commitments
     let vanishing = vanishing.construct(params, domain, h_poly, &mut rng, transcript)?;
+
+    if let Some(trace) = &mut trace {
+        trace.vanishing_pieces = vanishing.h_pieces.clone();
+    }
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow([params.n()]);
@@ -604,6 +697,10 @@ where
             })
             .collect();
 
+        if let Some(trace) = &mut trace {
+            trace.advice_evals.push(advice_evals.clone());
+        }
+
         // Hash each advice column evaluation
         for eval in advice_evals.iter() {
             transcript.write_scalar(*eval)?;
@@ -619,6 +716,10 @@ where
         })
         .collect();
 
+    if let Some(trace) = &mut trace {
+        trace.fixed_evals = fixed_evals.clone();
+    }
+
     // Hash each fixed column evaluation
     for eval in fixed_evals.iter() {
         transcript.write_scalar(*eval)?;
@@ -627,21 +728,39 @@ where
     let vanishing = vanishing.evaluate(x, xn, domain, transcript)?;
 
     // Evaluate common permutation data
-    pk.permutation.evaluate(x, transcript)?;
+    pk.permutation
+        .evaluate(x, transcript, trace.as_mut().map(DerefMut::deref_mut))?;
 
     // Evaluate the permutations, if any, at omega^i x.
     let permutations: Vec<permutation::prover::Evaluated<Scheme::Curve>> = permutations
         .into_iter()
-        .map(|permutation| -> Result<_, _> { permutation.construct().evaluate(pk, x, transcript) })
+        .enumerate()
+        .map(|(i, permutation)| -> Result<_, _> {
+            permutation.construct().evaluate(
+                pk,
+                x,
+                transcript,
+                trace.as_mut().map(|t| &mut t.permutation_evals[i]),
+            )
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Evaluate the lookups, if any, at omega^i x.
     let lookups: Vec<Vec<lookup::prover::Evaluated<Scheme::Curve>>> = lookups
         .into_iter()
-        .map(|lookups| -> Result<Vec<_>, _> {
+        .enumerate()
+        .map(|(i, lookups)| -> Result<Vec<_>, _> {
             lookups
                 .into_iter()
-                .map(|p| p.evaluate(pk, x, transcript))
+                .enumerate()
+                .map(|(j, p)| {
+                    p.evaluate(
+                        pk,
+                        x,
+                        transcript,
+                        trace.as_mut().map(|t| &mut t.lookup_evals[i][j]),
+                    )
+                })
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -709,7 +828,7 @@ where
 
     let prover = P::new(params);
     prover
-        .create_proof(rng, transcript, instances)
+        .create_proof(rng, transcript, instances, trace)
         .map_err(|_| Error::ConstraintSystemFailure)
 }
 

@@ -23,7 +23,7 @@ pub(in crate::plonk) struct Committed<C: CurveAffine> {
 }
 
 pub(in crate::plonk) struct Constructed<C: CurveAffine> {
-    h_pieces: Vec<Polynomial<C::Scalar, Coeff>>,
+    pub(in crate::plonk) h_pieces: Vec<Polynomial<C::Scalar, Coeff>>,
     h_blinds: Vec<Blind<C::Scalar>>,
     committed: Committed<C>,
 }
@@ -78,6 +78,33 @@ impl<C: CurveAffine> Argument<C> {
         });
 
         let random_poly: Polynomial<C::Scalar, Coeff> = domain.coeff_from_vec(rand_vec);
+
+        // Sample a random blinding factor
+        let random_blind = Blind(C::Scalar::random(rng));
+
+        // Commit
+        let c = params.commit(&random_poly, random_blind).to_affine();
+        transcript.write_point(c)?;
+
+        Ok(Committed {
+            random_poly,
+            random_blind,
+        })
+    }
+
+    pub(in crate::plonk) fn commit_no_random<
+        'params,
+        P: ParamsProver<'params, C>,
+        E: EncodedChallenge<C>,
+        R: RngCore,
+        T: TranscriptWrite<C, E>,
+    >(
+        params: &P,
+        domain: &EvaluationDomain<C::Scalar>,
+        rng: R,
+        transcript: &mut T,
+    ) -> Result<Committed<C>, Error> {
+        let random_poly: Polynomial<C::Scalar, Coeff> = domain.empty_coeff();
 
         // Sample a random blinding factor
         let random_blind = Blind(C::Scalar::random(rng));
