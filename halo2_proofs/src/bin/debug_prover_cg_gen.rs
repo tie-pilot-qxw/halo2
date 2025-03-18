@@ -3,6 +3,7 @@ use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
+use halo2_proofs::tracing::Trace;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 use rand_core::OsRng;
 
@@ -279,14 +280,44 @@ fn main() {
 
         let mut allocator = PinnedMemoryPool::new(30, std::mem::size_of::<u32>());
 
-        println!("[Test] Begin Computation Graph Generation");
-        let (cg_ret, cg_inputs_shape) = prover_gen::create_proof::<
+        let mut trace = Trace::default();
+
+        println!("[Test] Begin Running Original Prover for Trace");
+        use halo2_proofs::transcript::TranscriptWriterBuffer;
+        let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
+            _,
+            _,
+            halo2_proofs::transcript::Challenge255<G1Affine>,
+        >::init(vec![]);
+        halo2_proofs::plonk::create_proof_traced::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
-            E,
-            Tr,
             _,
-        >(params, pk, vec![circuit], &mut allocator);
+            _,
+            _,
+            _,
+        >(
+            params,
+            pk,
+            &[circuit.clone()],
+            &[&[]],
+            rng,
+            &mut transcript,
+            Some(&mut trace),
+        )
+        .expect("proof generation should not fail");
+        transcript.finalize();
+        println!("[Test] End Running Original Prover for Trace");
+
+        println!("[Test] Begin Computation Graph Generation");
+        let (cg_ret, cg_inputs_shape) =
+            prover_gen::create_proof_validated::<
+                KZGCommitmentScheme<Bn256>,
+                ProverSHPLONK<Bn256>,
+                E,
+                Tr,
+                _,
+            >(params, pk, vec![circuit], &mut allocator, Some(&trace));
         println!("[Test] End Computation Graph Generation");
 
         use zkpoly_compiler::driver;
@@ -294,7 +325,7 @@ fn main() {
         let options =
             driver::DebugOptions::all(PathBuf::from("target/debug/transit")).with_log(true);
         let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 4 * 2u64.pow(30),
+            gpu_memory_limit: 2 * 2u64.pow(30),
         };
 
         println!("[Test] Begin Compiling to Runtime Instructions");

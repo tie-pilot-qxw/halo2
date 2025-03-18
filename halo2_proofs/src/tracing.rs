@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Intermediate results of proof generation
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Trace<C: CurveAffine> {
     /// circuit index |-> column index |-> polynomial
     pub(crate) instance_coefs: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,

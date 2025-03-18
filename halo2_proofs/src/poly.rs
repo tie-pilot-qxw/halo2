@@ -69,6 +69,15 @@ pub struct Polynomial<F, B> {
     _marker: PhantomData<B>,
 }
 
+impl<F, B> Default  for Polynomial<F, B> {
+    fn default() -> Self {
+        Self {
+            values: Vec::new(),
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<F: Field> Polynomial<F, LagrangeCoeff> {
     /// Create a zero polynomial with its elements being [`Assigned`]
     pub fn empty_lagrange_assigned(degree: usize) -> Polynomial<Assigned<F>, LagrangeCoeff> {

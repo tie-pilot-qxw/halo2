@@ -59,7 +59,8 @@ where
     )
 }
 
-fn create_proof_traced<
+/// Like `create_proof`, but additionally writes the trace to the provided
+pub fn create_proof_traced<
     'params,
     Scheme: CommitmentScheme,
     P: Prover<'params, Scheme>,
@@ -740,7 +741,10 @@ where
                 pk,
                 x,
                 transcript,
-                trace.as_mut().map(|t| &mut t.permutation_evals[i]),
+                trace.as_mut().map(|t| {
+                    t.permutation_evals.push(Vec::new());
+                    &mut t.permutation_evals[i]
+                }),
             )
         })
         .collect::<Result<Vec<_>, _>>()?;

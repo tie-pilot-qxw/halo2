@@ -311,6 +311,7 @@ where
 
         if let Some(trace) = &mut trace {
             trace.shplonk_h1 = h_x.clone();
+            trace.shplonk_h1.values.push(E::Fr::ZERO);
         }
 
         let h = self.params.commit(&h_x, Blind::default()).to_affine();
