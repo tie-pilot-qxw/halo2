@@ -82,6 +82,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         challenges: &'a [C::Scalar],
         mut rng: R,
         transcript: &mut T,
+        blind_with_random: bool
     ) -> Result<Permuted<C>, Error>
     where
         C: CurveAffine<ScalarExt = F>,
@@ -179,6 +180,7 @@ impl<C: CurveAffine> Permuted<C> {
         gamma: ChallengeGamma<C>,
         mut rng: R,
         transcript: &mut T,
+        blind_with_random: bool,
     ) -> Result<Committed<C>, Error> {
         let blinding_factors = pk.vk.cs.blinding_factors();
         // Goal is to compute the products of fractions
@@ -235,18 +237,31 @@ impl<C: CurveAffine> Permuted<C> {
 
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
-        let z = iter::once(C::Scalar::ONE)
-            .chain(lookup_product)
-            .scan(C::Scalar::ONE, |state, cur| {
-                *state *= &cur;
-                Some(*state)
-            })
-            // Take all rows including the "last" row which should
-            // be a boolean (and ideally 1, else soundness is broken)
-            .take(params.n() as usize - blinding_factors)
-            // Chain random blinding factors.
-            .chain((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)))
-            .collect::<Vec<_>>();
+        let z = if blind_with_random {
+            iter::once(C::Scalar::ONE)
+                .chain(lookup_product)
+                .scan(C::Scalar::ONE, |state, cur| {
+                    *state *= &cur;
+                    Some(*state)
+                })
+                // Take all rows including the "last" row which should
+                // be a boolean (and ideally 1, else soundness is broken)
+                .take(params.n() as usize - blinding_factors)
+                // Chain random blinding factors.
+                .chain((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)))
+                .collect::<Vec<_>>()
+        } else {
+            iter::once(C::Scalar::ONE)
+                .chain(lookup_product)
+                .scan(C::Scalar::ONE, |state, cur| {
+                    *state *= &cur;
+                    Some(*state)
+                })
+                // Take all rows including the "last" row which should
+                // be a boolean (and ideally 1, else soundness is broken)
+                .take(params.n() as usize)
+                .collect::<Vec<_>>()
+        };
         assert_eq!(z.len(), params.n() as usize);
         let z = pk.vk.domain.lagrange_from_vec(z);
 
@@ -313,7 +328,7 @@ impl<C: CurveAffine> Committed<C> {
         pk: &ProvingKey<C>,
         x: ChallengeX<C>,
         transcript: &mut T,
-        mut trace: Option<&mut Vec<C::ScalarExt>>
+        mut trace: Option<&mut Vec<C::ScalarExt>>,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let x_inv = domain.rotate_omega(*x, Rotation::prev());

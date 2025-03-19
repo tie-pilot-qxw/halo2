@@ -499,6 +499,7 @@ where
                         &challenges,
                         &mut rng,
                         transcript,
+                        trace.is_none()
                     )
                 })
                 .collect()
@@ -536,6 +537,7 @@ where
                 gamma,
                 &mut rng,
                 transcript,
+                trace.is_none()
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -550,7 +552,7 @@ where
             // Construct and commit to products for each lookup
             lookups
                 .into_iter()
-                .map(|lookup| lookup.commit_product(pk, params, beta, gamma, &mut rng, transcript))
+                .map(|lookup| lookup.commit_product(pk, params, beta, gamma, &mut rng, transcript, trace.is_none()))
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;

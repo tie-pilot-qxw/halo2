@@ -12,11 +12,13 @@ use crate::{
 pub struct Trace<C: CurveAffine> {
     /// circuit index |-> column index |-> polynomial
     pub(crate) instance_coefs: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,
+    pub(crate) instance_extended: Vec<Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>>,
     /// phase index |-> column index |-> point
     pub(crate) advice_commitments: Vec<Vec<C>>,
     pub(crate) challenges: Vec<C::ScalarExt>,
     /// circuit index |-> column index |-> polynomial
     pub(crate) advice_coefs: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,
+    pub(crate) advice_extended: Vec<Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>>,
     /// circuit index |-> column index |-> polynomial
     pub(crate) advice_values: Vec<Vec<Polynomial<C::ScalarExt, LagrangeCoeff>>>,
     /// circuit index |-> lookup argument index |-> permuted lookup

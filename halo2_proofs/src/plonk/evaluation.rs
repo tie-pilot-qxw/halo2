@@ -334,6 +334,10 @@ impl<C: CurveAffine> Evaluator<C> {
                     .collect()
             })
             .collect();
+        if let Some(trace) = &mut trace {
+            trace.advice_extended = advice.clone();
+        }
+
         let instance: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>> = instance_polys
             .iter()
             .map(|instance_polys| {
@@ -343,6 +347,9 @@ impl<C: CurveAffine> Evaluator<C> {
                     .collect()
             })
             .collect();
+        if let Some(trace) = &mut trace {
+            trace.instance_extended = instance.clone();
+        }
 
         let mut values = domain.empty_extended();
 
@@ -413,11 +420,11 @@ impl<C: CurveAffine> Evaluator<C> {
                             + ((one - first_set.permutation_product_coset[idx]) * l0[idx]);
                         // Enforce only for the last set.
                         // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
-                        *value = *value * y
-                            + ((last_set.permutation_product_coset[idx]
-                                * last_set.permutation_product_coset[idx]
-                                - last_set.permutation_product_coset[idx])
-                                * l_last[idx]);
+                        // *value = *value * y
+                        //     + ((last_set.permutation_product_coset[idx]
+                        //         * last_set.permutation_product_coset[idx]
+                        //         - last_set.permutation_product_coset[idx])
+                        //         * l_last[idx]);
                         // Except for the first set, enforce.
                         // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
                         for (set_idx, set) in sets.iter().enumerate() {

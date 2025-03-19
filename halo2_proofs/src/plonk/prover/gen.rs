@@ -623,9 +623,6 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     let ci_values = compress_expressions(inputs_evaluated.iter().cloned(), theta, n);
     let ct_values = compress_expressions(tables_evaluated.iter().cloned(), theta, n);
 
-    let ci_values = ci_values.extend(n).blind(unusable_rows_start, n);
-    let ct_values = ct_values.extend(n).blind(unusable_rows_start, n);
-
     let (pi_values, pt_values) = permutater
         .call(ci_values.clone(), ct_values.clone())
         .unpack();
@@ -653,12 +650,12 @@ fn compute_permutation_ppp<Rt: RuntimeType>(
     gamma: &ast::Scalar<Rt>,
     omega_powers: &ast::PolyLagrange<Rt>,
     delta: &ast::Scalar<Rt>,
+    blind_with_random: bool,
 ) -> Vec<ast::PolyLagrange<Rt>> {
     let chunk_len = ppk.vk.cs_degree - 2;
     let blinding_factors = ppk.vk.cs.blinding_factors();
     let unusable_rows_start = n as usize - (blinding_factors + 1);
 
-    let mut modified_values = ast::PolyLagrange::ones(n);
     let mut last_z = ast::Scalar::one();
 
     let mut delta_power = ast::Scalar::one();
@@ -667,12 +664,19 @@ fn compute_permutation_ppp<Rt: RuntimeType>(
         .chunks(chunk_len)
         .zip(permutations.chunks(chunk_len))
         .map(|(columns, permutations)| {
+            let mut modified_values = ast::PolyLagrange::ones(n);
             for (column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
                 let column_values = table.lagrange(*column);
                 modified_values = modified_values.clone()
                     * (beta.clone() * permuted_column_values.clone()
                         + gamma.clone()
                         + column_values.clone());
+            }
+
+            modified_values = modified_values.invert();
+
+            for column in columns.iter() {
+                let column_values = table.lagrange(*column);
                 modified_values = modified_values.clone()
                     * (omega_powers.clone() * beta.clone() * delta_power.clone()
                         + gamma.clone()
@@ -682,7 +686,11 @@ fn compute_permutation_ppp<Rt: RuntimeType>(
             }
 
             let z = modified_values.scan_mul(&last_z);
-            let z = z.blind(unusable_rows_start as u64, n);
+            let z = if blind_with_random {
+                z.blind(unusable_rows_start as u64, n)
+            } else {
+                z
+            };
             last_z = z.index(n - (blinding_factors as u64 + 1));
 
             z
@@ -698,11 +706,16 @@ fn compute_lookup_ppp<Rt: RuntimeType>(
     gamma: &ast::Scalar<Rt>,
     unusable_rows_start: u64,
     n: u64,
+    blind_with_random: bool,
 ) -> ast::PolyLagrange<Rt> {
     let z = (beta.clone() + ppa.ci_values.clone()) * (gamma.clone() + ppa.ct_values.clone());
     let z = z / (beta.clone() + ppa.pi_values.clone()) * (gamma.clone() + ppa.pt_values.clone());
     let z = z.scan_mul(&ast::Scalar::one());
-    let z = z.blind(unusable_rows_start, n);
+    let z = if blind_with_random {
+        z.blind(unusable_rows_start, n)
+    } else {
+        z
+    };
     z
 }
 
@@ -765,20 +778,15 @@ fn construct_primary_constraint<Rt: RuntimeType>(
         let last_rotation = -((blinding_factors + 1) as i32);
 
         let chunk_len = pk.vk.cs_degree - 2;
-        let permutation_ppps: Vec<_> = permutation_ppps
-            .iter()
-            .map(|p| p.to_coef())
-            .map(|p| coef_to_extended(&p, extended_n, zetas))
-            .collect();
         add_constraint(
             (ast::Scalar::one() - permutation_ppps.first().unwrap().clone()) * l0.clone(),
             h,
         );
         let last = permutation_ppps.last().unwrap().clone();
-        add_constraint(
-            (last.clone() * last.clone() - last.clone()) * l_last.clone(),
-            h,
-        );
+        // add_constraint(
+        //     (last.clone() * last.clone() - last.clone()) * l_last.clone(),
+        //     h,
+        // );
 
         for (i, ppp) in permutation_ppps.iter().skip(1).enumerate() {
             add_constraint(
@@ -878,7 +886,7 @@ fn construct_vanishing<Rt: RuntimeType>(
     extended_truncted_n: u64,
     n: u64,
 ) -> Vec<ast::PolyCoef<Rt>> {
-    let vanishing = h.clone() * vanishing_divisor.clone();
+    let vanishing = h.clone().distribute_powers(vanishing_divisor);
     let vanishing = extended_to_coef(&vanishing, extended_truncted_n, zetas_inv);
     let pieces = (0..extended_truncted_n)
         .step_by(n as usize)
@@ -1465,10 +1473,8 @@ where
     let l_active_row = ast::PolyLagrange::constant(&pk.l_active_row.values, allocator);
 
     let vanishing_divisor = {
-        let tlen = domain.get_t_evaluations().len() as u64;
-        ast::PolyLagrange::constant_from_iter(
-            (0..extended_n).map(|i| domain.get_t_evaluations()[(i % tlen) as usize]),
-            extended_n,
+        ast::PolyLagrange::constant(
+            domain.get_t_evaluations(),
             allocator,
         )
     };
@@ -1694,7 +1700,20 @@ where
                 .collect();
             let instance_exts: Vec<_> = instance_coefs
                 .iter()
-                .map(|p| coef_to_extended(p, extended_n, &zetas))
+                .enumerate()
+                .map(|(j, p)| {
+                    let p = coef_to_extended(p, extended_n, &zetas);
+                    trace.as_ref().map_or_else(
+                        || p.clone(),
+                        |trace| {
+                            let correct = ast::PolyLagrange::constant(
+                                &trace.instance_extended[i][j].values,
+                                allocator,
+                            );
+                            p.clone().assert_eq(&correct)
+                        },
+                    )
+                })
                 .collect();
             let advice_coefs: Vec<_> = advice
                 .iter()
@@ -1715,8 +1734,22 @@ where
                 .collect();
             let advice_exts: Vec<_> = advice_coefs
                 .iter()
-                .map(|p| coef_to_extended(p, extended_n, &zetas))
+                .enumerate()
+                .map(|(j, p)| {
+                    let p = coef_to_extended(p, extended_n, &zetas);
+                    trace.as_ref().map_or_else(
+                        || p.clone(),
+                        |trace| {
+                            let correct = ast::PolyLagrange::constant(
+                                &trace.advice_extended[i][j].values,
+                                allocator,
+                            );
+                            p.clone().assert_eq(&correct)
+                        },
+                    )
+                })
                 .collect();
+
             Table {
                 instance_values: instance,
                 instance_coefs,
@@ -1732,6 +1765,14 @@ where
         .collect::<Vec<_>>();
 
     let theta = transcript.squeeze_challenge_scalar();
+
+    let theta = trace.as_ref().map_or_else(
+        || theta.clone(),
+        |trace| {
+            let ans = ast::Scalar::constant(trace.theta.clone());
+            theta.assert_eq(&ans)
+        },
+    );
 
     let permute_expression_pair_f =
         user_functions::permute_expression_pair(meta.blinding_factors(), params.n());
@@ -1816,6 +1857,7 @@ where
                 &gamma,
                 &omega_powers,
                 &delta,
+                trace.is_none(),
             );
 
             let sets = trace.as_ref().map_or_else(
@@ -1846,6 +1888,32 @@ where
         .map(|p| p.iter().map(ast::PolyLagrange::to_coef).collect())
         .collect();
 
+    let permutation_ppp_exts: Vec<Vec<_>> = permutation_ppp_coefs
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(i, p)| {
+            p.iter()
+                .enumerate()
+                .map(|(j, p)| {
+                    let p = coef_to_extended(p, extended_n, &zetas);
+                    trace.as_ref().map_or_else(
+                        || p.clone(),
+                        |trace| {
+                            let ans = ast::PolyLagrange::constant(
+                                &trace.permutation_ppps[i].sets[j]
+                                    .permutation_product_coset
+                                    .values,
+                                allocator,
+                            );
+                            p.assert_eq(&ans)
+                        },
+                    )
+                })
+                .collect()
+        })
+        .collect();
+
     let plookup_ppps: Vec<Vec<_>> = lookup_permuteds
         .iter()
         .enumerate()
@@ -1859,6 +1927,7 @@ where
                         &gamma,
                         unusable_rows_start as u64,
                         params.n(),
+                        trace.is_none(),
                     );
                     trace.as_ref().map_or_else(
                         || p.clone(),
@@ -1930,15 +1999,15 @@ where
     tables
         .iter()
         .enumerate()
-        .zip(permutation_ppps.iter())
+        .zip(permutation_ppp_exts.iter())
         .zip(lookup_permuteds.iter())
         .zip(plookup_ppp_coefs.iter())
         .for_each(
-            |((((i, table), permutation_ppps), plas), lookup_ppp_coefs)| {
+            |((((i, table), permutation_ppp_exts), plas), lookup_ppp_coefs)| {
                 construct_primary_constraint(
                     &mut h,
                     &pk_permutation_exts,
-                    permutation_ppps,
+                    permutation_ppp_exts,
                     &pk.vk.cs.lookups,
                     plas,
                     lookup_ppp_coefs,

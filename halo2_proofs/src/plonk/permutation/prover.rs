@@ -66,6 +66,7 @@ impl Argument {
         gamma: ChallengeGamma<C>,
         mut rng: R,
         transcript: &mut T,
+        blind_with_random: bool,
     ) -> Result<Committed<C>, Error> {
         let domain = &pk.vk.domain;
 
@@ -164,8 +165,10 @@ impl Argument {
             }
             let mut z = domain.lagrange_from_vec(z);
             // Set blinding factors
-            for z in &mut z[params.n() as usize - blinding_factors..] {
-                *z = C::Scalar::random(&mut rng);
+            if blind_with_random {
+                for z in &mut z[params.n() as usize - blinding_factors..] {
+                    *z = C::Scalar::random(&mut rng);
+                }
             }
             // Set new last_z
             last_z = z[params.n() as usize - (blinding_factors + 1)];
@@ -174,7 +177,7 @@ impl Argument {
 
             let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
             let permutation_product_blind = blind;
-            let mut permutation_product_poly = z.clone();
+            let permutation_product_poly = z.clone();
             let permutation_product_poly = domain.lagrange_to_coeff(permutation_product_poly);
 
             let permutation_product_coset =
