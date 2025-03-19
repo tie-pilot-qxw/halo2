@@ -37,6 +37,8 @@ pub struct Trace<C: CurveAffine> {
     pub(crate) permutation_constraint: Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>,
     /// circuit index |-> primary constraint polynomial after adding lookup PPP's
     pub(crate) lookup_constraint: Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>,
+    pub(crate) vanished_h_extended: Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>,
+    pub(crate) vanished_h_coefs: Vec<C::ScalarExt>,
     pub(crate) vanishing_pieces: Vec<Polynomial<C::ScalarExt, Coeff>>,
     /// circuit index |-> column index |-> scalar
     pub(crate) advice_evals: Vec<Vec<C::ScalarExt>>,

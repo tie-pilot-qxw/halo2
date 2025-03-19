@@ -420,11 +420,11 @@ impl<C: CurveAffine> Evaluator<C> {
                             + ((one - first_set.permutation_product_coset[idx]) * l0[idx]);
                         // Enforce only for the last set.
                         // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
-                        // *value = *value * y
-                        //     + ((last_set.permutation_product_coset[idx]
-                        //         * last_set.permutation_product_coset[idx]
-                        //         - last_set.permutation_product_coset[idx])
-                        //         * l_last[idx]);
+                        *value = *value * y
+                            + ((last_set.permutation_product_coset[idx]
+                                * last_set.permutation_product_coset[idx]
+                                - last_set.permutation_product_coset[idx])
+                                * l_last[idx]);
                         // Except for the first set, enforce.
                         // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
                         for (set_idx, set) in sets.iter().enumerate() {

@@ -783,10 +783,10 @@ fn construct_primary_constraint<Rt: RuntimeType>(
             h,
         );
         let last = permutation_ppps.last().unwrap().clone();
-        // add_constraint(
-        //     (last.clone() * last.clone() - last.clone()) * l_last.clone(),
-        //     h,
-        // );
+        add_constraint(
+            (last.clone() * last.clone() - last.clone()) * l_last.clone(),
+            h,
+        );
 
         for (i, ppp) in permutation_ppps.iter().skip(1).enumerate() {
             add_constraint(
@@ -885,9 +885,27 @@ fn construct_vanishing<Rt: RuntimeType>(
     vanishing_divisor: &ast::PolyLagrange<Rt>,
     extended_truncted_n: u64,
     n: u64,
+    allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    trace: Option<&Trace<Rt::PointAffine>>,
 ) -> Vec<ast::PolyCoef<Rt>> {
     let vanishing = h.clone().distribute_powers(vanishing_divisor);
+    let vanishing = trace.map_or_else(
+        || vanishing.clone(),
+        |trace| {
+            let answer = ast::PolyLagrange::constant(&trace.vanished_h_extended.values, allocator);
+            vanishing.assert_eq(&answer)
+        },
+    );
+
     let vanishing = extended_to_coef(&vanishing, extended_truncted_n, zetas_inv);
+    let vanishing = trace.map_or_else(
+        || vanishing.clone(),
+        |trace| {
+            let answer = ast::PolyCoef::constant(&trace.vanished_h_coefs, allocator);
+            vanishing.assert_eq(&answer)
+        },
+    );
+
     let pieces = (0..extended_truncted_n)
         .step_by(n as usize)
         .map(|offset| vanishing.slice(offset, offset + n))
@@ -1472,12 +1490,7 @@ where
     let l_last = ast::PolyLagrange::constant(&pk.l_last.values, allocator);
     let l_active_row = ast::PolyLagrange::constant(&pk.l_active_row.values, allocator);
 
-    let vanishing_divisor = {
-        ast::PolyLagrange::constant(
-            domain.get_t_evaluations(),
-            allocator,
-        )
-    };
+    let vanishing_divisor = { ast::PolyLagrange::constant(domain.get_t_evaluations(), allocator) };
 
     // Declare inputs
     let inputs_shape = InputsShape {
@@ -2044,6 +2057,8 @@ where
         &vanishing_divisor,
         extended_truncted_n,
         params.n(),
+        allocator,
+        trace,
     );
 
     let h_pieces = if let Some(trace) = &trace {

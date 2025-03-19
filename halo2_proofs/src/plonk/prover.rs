@@ -499,7 +499,7 @@ where
                         &challenges,
                         &mut rng,
                         transcript,
-                        trace.is_none()
+                        trace.is_none(),
                     )
                 })
                 .collect()
@@ -537,7 +537,7 @@ where
                 gamma,
                 &mut rng,
                 transcript,
-                trace.is_none()
+                trace.is_none(),
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -552,7 +552,17 @@ where
             // Construct and commit to products for each lookup
             lookups
                 .into_iter()
-                .map(|lookup| lookup.commit_product(pk, params, beta, gamma, &mut rng, transcript, trace.is_none()))
+                .map(|lookup| {
+                    lookup.commit_product(
+                        pk,
+                        params,
+                        beta,
+                        gamma,
+                        &mut rng,
+                        transcript,
+                        trace.is_none(),
+                    )
+                })
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -655,7 +665,14 @@ where
     );
 
     // Construct the vanishing argument's h(X) commitments
-    let vanishing = vanishing.construct(params, domain, h_poly, &mut rng, transcript)?;
+    let vanishing = vanishing.construct(
+        params,
+        domain,
+        h_poly,
+        &mut rng,
+        transcript,
+        trace.as_mut().map(DerefMut::deref_mut),
+    )?;
 
     if let Some(trace) = &mut trace {
         trace.vanishing_pieces = vanishing.h_pieces.clone();

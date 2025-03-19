@@ -7,14 +7,10 @@ use rand_core::{RngCore, SeedableRng};
 
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine},
-    multicore::current_num_threads,
-    plonk::{ChallengeX, Error},
-    poly::{
+    arithmetic::{eval_polynomial, parallelize, CurveAffine}, multicore::current_num_threads, plonk::{ChallengeX, Error}, poly::{
         commitment::{Blind, ParamsProver},
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, ProverQuery,
-    },
-    transcript::{EncodedChallenge, TranscriptWrite},
+    }, tracing::Trace, transcript::{EncodedChallenge, TranscriptWrite}
 };
 
 pub(in crate::plonk) struct Committed<C: CurveAffine> {
@@ -134,12 +130,21 @@ impl<C: CurveAffine> Committed<C> {
         h_poly: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
         mut rng: R,
         transcript: &mut T,
+        mut trace: Option<&mut Trace<C>>
     ) -> Result<Constructed<C>, Error> {
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
 
+        if let Some(trace) = &mut trace {
+            trace.vanished_h_extended = h_poly.clone();
+        }
+
         // Obtain final h(X) polynomial
         let h_poly = domain.extended_to_coeff(h_poly);
+
+        if let Some(trace) = &mut trace {
+            trace.vanished_h_coefs = h_poly.clone();
+        }
 
         // Split h(X) up into pieces
         let h_pieces = h_poly
