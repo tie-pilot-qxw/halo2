@@ -39,7 +39,10 @@ pub struct Trace<C: CurveAffine> {
     pub(crate) lookup_constraint: Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>,
     pub(crate) vanished_h_extended: Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>,
     pub(crate) vanished_h_coefs: Vec<C::ScalarExt>,
+    /// pieces of vanished_h_coefs
     pub(crate) vanishing_pieces: Vec<Polynomial<C::ScalarExt, Coeff>>,
+    pub(crate) vanishing_commitments: Vec<C>,
+    pub(crate) x: C::ScalarExt,
     /// circuit index |-> column index |-> scalar
     pub(crate) advice_evals: Vec<Vec<C::ScalarExt>>,
     /// column index |-> scalar

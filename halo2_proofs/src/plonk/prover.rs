@@ -679,6 +679,11 @@ where
     }
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
+
+    if let Some(trace) = &mut trace {
+        trace.x = x.deref().clone();
+    }
+
     let xn = x.pow([params.n()]);
 
     if P::QUERY_INSTANCE {

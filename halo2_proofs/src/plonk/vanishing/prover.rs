@@ -7,10 +7,15 @@ use rand_core::{RngCore, SeedableRng};
 
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine}, multicore::current_num_threads, plonk::{ChallengeX, Error}, poly::{
+    arithmetic::{eval_polynomial, parallelize, CurveAffine},
+    multicore::current_num_threads,
+    plonk::{ChallengeX, Error},
+    poly::{
         commitment::{Blind, ParamsProver},
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, ProverQuery,
-    }, tracing::Trace, transcript::{EncodedChallenge, TranscriptWrite}
+    },
+    tracing::Trace,
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
 
 pub(in crate::plonk) struct Committed<C: CurveAffine> {
@@ -130,7 +135,7 @@ impl<C: CurveAffine> Committed<C> {
         h_poly: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
         mut rng: R,
         transcript: &mut T,
-        mut trace: Option<&mut Trace<C>>
+        mut trace: Option<&mut Trace<C>>,
     ) -> Result<Constructed<C>, Error> {
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
@@ -170,6 +175,10 @@ impl<C: CurveAffine> Committed<C> {
         // Hash each h(X) piece
         for c in h_commitments.iter() {
             transcript.write_point(*c)?;
+
+            if let Some(trace) = &mut trace {
+                trace.vanishing_commitments.push(*c);
+            }
         }
 
         Ok(Constructed {

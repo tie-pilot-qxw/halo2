@@ -1001,10 +1001,7 @@ fn kzg_commit_lagrange<Rt: RuntimeType>(
     points: &ast::PrecomputedPoints<Rt>,
     transcript: &mut ast::Transcript<Rt>,
 ) {
-    let points = ast::point::msm_lagrange(poly, points);
-    points.iter().for_each(|point| {
-        transcript.hash_point(&point, HashTyp::WriteProof);
-    })
+    kzg_commit_lagrange_validated(poly, points, transcript, None);
 }
 
 fn kzg_commit_coef<Rt: RuntimeType>(
@@ -1012,8 +1009,25 @@ fn kzg_commit_coef<Rt: RuntimeType>(
     points: &ast::PrecomputedPoints<Rt>,
     transcript: &mut ast::Transcript<Rt>,
 ) {
+    kzg_commit_coef_validated(poly, points, transcript, None);
+}
+
+fn kzg_commit_coef_validated<Rt: RuntimeType>(
+    poly: impl Iterator<Item = ast::PolyCoef<Rt>>,
+    points: &ast::PrecomputedPoints<Rt>,
+    transcript: &mut ast::Transcript<Rt>,
+    answers: Option<Vec<ast::Point<Rt>>>,
+) {
     let points = ast::point::msm_coef(poly, points);
-    points.iter().for_each(|point| {
+
+    if let Some(answers) = &answers {
+        assert!(points.len().unwrap() == answers.len());
+    }
+
+    points.iter().enumerate().for_each(|(i, point)| {
+        let point = answers
+            .as_ref()
+            .map_or_else(|| point.clone(), |answers| point.assert_eq(&answers[i]));
         transcript.hash_point(&point, HashTyp::WriteProof);
     })
 }
@@ -1991,7 +2005,7 @@ where
 
     let y = transcript.squeeze_challenge_scalar();
 
-    trace.as_ref().map_or_else(
+    let y = trace.as_ref().map_or_else(
         || y.clone(),
         |trace| {
             let ans = ast::Scalar::constant(trace.y.clone());
@@ -2074,9 +2088,29 @@ where
         h_pieces
     };
 
-    kzg_commit_coef(h_pieces.iter().cloned(), &coef_points, &mut transcript);
+    kzg_commit_coef_validated(
+        h_pieces.iter().cloned(),
+        &coef_points,
+        &mut transcript,
+        trace.as_ref().map(|trace| {
+            trace
+                .vanishing_commitments
+                .iter()
+                .map(|c| ast::Point::constant(*c))
+                .collect::<Vec<_>>()
+        }),
+    );
 
     let x = transcript.squeeze_challenge_scalar();
+
+    let x = trace.as_ref().map_or_else(
+        || x.clone(),
+        |trace| {
+            let ans = ast::Scalar::constant(trace.x.clone());
+            x.assert_eq(&ans)
+        },
+    );
+
     // for n < 2^30, this will do
     let xn = x.pow(params.n());
 
