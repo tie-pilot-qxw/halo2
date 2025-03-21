@@ -8,7 +8,7 @@ use ff::PrimeField;
 use std::collections::BTreeMap;
 use std::{any, marker::PhantomData};
 use zkpoly_compiler::{
-    ast::{self, PolyLagrange},
+    ast::{self, PolyLagrange, Printable},
     transit::{type2, HashTyp},
 };
 use zkpoly_runtime::{self as rt, args::RuntimeType};
@@ -919,19 +919,34 @@ fn evaluate_permutation<Rt: RuntimeType>(
     transcript: &mut ast::Transcript<Rt>,
     pk: &ProvingKey<Rt::PointAffine>,
     get_x_mul_omega_power: &mut impl FnMut(i32) -> ast::Scalar<Rt>,
+    trace: Option<Vec<Vec<ast::Scalar<Rt>>>>,
 ) {
     let blinding_facotrs = pk.vk.cs.blinding_factors();
-    let mut iter = permutation_ppp_coefs.iter();
+    let mut iter = permutation_ppp_coefs.iter().enumerate();
 
-    while let Some(ppp) = iter.next() {
+    while let Some((i, ppp)) = iter.next() {
         let eval = ppp.evaluate(x);
         let eval_next = ppp.evaluate(&get_x_mul_omega_power(1));
+
+        let (eval, eval_next) = trace.as_ref().map_or_else(
+            || (eval.clone(), eval_next.clone()),
+            |trace| {
+                (
+                    eval.assert_eq(&trace[i][0]),
+                    eval_next.assert_eq(&trace[i][1]),
+                )
+            },
+        );
 
         transcript.hash_scalar(&eval, HashTyp::WriteProof);
         transcript.hash_scalar(&eval_next, HashTyp::WriteProof);
 
         if iter.len() > 0 {
             let eval_last = ppp.evaluate(&get_x_mul_omega_power(-((blinding_facotrs + 1) as i32)));
+            let eval_last = trace.as_ref().map_or_else(
+                || eval_last.clone(),
+                |trace| eval_last.assert_eq(&trace[i][2]),
+            );
 
             transcript.hash_scalar(&eval_last, HashTyp::WriteProof);
         }
@@ -1217,6 +1232,39 @@ fn shplonk_commit<Rt: RuntimeType>(
     let y = transcript.squeeze_challenge_scalar();
     let (super_point_set, rotation_sets) = construct_intermediate_sets(queries);
 
+    let rotation_sets = if let Some(trace) = &trace {
+        rotation_sets
+            .into_iter()
+            .enumerate()
+            .map(
+                |(
+                    i,
+                    RotationSet {
+                        points,
+                        commitments,
+                    },
+                )| {
+                    RotationSet {
+                        points,
+                        commitments: commitments
+                            .into_iter()
+                            .enumerate()
+                            .map(|(j, poly)| {
+                                let answer = ast::PolyCoef::constant(
+                                    &trace.shplonk_fs[i][j].values,
+                                    allocator,
+                                );
+                                poly.assert_eq(&answer)
+                            })
+                            .collect::<Vec<_>>(),
+                    }
+                },
+            )
+            .collect::<Vec<_>>()
+    } else {
+        rotation_sets
+    };
+
     let y = trace.as_ref().map_or_else(
         || y.clone(),
         |trace| y.assert_eq(&ast::Scalar::constant(trace.shplonk_y)),
@@ -1266,6 +1314,26 @@ fn shplonk_commit<Rt: RuntimeType>(
         )
         .collect();
 
+    let rs = trace.as_ref().map_or_else(
+        || rs.clone(),
+        |trace| {
+            rs.iter()
+                .enumerate()
+                .map(|(i, rs)| {
+                    rs.iter()
+                        .enumerate()
+                        .map(|(j, r)| {
+                            r.assert_eq(&ast::PolyCoef::constant(
+                                &trace.shplonk_rs[i][j].values,
+                                allocator,
+                            ))
+                        })
+                        .collect()
+                })
+                .collect()
+        },
+    );
+
     let v = transcript.squeeze_challenge_scalar();
 
     let v = trace.as_ref().map_or_else(
@@ -1273,17 +1341,37 @@ fn shplonk_commit<Rt: RuntimeType>(
         |trace| v.assert_eq(&ast::Scalar::constant(trace.shplonk_v)),
     );
 
-    let his = rotation_sets.iter().zip(rs.iter()).map(|(rot_set, rs)| {
-        let numerator = rot_set
-            .commitments
-            .iter()
-            .rev()
-            .zip(rs.iter().rev())
-            .fold(ast::PolyCoef::zero(n), |acc, (f, r)| {
-                acc * y.clone() + f.clone() - r.clone()
-            });
-        div_by_vanishing(numerator, rot_set.points.iter())
-    });
+    let his = rotation_sets
+        .iter()
+        .enumerate()
+        .zip(rs.iter())
+        .map(|((i, rot_set), rs)| {
+            let numerators =
+                rot_set
+                    .commitments
+                    .iter()
+                    .enumerate()
+                    .zip(rs.iter())
+                    .map(|((j, f), r)| {
+                        let n = f.clone() - r.clone();
+                        trace.as_ref().map_or_else(
+                            || n.clone(),
+                            |trace| {
+                                n.assert_eq(&ast::PolyCoef::constant(
+                                    &trace.shplonk_f_minus_rs[i][j].values,
+                                    allocator,
+                                ))
+                            },
+                        )
+                    });
+            let numerator = numerators
+                .into_iter()
+                .rev()
+                .fold(ast::PolyCoef::zero(n), |acc, numerator| {
+                    acc * y.clone() + numerator
+                });
+            div_by_vanishing(numerator, rot_set.points.iter())
+        });
 
     let h = his
         .into_iter()
@@ -1304,27 +1392,88 @@ fn shplonk_commit<Rt: RuntimeType>(
         |trace| u.assert_eq(&ast::Scalar::constant(trace.shplonk_u)),
     );
 
-    let lis = rotation_sets
+    let (lis, zis): (Vec<ast::PolyCoef<Rt>>, Vec<ast::Scalar<Rt>>) = rotation_sets
         .iter()
+        .enumerate()
         .zip(rs.iter())
         .zip(points_complement.into_iter())
-        .map(|((rot_set, rs), complement_points)| {
-            let factor1 = rot_set
+        .map(|(((i, rot_set), rs), complement_points)| {
+            let r_evaluations: Vec<_> = rs.iter().map(|r| r.evaluate(&u)).collect();
+
+            let r_evaluations = trace.as_ref().map_or_else(
+                || r_evaluations.clone(),
+                |trace| {
+                    r_evaluations
+                        .iter()
+                        .enumerate()
+                        .map(|(j, r)| {
+                            r.assert_eq(&ast::Scalar::constant(trace.shplonk_r_evaluation_us[i][j]))
+                        })
+                        .collect()
+                },
+            );
+
+            let numerators: Vec<_> = rot_set
                 .commitments
                 .iter()
+                .zip(r_evaluations.into_iter())
+                .map(|(f, ru)| f.clone() - ru)
+                .collect();
+
+            let numerators = trace.as_ref().map_or_else(
+                || numerators.clone(),
+                |trace| {
+                    numerators
+                        .iter()
+                        .enumerate()
+                        .map(|(j, numerator)| {
+                            numerator
+                                .assert_eq(&ast::PolyCoef::constant(
+                                    &trace.shplonk_li_numerators[i][j].values,
+                                    allocator,
+                                ))
+                        })
+                        .collect()
+                },
+            );
+
+            let factor1 = numerators
+                .into_iter()
                 .rev()
-                .zip(rs.iter().rev())
-                .fold(ast::PolyCoef::zero(n), |acc, (f, r)| {
-                    acc * y.clone() + f.clone() - r.evaluate(&u)
+                .fold(ast::PolyCoef::zero(n), |acc, numerator| {
+                    acc * y.clone() + numerator
                 });
             let factor2 = evaluate_vanishing_polynomail_f.call(
                 ast::Array::construct(complement_points.into_iter()),
                 u.clone(),
             );
-            factor1 * factor2
-        });
+            (factor1 * factor2.clone(), factor2)
+        })
+        .unzip();
+
+    let (lis, zis) = trace.as_ref().map_or_else(
+        || (lis.clone(), zis.clone()),
+        |trace| {
+            (
+                lis.iter()
+                    .enumerate()
+                    .map(|(i, li)| {
+                        li.assert_eq(&ast::PolyCoef::constant(
+                            &trace.shplonk_lis[i].values,
+                            allocator,
+                        ))
+                    })
+                    .collect(),
+                zis.iter()
+                    .enumerate()
+                    .map(|(i, zi)| zi.assert_eq(&ast::Scalar::constant(trace.shplonk_zis[i])))
+                    .collect(),
+            )
+        },
+    );
 
     let l_left = lis
+        .into_iter()
         .rev()
         .fold(ast::PolyCoef::zero(n), |acc, li| acc * v.clone() + li);
     let l_right = h * evaluate_vanishing_polynomail_f.call(
@@ -1338,7 +1487,7 @@ fn shplonk_commit<Rt: RuntimeType>(
     let l = l_left - l_right;
 
     let h1 = l.kate_div(&u);
-    let alpha = h1.index(0).invert();
+    let alpha = zis[0].invert();
     let h1 = h1 * alpha;
 
     let h1 = trace.as_ref().map_or_else(
@@ -2163,14 +2312,41 @@ where
         .map(|p| ast::PolyCoef::constant(&p.values, allocator))
         .collect();
 
-    pk_permutation_coefs.iter().for_each(|p| {
+    pk_permutation_coefs.iter().enumerate().for_each(|(i, p)| {
         let eval = p.evaluate(&x);
+        let eval = trace.as_ref().map_or_else(
+            || eval.clone(),
+            |trace| {
+                let ans = ast::Scalar::constant(trace.common_permutation_evals[i]);
+                eval.assert_eq(&ans)
+            },
+        );
         transcript.hash_scalar(&eval, HashTyp::WriteProof);
     });
 
-    permutation_ppp_coefs.iter().for_each(|ppps| {
-        evaluate_permutation(ppps, &x, &mut transcript, pk, &mut get_x_mul_omega_power);
-    });
+    permutation_ppp_coefs
+        .iter()
+        .enumerate()
+        .for_each(|(i, ppps)| {
+            evaluate_permutation(
+                ppps,
+                &x,
+                &mut transcript,
+                pk,
+                &mut get_x_mul_omega_power,
+                trace.as_ref().map(|trace| {
+                    trace.permutation_evals[i]
+                        .iter()
+                        .map(|evals| {
+                            evals
+                                .iter()
+                                .map(|c| ast::Scalar::constant(*c))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                }),
+            );
+        });
 
     lookup_permuteds
         .iter()

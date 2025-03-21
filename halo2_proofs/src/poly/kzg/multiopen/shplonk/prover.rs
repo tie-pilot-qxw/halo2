@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use super::{
     construct_intermediate_sets, ChallengeU, ChallengeV, ChallengeY, Commitment, RotationSet,
 };
@@ -13,6 +12,7 @@ use crate::poly::query::{PolynomialPointer, ProverQuery};
 use crate::poly::{Coeff, Polynomial};
 use crate::tracing::Trace;
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
+use std::ops::{Deref, DerefMut};
 
 use crate::multicore::{IntoParallelIterator, ParallelIterator};
 use ff::Field;
@@ -144,41 +144,47 @@ where
             trace.shplonk_y = y.deref().clone();
         }
 
-        let quotient_contribution = |rotation_set: &RotationSetExtension<E::G1Affine>| {
-            // [P_i_0(X) - R_i_0(X), P_i_1(X) - R_i_1(X), ... ]
-            #[allow(clippy::needless_collect)]
-            let numerators = rotation_set
-                .commitments
-                .as_slice()
-                .into_par_iter()
-                .map(|commitment| commitment.quotient_contribution())
-                .collect::<Vec<_>>();
+        let quotient_contribution =
+            |rotation_set: &RotationSetExtension<E::G1Affine>,
+             traced_numerators: Option<&mut Vec<Polynomial<E::Fr, Coeff>>>| {
+                // [P_i_0(X) - R_i_0(X), P_i_1(X) - R_i_1(X), ... ]
+                #[allow(clippy::needless_collect)]
+                let numerators = rotation_set
+                    .commitments
+                    .as_slice()
+                    .into_par_iter()
+                    .map(|commitment| commitment.quotient_contribution())
+                    .collect::<Vec<_>>();
 
-            // define numerator polynomial as
-            // N_i_j(X) = (P_i_j(X) - R_i_j(X))
-            // and combine polynomials with same evaluation point set
-            // N_i(X) = linear_combination(y, N_i_j(X))
-            // where y is random scalar to combine numerator polynomials
-            let n_x = numerators
-                .into_iter()
-                .zip(powers(*y))
-                .map(|(numerator, power_of_y)| numerator * power_of_y)
-                .reduce(|acc, numerator| acc + &numerator)
-                .unwrap();
+                if let Some(trace) = traced_numerators {
+                    *trace = numerators.clone();
+                }
 
-            let points = &rotation_set.points[..];
+                // define numerator polynomial as
+                // N_i_j(X) = (P_i_j(X) - R_i_j(X))
+                // and combine polynomials with same evaluation point set
+                // N_i(X) = linear_combination(y, N_i_j(X))
+                // where y is random scalar to combine numerator polynomials
+                let n_x = numerators
+                    .into_iter()
+                    .zip(powers(*y))
+                    .map(|(numerator, power_of_y)| numerator * power_of_y)
+                    .reduce(|acc, numerator| acc + &numerator)
+                    .unwrap();
 
-            // quotient contribution of this evaluation set is
-            // Q_i(X) = N_i(X) / Z_i(X) where
-            // Z_i(X) = (x - r_i_0) * (x - r_i_1) * ...
-            let mut poly = div_by_vanishing(n_x, points);
-            poly.resize(self.params.n as usize, E::Fr::ZERO);
+                let points = &rotation_set.points[..];
 
-            Polynomial {
-                values: poly,
-                _marker: PhantomData,
-            }
-        };
+                // quotient contribution of this evaluation set is
+                // Q_i(X) = N_i(X) / Z_i(X) where
+                // Z_i(X) = (x - r_i_0) * (x - r_i_1) * ...
+                let mut poly = div_by_vanishing(n_x, points);
+                poly.resize(self.params.n as usize, E::Fr::ZERO);
+
+                Polynomial {
+                    values: poly,
+                    _marker: PhantomData,
+                }
+            };
 
         let intermediate_sets = construct_intermediate_sets(queries);
         let (rotation_sets, super_point_set) = (
@@ -199,17 +205,42 @@ where
             })
             .collect();
 
+        if let Some(trace) = &mut trace {
+            trace.shplonk_fs = rotation_sets
+                .iter()
+                .map(|set| {
+                    set.commitments
+                        .iter()
+                        .map(|c| c.commitment.get().poly.clone())
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            trace.shplonk_rs = rotation_sets
+                .iter()
+                .map(|set| {
+                    set.commitments
+                        .iter()
+                        .map(|c| c.low_degree_equivalent.clone())
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        }
+
         let v: ChallengeV<_> = transcript.squeeze_challenge_scalar();
 
         if let Some(trace) = &mut trace {
             trace.shplonk_v = v.deref().clone();
+            trace.shplonk_f_minus_rs = vec![vec![]; rotation_sets.len()];
         }
 
         #[allow(clippy::needless_collect)]
         let quotient_polynomials = rotation_sets
             .as_slice()
-            .into_par_iter()
-            .map(quotient_contribution)
+            .into_iter()
+            .enumerate()
+            .map(|(i, set)| {
+                quotient_contribution(set, trace.as_mut().map(|t| &mut t.shplonk_f_minus_rs[i]))
+            })
             .collect::<Vec<_>>();
 
         let h_x: Polynomial<E::Fr, Coeff> = quotient_polynomials
@@ -218,7 +249,7 @@ where
             .map(|(poly, power_of_v)| poly * power_of_v)
             .reduce(|acc, poly| acc + &poly)
             .unwrap();
-        
+
         if let Some(trace) = &mut trace {
             trace.shplonk_h = h_x.clone();
         }
@@ -231,7 +262,9 @@ where
             trace.shplonk_u = u.deref().clone();
         }
 
-        let linearisation_contribution = |rotation_set: RotationSetExtension<E::G1Affine>| {
+        let linearisation_contribution = |rotation_set: RotationSetExtension<E::G1Affine>,
+                                          trace: Option<&mut Trace<E::G1Affine>>,
+                                          i: usize| {
             let mut diffs = super_point_set.clone();
             for point in rotation_set.points.iter() {
                 diffs.remove(point);
@@ -253,6 +286,18 @@ where
                 .map(|commitment| commitment.linearisation_contribution(*u))
                 .collect::<Vec<_>>();
 
+            if let Some(trace) = trace {
+                trace.shplonk_li_numerators[i] = inner_contributions.clone();
+                trace.shplonk_r_evaluation_us[i] = rotation_set
+                    .commitments
+                    .as_slice()
+                    .into_par_iter()
+                    .map(|commitment| {
+                        eval_polynomial(&commitment.low_degree_equivalent.values[..], *u)
+                    })
+                    .collect();
+            }
+
             // define inner contributor polynomial as
             // L_i_j(X) = (P_i_j(X) - r_i_j)
             // and combine polynomials with same evaluation point set
@@ -269,14 +314,27 @@ where
             (l_x * z_i, z_i)
         };
 
+        if let Some(trace) = &mut trace {
+            trace.shplonk_li_numerators = vec![vec![]; rotation_sets.len()];
+            trace.shplonk_r_evaluation_us = vec![vec![]; rotation_sets.len()];
+        }
+
         #[allow(clippy::type_complexity)]
         let (linearisation_contributions, z_diffs): (
             Vec<Polynomial<E::Fr, Coeff>>,
             Vec<E::Fr>,
         ) = rotation_sets
-            .into_par_iter()
-            .map(linearisation_contribution)
+            .into_iter()
+            .enumerate()
+            .map(|(i, set)| {
+                linearisation_contribution(set, trace.as_mut().map(DerefMut::deref_mut), i)
+            })
             .unzip();
+
+        if let Some(trace) = &mut trace {
+            trace.shplonk_lis = linearisation_contributions.clone();
+            trace.shplonk_zis = z_diffs.clone();
+        }
 
         let l_x: Polynomial<E::Fr, Coeff> = linearisation_contributions
             .into_iter()

@@ -55,6 +55,16 @@ pub struct Trace<C: CurveAffine> {
     pub(crate) lookup_evals: Vec<Vec<Vec<C::ScalarExt>>>,
     pub(crate) shplonk_y: C::ScalarExt,
     pub(crate) shplonk_v: C::ScalarExt,
+    /// rotation set index |-> commitment index |-> polynomial
+    pub shplonk_fs: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,
+    /// rotation set index |-> commitment index |-> polynomial
+    pub shplonk_rs: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,
+    /// rotation set index |-> commitment index |-> polynomial
+    pub shplonk_f_minus_rs: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,
+    pub(crate) shplonk_lis: Vec<Polynomial<C::ScalarExt, Coeff>>,
+    pub(crate) shplonk_r_evaluation_us: Vec<Vec<C::ScalarExt>>,
+    pub(crate) shplonk_li_numerators: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,
+    pub(crate) shplonk_zis: Vec<C::ScalarExt>,
     pub(crate) shplonk_u: C::ScalarExt,
     pub(crate) shplonk_h: Polynomial<C::ScalarExt, Coeff>,
     pub(crate) shplonk_h1: Polynomial<C::ScalarExt, Coeff>,
