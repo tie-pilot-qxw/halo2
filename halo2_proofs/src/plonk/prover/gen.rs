@@ -445,6 +445,46 @@ mod user_functions {
         )
     }
 
+    pub type PseudoRandomPoly<Rt: RuntimeType> = uf::FunctionFn0<Rt, ast::PolyCoef<Rt>>;
+
+    pub fn pseudo_random_poly<Rt: RuntimeType>(n: usize) -> PseudoRandomPoly<Rt> {
+        use rand_core::SeedableRng;
+
+        let f = move |r: &mut zkpoly_runtime::scalar::ScalarArray<Rt::Field>| {
+            let mut rng = rand_core::OsRng;
+
+            let num_threads = rayon::current_num_threads();
+            let chunk_size = n / num_threads;
+            let thread_seeds = (0..)
+                .step_by(chunk_size + 1)
+                .take(n % num_threads)
+                .chain(
+                    (chunk_size != 0)
+                        .then(|| ((n % num_threads) * (chunk_size + 1)..).step_by(chunk_size))
+                        .into_iter()
+                        .flatten(),
+                )
+                .take(num_threads)
+                .zip(iter::repeat_with(|| {
+                    let mut seed = [0u8; 32];
+                    rng.fill_bytes(&mut seed);
+                    rand_chacha::ChaCha20Rng::from_seed(seed)
+                }))
+                .collect::<HashMap<_, _>>();
+
+            crate::arithmetic::parallelize(r.as_mut(), |chunk, offset| {
+                let mut rng = thread_seeds[&offset].clone();
+                chunk
+                    .iter_mut()
+                    .for_each(|v| *v = Rt::Field::random(&mut rng));
+            });
+
+            Ok(())
+        };
+
+        uf::FunctionFn0::new("pseudo_random_poly".to_string(), f, type2::Typ::lagrange(n as u64))
+    }
+
     pub type PermuteExpressionPairF<Rt: RuntimeType> = uf::FunctionFn2<
         Rt,
         ast::PolyLagrange<Rt>,
@@ -1427,11 +1467,10 @@ fn shplonk_commit<Rt: RuntimeType>(
                         .iter()
                         .enumerate()
                         .map(|(j, numerator)| {
-                            numerator
-                                .assert_eq(&ast::PolyCoef::constant(
-                                    &trace.shplonk_li_numerators[i][j].values,
-                                    allocator,
-                                ))
+                            numerator.assert_eq(&ast::PolyCoef::constant(
+                                &trace.shplonk_li_numerators[i][j].values,
+                                allocator,
+                            ))
                         })
                         .collect()
                 },
@@ -2140,12 +2179,12 @@ where
     assert!(pk.vk.cs.shuffles.len() == 0);
 
     let random_poly = if trace.is_some() {
-        ast::PolyLagrange::zeros(params.n())
+        ast::PolyCoef::zero(params.n())
     } else {
-        ast::PolyLagrange::random(params.n())
+        let random_poly_f = user_functions::pseudo_random_poly(params.n() as usize);
+        random_poly_f.call()
     };
 
-    let random_poly = random_poly.to_coef();
     kzg_commit_coef(
         [random_poly.clone()].into_iter(),
         &coef_points,

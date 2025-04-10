@@ -21,3 +21,8 @@ mod helpers;
 pub use helpers::SerdeFormat;
 
 pub mod tracing;
+
+pub use zkpoly_compiler;
+pub use zkpoly_cuda_api;
+pub use zkpoly_memory_pool;
+pub use zkpoly_runtime;

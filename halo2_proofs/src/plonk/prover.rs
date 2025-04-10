@@ -774,6 +774,13 @@ where
         .collect::<Result<Vec<_>, _>>()?;
 
     // Evaluate the lookups, if any, at omega^i x.
+    if let Some(trace) = &mut trace {
+        trace.lookup_evals = lookups
+            .iter()
+            .map(|lookups| vec![vec![]; lookups.len()])
+            .collect();
+    }
+
     let lookups: Vec<Vec<lookup::prover::Evaluated<Scheme::Curve>>> = lookups
         .into_iter()
         .enumerate()
