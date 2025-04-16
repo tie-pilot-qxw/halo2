@@ -25,6 +25,13 @@ impl<Rt: RuntimeType> PolyOrScalar<Rt> {
             _ => panic!("called unwrap_poly on a scalar"),
         }
     }
+
+    pub fn to_poly(&self, deg: u64) -> ast::PolyLagrange<Rt> {
+        match self {
+            PolyOrScalar::Poly(poly) => poly.clone(),
+            PolyOrScalar::Scalar(scalar) => ast::PolyLagrange::zeros(deg) + scalar.clone(),
+        }
+    }
 }
 
 fn evaluate_expression<Rt: RuntimeType, const USE_EXT: bool>(
@@ -482,7 +489,11 @@ mod user_functions {
             Ok(())
         };
 
-        uf::FunctionFn0::new("pseudo_random_poly".to_string(), f, type2::Typ::lagrange(n as u64))
+        uf::FunctionFn0::new(
+            "pseudo_random_poly".to_string(),
+            f,
+            type2::Typ::coef(n as u64),
+        )
     }
 
     pub type PermuteExpressionPairF<Rt: RuntimeType> = uf::FunctionFn2<
@@ -577,8 +588,8 @@ mod user_functions {
             "permute_expression_pair".to_string(),
             f,
             type2::Typ::Tuple(vec![
-                type2::Typ::lagrange(usable_rows as u64),
-                type2::Typ::lagrange(usable_rows as u64),
+                type2::Typ::lagrange(n),
+                type2::Typ::lagrange(n),
             ]),
         )
     }
@@ -801,7 +812,8 @@ fn construct_primary_constraint<Rt: RuntimeType>(
         .iter()
         .flat_map(|gate| {
             gate.polynomials().iter().map(|expr| {
-                evaluate_expression::<_, true>(expr, table, challenges, rot_scale).unwrap_poly()
+                evaluate_expression::<_, true>(expr, table, challenges, rot_scale)
+                    .to_poly(extended_n)
             })
         })
         .for_each(|p| add_constraint(p, h));

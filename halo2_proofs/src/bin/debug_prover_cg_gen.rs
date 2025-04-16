@@ -322,8 +322,9 @@ fn main() {
 
         use zkpoly_compiler::driver;
 
-        let options =
-            driver::DebugOptions::all(PathBuf::from("target/debug/transit")).with_log(true);
+        let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
+            .with_log(true)
+            .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo {
             gpu_memory_limit: 2 * 2u64.pow(30),
         };
