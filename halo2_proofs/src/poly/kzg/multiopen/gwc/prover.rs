@@ -48,7 +48,7 @@ where
         _: R,
         transcript: &mut T,
         queries: I,
-        _trace: Option<&mut Trace<E::G1Affine>>
+        _trace: Option<&mut Trace<E::G1Affine>>,
     ) -> io::Result<()>
     where
         I: IntoIterator<Item = ProverQuery<'com, E::G1Affine>> + Clone,

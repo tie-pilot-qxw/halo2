@@ -3,8 +3,8 @@ use super::{
     strategy::Guard,
     Coeff, LagrangeCoeff, Polynomial,
 };
-use crate::{poly::Error, tracing::Trace};
 use crate::transcript::{EncodedChallenge, TranscriptRead, TranscriptWrite};
+use crate::{poly::Error, tracing::Trace};
 use ff::Field;
 use halo2curves::CurveAffine;
 use rand_core::RngCore;

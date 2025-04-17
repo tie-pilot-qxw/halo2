@@ -82,7 +82,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         challenges: &'a [C::Scalar],
         mut rng: R,
         transcript: &mut T,
-        blind_with_random: bool
+        blind_with_random: bool,
     ) -> Result<Permuted<C>, Error>
     where
         C: CurveAffine<ScalarExt = F>,
