@@ -587,10 +587,7 @@ mod user_functions {
         uf::FunctionFn2::new(
             "permute_expression_pair".to_string(),
             f,
-            type2::Typ::Tuple(vec![
-                type2::Typ::lagrange(n),
-                type2::Typ::lagrange(n),
-            ]),
+            type2::Typ::Tuple(vec![type2::Typ::lagrange(n), type2::Typ::lagrange(n)]),
         )
     }
 
@@ -760,7 +757,7 @@ fn compute_lookup_ppp<Rt: RuntimeType>(
     blind_with_random: bool,
 ) -> ast::PolyLagrange<Rt> {
     let z = (beta.clone() + ppa.ci_values.clone()) * (gamma.clone() + ppa.ct_values.clone());
-    let z = z / (beta.clone() + ppa.pi_values.clone()) * (gamma.clone() + ppa.pt_values.clone());
+    let z = z / ((beta.clone() + ppa.pi_values.clone()) * (gamma.clone() + ppa.pt_values.clone()));
     let z = z.scan_mul(&ast::Scalar::one());
     let z = if blind_with_random {
         z.blind(unusable_rows_start, n)
@@ -907,6 +904,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
         let ct_ext = compress_expressions(tables_evaluated.iter().cloned(), theta, extended_n);
 
         let t = (ct_ext + gamma.clone()) * (ci_ext + beta.clone());
+        let a_minus_s = pi_ext.clone() - pt_ext.clone();
 
         add_constraint((ast::Scalar::one() - ppp_ext.clone()) * l0.clone(), h);
         add_constraint(
@@ -915,9 +913,17 @@ fn construct_primary_constraint<Rt: RuntimeType>(
         );
 
         add_constraint(
-            (ppp_ext.rotate(rot_scale) * (pi_ext + beta.clone()) * (pt_ext + gamma.clone())
+            (ppp_ext.rotate(rot_scale)
+                * (pi_ext.clone() + beta.clone())
+                * (pt_ext.clone() + gamma.clone())
                 - ppp_ext * t)
                 * l_active_row.clone(),
+            h,
+        );
+
+        add_constraint(a_minus_s.clone() * l0.clone(), h);
+        add_constraint(
+            a_minus_s * (pi_ext.clone() - pi_ext.rotate(-rot_scale)) * l_active_row.clone(),
             h,
         );
     }
@@ -1469,7 +1475,8 @@ fn shplonk_commit<Rt: RuntimeType>(
                 .commitments
                 .iter()
                 .zip(r_evaluations.into_iter())
-                .map(|(f, ru)| f.clone() - ru)
+                .enumerate()
+                .map(|(j, (f, ru))| f.clone().print(format!("f_{}_{}", i, j)) - ru)
                 .collect();
 
             let numerators = trace.as_ref().map_or_else(

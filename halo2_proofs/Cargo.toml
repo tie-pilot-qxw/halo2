@@ -116,3 +116,6 @@ required-features = ["cost-estimator"]
 
 [[bin]]
 name = "debug_prover_cg_gen"
+
+[[bin]]
+name = "debug_prover_lookup_cg_gen"

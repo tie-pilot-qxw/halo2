@@ -2,6 +2,11 @@
 **/*.rs.bk
 Cargo.lock
 .vscode
-**/*.html
+/book/book
 .DS_Store
 .xmake/
+/zkpoly-compiler/lib
+/zkpoly-compiler/target
+/zkpoly-compiler/.xmake
+/zkpoly-compiler/build
+/zkpoly-compiler/core/src/fused_kernels/src/

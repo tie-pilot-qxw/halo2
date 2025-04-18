@@ -82,7 +82,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         challenges: &'a [C::Scalar],
         mut rng: R,
         transcript: &mut T,
-        blind_with_random: bool
+        blind_with_random: bool,
     ) -> Result<Permuted<C>, Error>
     where
         C: CurveAffine<ScalarExt = F>,
@@ -123,6 +123,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
             &mut rng,
             &compressed_input_expression,
             &compressed_table_expression,
+            blind_with_random,
         )?;
 
         // Closure to construct commitment to vector of values
@@ -417,6 +418,7 @@ fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: Rn
     mut rng: R,
     input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
+    random_on: bool,
 ) -> Result<ExpressionPair<C::Scalar>, Error> {
     let blinding_factors = pk.vk.cs.blinding_factors();
     let usable_rows = params.n() as usize - (blinding_factors + 1);
@@ -469,9 +471,15 @@ fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: Rn
     }
     assert!(repeated_input_rows.is_empty());
 
-    permuted_input_expression
-        .extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
-    permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
+    if random_on {
+        permuted_input_expression
+            .extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
+        permuted_table_coeffs
+            .extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
+    } else {
+        permuted_input_expression.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::ZERO));
+        permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::ZERO));
+    }
     assert_eq!(permuted_input_expression.len(), params.n() as usize);
     assert_eq!(permuted_table_coeffs.len(), params.n() as usize);
 
