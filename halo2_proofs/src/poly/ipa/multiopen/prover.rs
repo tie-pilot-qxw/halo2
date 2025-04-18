@@ -33,7 +33,7 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
         mut rng: R,
         transcript: &mut T,
         queries: I,
-        _trace: Option<&mut Trace<C>>
+        _trace: Option<&mut Trace<C>>,
     ) -> io::Result<()>
     where
         I: IntoIterator<Item = ProverQuery<'com, C>> + Clone,

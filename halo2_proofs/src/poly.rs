@@ -69,7 +69,7 @@ pub struct Polynomial<F, B> {
     _marker: PhantomData<B>,
 }
 
-impl<F, B> Default  for Polynomial<F, B> {
+impl<F, B> Default for Polynomial<F, B> {
     fn default() -> Self {
         Self {
             values: Vec::new(),

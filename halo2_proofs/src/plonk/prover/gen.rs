@@ -410,9 +410,9 @@ mod user_functions {
     > {
         let f = move |r: Box<dyn FnOnce(HashMap<usize, Rt::Field>) + '_>,
                       hd: &HashMap<usize, Rt::Field>,
-                      t: &rt::scalar::Scalar<Rt::Field>| {
+                      t: &Rt::Field| {
             let mut hd = hd.clone();
-            hd.insert(k, t.to_ff());
+            hd.insert(k, *t);
             r(hd);
             Ok(())
         };
@@ -434,13 +434,12 @@ mod user_functions {
         ast::Whatever<Rt, HashMap<usize, Rt::Field>>,
         ast::Array<Rt, ast::Scalar<Rt>>,
     > {
-        let f = move |r: Vec<&mut rt::scalar::Scalar<Rt::Field>>,
-                      challenges: &HashMap<usize, Rt::Field>| {
+        let f = move |r: Vec<&mut Rt::Field>, challenges: &HashMap<usize, Rt::Field>| {
             let result = (0..num_challenges)
                 .map(|index| challenges[&index].clone())
                 .collect::<Vec<_>>();
             result.into_iter().zip(r.into_iter()).for_each(|(x, y)| {
-                *y.as_mut() = x;
+                *y = x;
             });
             Ok(())
         };
@@ -595,12 +594,10 @@ mod user_functions {
         uf::FunctionFn2<Rt, ast::Array<Rt, ast::Scalar<Rt>>, ast::Scalar<Rt>, ast::Scalar<Rt>>;
 
     pub fn evaluate_vanishing_polynomial<Rt: RuntimeType>() -> EvaluateVanishingPolynomailF<Rt> {
-        let f = |r: &mut rt::scalar::Scalar<Rt::Field>,
-                 roots: Vec<&rt::scalar::Scalar<Rt::Field>>,
-                 z: &rt::scalar::Scalar<Rt::Field>| {
-            let roots: Vec<_> = roots.into_iter().map(|x| x.to_ff()).collect();
-            let eval = crate::arithmetic::evaluate_vanishing_polynomial(&roots, z.to_ff());
-            *r = rt::scalar::Scalar::from_ff(&eval);
+        let f = |r: &mut Rt::Field, roots: Vec<&Rt::Field>, z: &Rt::Field| {
+            let roots: Vec<_> = roots.into_iter().map(|x| *x).collect();
+            let eval = crate::arithmetic::evaluate_vanishing_polynomial(&roots, *z);
+            *r = eval;
             Ok(())
         };
 
