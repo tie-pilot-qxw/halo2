@@ -460,7 +460,7 @@ fn plonk_api() {
         P: Prover<'params, Scheme>,
         E: EncodedChallenge<Scheme::Curve>,
         R: RngCore,
-        T: TranscriptWriterBuffer<Vec<u8>, Scheme::Curve, E>,
+        T: TranscriptWriterBuffer<Vec<u8>, Scheme::Curve, E> + std::fmt::Debug,
     >(
         rng: R,
         params: &'params Scheme::ParamsProver,

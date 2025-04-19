@@ -1046,11 +1046,12 @@ fn extended_to_coef<Rt: RuntimeType>(
     extended_coef.slice(0, len)
 }
 
-fn kzg_commit_lagrange_validated<Rt: RuntimeType>(
+fn kzg_commit_lagrange_validated_with_msg<Rt: RuntimeType>(
     poly: impl Iterator<Item = ast::PolyLagrange<Rt>>,
     points: &ast::PrecomputedPoints<Rt>,
     transcript: &mut ast::Transcript<Rt>,
     answers: Option<Vec<ast::Point<Rt>>>,
+    msg_prefix: Option<String>,
 ) {
     let points = ast::point::msm_lagrange(poly, points);
 
@@ -1059,11 +1060,27 @@ fn kzg_commit_lagrange_validated<Rt: RuntimeType>(
     }
 
     points.iter().enumerate().for_each(|(i, point)| {
-        let point = answers
-            .as_ref()
-            .map_or_else(|| point.clone(), |answers| point.assert_eq(&answers[i]));
+        let point = if let Some(msg_prefix) = &msg_prefix {
+            answers.as_ref().map_or_else(
+                || point.clone(),
+                |answers| point.assert_eq_with_msg(&answers[i], format!("{}_{}", msg_prefix, i)),
+            )
+        } else {
+            answers
+                .as_ref()
+                .map_or_else(|| point.clone(), |answers| point.assert_eq(&answers[i]))
+        };
         transcript.hash_point(&point, HashTyp::WriteProof);
     })
+}
+
+fn kzg_commit_lagrange_validated<Rt: RuntimeType>(
+    poly: impl Iterator<Item = ast::PolyLagrange<Rt>>,
+    points: &ast::PrecomputedPoints<Rt>,
+    transcript: &mut ast::Transcript<Rt>,
+    answers: Option<Vec<ast::Point<Rt>>>,
+) {
+    kzg_commit_lagrange_validated_with_msg(poly, points, transcript, answers, None);
 }
 
 fn kzg_commit_lagrange<Rt: RuntimeType>(
@@ -1473,7 +1490,7 @@ fn shplonk_commit<Rt: RuntimeType>(
                 .iter()
                 .zip(r_evaluations.into_iter())
                 .enumerate()
-                .map(|(j, (f, ru))| f.clone().print(format!("f_{}_{}", i, j)) - ru)
+                .map(|(j, (f, ru))| f.clone() - ru)
                 .collect();
 
             let numerators = trace.as_ref().map_or_else(
@@ -1594,6 +1611,7 @@ pub struct InputsShape {
     n_circuits: usize,
     n_columns: usize,
     n: u64,
+    instance_lengths: Vec<usize>,
 }
 
 /// The generator for [`super::create_proof`].
@@ -1608,6 +1626,7 @@ pub fn create_proof<
     params: &Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
+    instance_lengths: &[usize],
     allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
@@ -1615,7 +1634,12 @@ where
     ConcreteCircuit::Config: 'static + Send + Sync,
 {
     create_proof_validated::<Scheme, P, E, T, ConcreteCircuit>(
-        params, pk, circuits, allocator, None,
+        params,
+        pk,
+        circuits,
+        instance_lengths,
+        allocator,
+        None,
     )
 }
 
@@ -1631,6 +1655,7 @@ pub fn create_proof_validated<
     params: &Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
+    instance_lengths: &[usize],
     allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
     trace: Option<&Trace<Scheme::Curve>>,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
@@ -1715,15 +1740,17 @@ where
         n_circuits: circuits.len(),
         n_columns: pk.vk.cs.num_instance_columns,
         n: params.n(),
+        instance_lengths: instance_lengths.to_vec(),
     };
 
     let instances: Vec<Vec<ast::PolyLagrange<RtInstance<Scheme, E, T>>>> = (0..circuits.len())
         .map(|i| {
             (0..pk.vk.cs.num_instance_columns)
-                .map(|j| {
+                .zip(instance_lengths.iter())
+                .map(|(j, len)| {
                     entry_definer.define(
                         format!("instance_{}_{}", i, j),
-                        type2::Typ::lagrange(params.n()),
+                        type2::Typ::lagrange(*len as u64),
                     )
                 })
                 .collect::<Vec<_>>()
@@ -1754,6 +1781,24 @@ where
     // Hash verfication key into transcript
     let vk_scalar = ast::Scalar::constant(pk.vk.transcript_repr.clone());
     transcript.hash_scalar(&vk_scalar, HashTyp::NoWriteProof);
+
+    let instances: Vec<Vec<_>> = instances
+        .into_iter()
+        .map(|instances| {
+            instances
+                .into_iter()
+                .zip(instance_lengths.iter())
+                .map(|(instance, len)| {
+                    transcript.hash_lagrange(&instance, HashTyp::NoWriteProof);
+                    if *len as u64 == params.n() {
+                        instance
+                    } else {
+                        instance.extend(params.n())
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
 
     let mut advices: Vec<Vec<Option<_>>> =
         vec![vec![None; meta.num_advice_columns]; instances.len()];
@@ -1825,17 +1870,27 @@ where
 
             let advice_values_blinded: Vec<_> = column_indices
                 .iter()
+                .enumerate()
                 .zip(advice_values.iter())
-                .map(|(j, advice_value)| {
-                    if meta.unblinded_advice_columns.contains(j) || trace.is_some() {
-                        advice_value.clone()
+                .map(|((j, col), advice_value)| {
+                    if meta.unblinded_advice_columns.contains(col) || trace.is_some() {
+                        advice_value
+                            .slice(0, unusable_rows_start as u64)
+                            .extend(params.n())
+                            .assert_eq_with_msg(
+                                &ast::PolyLagrange::constant(
+                                    &trace.as_ref().unwrap().advice_phases[phase_i][i][j].values,
+                                    allocator,
+                                ),
+                                format!("advice_{}_{}_{}", phase_i, i, j),
+                            )
                     } else {
                         advice_value.blind(unusable_rows_start as u64, params.n())
                     }
                 })
                 .collect();
 
-            kzg_commit_lagrange_validated(
+            kzg_commit_lagrange_validated_with_msg(
                 advice_values_blinded.into_iter(),
                 &lagrange_points,
                 &mut transcript,
@@ -1845,6 +1900,7 @@ where
                         .map(|c| ast::Point::constant(c.clone()))
                         .collect::<Vec<_>>()
                 }),
+                Some(format!("advice_commitment_{}_{}", phase_i, i)),
             );
 
             for (&i, p) in column_indices.iter().zip(advice_values.into_iter()) {
@@ -1924,7 +1980,8 @@ where
                                 &trace.instance_coefs[i][j].values,
                                 allocator,
                             );
-                            p.clone().assert_eq(&correct)
+                            p.clone()
+                                .assert_eq_with_msg(&correct, format!("instance_{}_{}", i, j))
                         },
                     )
                 })
@@ -2483,7 +2540,9 @@ impl InputsShape {
         assert!(instances.len() == self.n_circuits);
         instances.iter().for_each(|ins| {
             assert!(ins.len() == self.n_columns);
-            ins.iter().for_each(|c| assert!(c.len() == self.n as usize))
+            ins.iter()
+                .zip(self.instance_lengths.iter())
+                .for_each(|(c, len)| assert!(c.len() == *len))
         });
 
         let mut entry_table = rt::args::EntryTable::new();

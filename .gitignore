@@ -9,4 +9,4 @@ Cargo.lock
 /zkpoly-compiler/target
 /zkpoly-compiler/.xmake
 /zkpoly-compiler/build
-/zkpoly-compiler/core/src/fused_kernels/src/
+/zkpoly-compiler/core/src/fused_kernels/src/fused_arith*

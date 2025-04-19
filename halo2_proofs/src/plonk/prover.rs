@@ -41,7 +41,7 @@ pub fn create_proof<
     P: Prover<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
-    T: TranscriptWrite<Scheme::Curve, E>,
+    T: TranscriptWrite<Scheme::Curve, E> + std::fmt::Debug,
     ConcreteCircuit: Circuit<Scheme::Scalar>,
 >(
     params: &'params Scheme::ParamsProver,
@@ -66,7 +66,7 @@ pub fn create_proof_traced<
     P: Prover<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
-    T: TranscriptWrite<Scheme::Curve, E>,
+    T: TranscriptWrite<Scheme::Curve, E> + std::fmt::Debug,
     ConcreteCircuit: Circuit<Scheme::Scalar>,
 >(
     params: &'params Scheme::ParamsProver,
@@ -333,7 +333,7 @@ where
         let mut challenges = HashMap::<usize, Scheme::Scalar>::with_capacity(meta.num_challenges);
 
         let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
-        for current_phase in pk.vk.cs.phases() {
+        for (phase_i, current_phase) in pk.vk.cs.phases().enumerate() {
             let column_indices = meta
                 .advice_column_phase
                 .iter()
@@ -347,8 +347,15 @@ where
                 })
                 .collect::<BTreeSet<_>>();
 
-            for ((circuit, advice), instances) in
-                circuits.iter().zip(advice.iter_mut()).zip(instances)
+            if let Some(trace) = trace.as_mut() {
+                trace.advice_phases.push(vec![]);
+            }
+
+            for (((circuit_i, circuit), advice), instances) in circuits
+                .iter()
+                .enumerate()
+                .zip(advice.iter_mut())
+                .zip(instances)
             {
                 let mut witness = WitnessCollection {
                     k: params.k(),
@@ -406,6 +413,14 @@ where
                     }
                 }
 
+                if let Some(trace) = trace.as_mut() {
+                    trace
+                        .advice_phases
+                        .last_mut()
+                        .unwrap()
+                        .push(advice_values.clone());
+                }
+
                 // Compute commitments to advice column polynomials
                 let blinds: Vec<_> = column_indices
                     .iter()
@@ -448,8 +463,8 @@ where
 
             for (index, phase) in meta.challenge_phase.iter().enumerate() {
                 if current_phase == *phase {
-                    let existing =
-                        challenges.insert(index, *transcript.squeeze_challenge_scalar::<()>());
+                    let v = *transcript.squeeze_challenge_scalar::<()>();
+                    let existing = challenges.insert(index, v);
                     assert!(existing.is_none());
                 }
             }

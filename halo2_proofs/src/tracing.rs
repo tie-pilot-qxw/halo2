@@ -13,6 +13,8 @@ pub struct Trace<C: CurveAffine> {
     /// circuit index |-> column index |-> polynomial
     pub(crate) instance_coefs: Vec<Vec<Polynomial<C::ScalarExt, Coeff>>>,
     pub(crate) instance_extended: Vec<Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>>,
+    /// phase index |-> circuit index |-> column index |-> polynomial
+    pub(crate) advice_phases: Vec<Vec<Vec<Polynomial<C::ScalarExt, LagrangeCoeff>>>>,
     /// phase index |-> column index |-> point
     pub(crate) advice_commitments: Vec<Vec<C>>,
     pub(crate) challenges: Vec<C::ScalarExt>,
