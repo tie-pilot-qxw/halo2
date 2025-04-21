@@ -399,9 +399,7 @@ where
                 for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
                     if !witness.unblinded_advice.contains(column_index) {
                         for cell in &mut advice_values[unusable_rows_start..] {
-                            if trace.is_some() {
-                                *cell = Scheme::Scalar::ZERO;
-                            } else {
+                            if trace.is_none() {
                                 *cell = Scheme::Scalar::random(&mut rng);
                             }
                         }

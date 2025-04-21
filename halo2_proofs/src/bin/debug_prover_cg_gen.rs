@@ -278,36 +278,36 @@ fn main() {
         type E = transcript::Challenge255<G1Affine>;
         type Tr = transcript::Blake2bWrite<Vec<u8>, G1Affine, E>;
 
-        let mut allocator = PinnedMemoryPool::new(30, std::mem::size_of::<u32>());
+        let mut allocator = PinnedMemoryPool::new(20, std::mem::size_of::<u32>());
 
-        let mut trace = Trace::default();
+        // let mut trace = Trace::default();
 
-        println!("[Test] Begin Running Original Prover for Trace");
-        use halo2_proofs::transcript::TranscriptWriterBuffer;
-        let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
-            _,
-            _,
-            halo2_proofs::transcript::Challenge255<G1Affine>,
-        >::init(vec![]);
-        halo2_proofs::plonk::create_proof_traced::<
-            KZGCommitmentScheme<Bn256>,
-            ProverSHPLONK<Bn256>,
-            _,
-            _,
-            _,
-            _,
-        >(
-            params,
-            pk,
-            &[circuit.clone()],
-            &[&[]],
-            rng,
-            &mut transcript,
-            Some(&mut trace),
-        )
-        .expect("proof generation should not fail");
-        transcript.finalize();
-        println!("[Test] End Running Original Prover for Trace");
+        // println!("[Test] Begin Running Original Prover for Trace");
+        // use halo2_proofs::transcript::TranscriptWriterBuffer;
+        // let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
+        //     _,
+        //     _,
+        //     halo2_proofs::transcript::Challenge255<G1Affine>,
+        // >::init(vec![]);
+        // halo2_proofs::plonk::create_proof_traced::<
+        //     KZGCommitmentScheme<Bn256>,
+        //     ProverSHPLONK<Bn256>,
+        //     _,
+        //     _,
+        //     _,
+        //     _,
+        // >(
+        //     params,
+        //     pk,
+        //     &[circuit.clone()],
+        //     &[&[]],
+        //     rng,
+        //     &mut transcript,
+        //     Some(&mut trace),
+        // )
+        // .expect("proof generation should not fail");
+        // transcript.finalize();
+        // println!("[Test] End Running Original Prover for Trace");
 
         println!("[Test] Begin Computation Graph Generation");
         let (cg_ret, cg_inputs_shape) =
@@ -317,7 +317,7 @@ fn main() {
                 E,
                 Tr,
                 _,
-            >(params, pk, vec![circuit], &vec![], &mut allocator, Some(&trace));
+            >(params, pk, vec![circuit], &vec![], &mut allocator, None);
         println!("[Test] End Computation Graph Generation");
 
         use zkpoly_compiler::driver;
@@ -326,7 +326,7 @@ fn main() {
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 2 * 2u64.pow(30),
+            gpu_memory_limit: 1 * 2u64.pow(30),
         };
 
         println!("[Test] Begin Compiling to Runtime Instructions");

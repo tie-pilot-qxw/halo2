@@ -699,7 +699,6 @@ fn compute_permutation_ppp<Rt: RuntimeType>(
 ) -> Vec<ast::PolyLagrange<Rt>> {
     let chunk_len = ppk.vk.cs_degree - 2;
     let blinding_factors = ppk.vk.cs.blinding_factors();
-    let unusable_rows_start = n as usize - (blinding_factors + 1);
 
     let mut last_z = ast::Scalar::one();
 
@@ -732,7 +731,7 @@ fn compute_permutation_ppp<Rt: RuntimeType>(
 
             let z = modified_values.scan_mul(&last_z);
             let z = if blind_with_random {
-                z.blind(unusable_rows_start as u64, n)
+                z.blind(n - blinding_factors as u64, n)
             } else {
                 z
             };
@@ -1874,16 +1873,19 @@ where
                 .zip(advice_values.iter())
                 .map(|((j, col), advice_value)| {
                     if meta.unblinded_advice_columns.contains(col) || trace.is_some() {
-                        advice_value
-                            .slice(0, unusable_rows_start as u64)
-                            .extend(params.n())
-                            .assert_eq_with_msg(
-                                &ast::PolyLagrange::constant(
-                                    &trace.as_ref().unwrap().advice_phases[phase_i][i][j].values,
-                                    allocator,
-                                ),
-                                format!("advice_{}_{}_{}", phase_i, i, j),
-                            )
+                        trace.as_ref().map_or_else(
+                            || advice_value.clone(),
+                            |trace| {
+                                advice_value.assert_eq_with_msg(
+                                    &ast::PolyLagrange::constant(
+                                        &trace.advice_phases[phase_i][i][j]
+                                            .values,
+                                        allocator,
+                                    ),
+                                    format!("advice_{}_{}_{}", phase_i, i, j),
+                                )
+                            },
+                        )
                     } else {
                         advice_value.blind(unusable_rows_start as u64, params.n())
                     }
@@ -1891,7 +1893,7 @@ where
                 .collect();
 
             kzg_commit_lagrange_validated_with_msg(
-                advice_values_blinded.into_iter(),
+                advice_values_blinded.iter().cloned(),
                 &lagrange_points,
                 &mut transcript,
                 trace.as_ref().map(|trace| {
@@ -1903,7 +1905,7 @@ where
                 Some(format!("advice_commitment_{}_{}", phase_i, i)),
             );
 
-            for (&i, p) in column_indices.iter().zip(advice_values.into_iter()) {
+            for (&i, p) in column_indices.iter().zip(advice_values_blinded.into_iter()) {
                 advice[i] = Some(p);
             }
         }
@@ -2213,7 +2215,7 @@ where
                         ppa,
                         &beta,
                         &gamma,
-                        unusable_rows_start as u64,
+                        params.n() - meta.blinding_factors() as u64,
                         params.n(),
                         trace.is_none(),
                     );
