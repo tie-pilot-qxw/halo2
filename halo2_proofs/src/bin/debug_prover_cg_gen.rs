@@ -350,7 +350,7 @@ fn main() {
         );
 
         println!("[Test] Launch VM");
-        let (r, _) = runtime.run();
+        let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::None);
         println!("[Test] VM Exited");
 
         let proof = r.unwrap().unwrap_transcript_move().take().finalize();
