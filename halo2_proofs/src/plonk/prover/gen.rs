@@ -137,7 +137,7 @@ mod user_functions {
     use zkpoly_compiler::{ast::user_function as uf, transit::type2};
     use zkpoly_runtime::error::RuntimeError;
 
-    pub type CalculateAdvicesF<Rt: RuntimeType, CC> = uf::FunctionOnce3<
+    pub type CalculateAdvicesF<Rt: RuntimeType, CC> = uf::FunctionFn3<
         Rt,
         ast::Array<Rt, ast::PolyLagrange<Rt>>,
         ast::Whatever<Rt, HashMap<usize, Rt::Field>>,
@@ -339,7 +339,7 @@ mod user_functions {
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config, constants)
+            ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config.clone(), constants.clone())
                 .map_err(|e| RuntimeError::Other(format!("{:?}", e)))?;
 
             let r_dominators = r.split_off(num_advice_columns);
@@ -369,7 +369,7 @@ mod user_functions {
             Ok(())
         };
 
-        uf::FunctionOnce3::new(
+        uf::FunctionFn3::new(
             "calculate_advices".to_string(),
             f,
             type2::Typ::Array(Box::new(type2::Typ::lagrange(n)), 2 * num_advice_columns),
