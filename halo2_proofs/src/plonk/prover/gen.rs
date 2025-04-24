@@ -137,7 +137,7 @@ mod user_functions {
     use zkpoly_compiler::{ast::user_function as uf, transit::type2};
     use zkpoly_runtime::error::RuntimeError;
 
-    pub type CalculateAdvicesF<Rt: RuntimeType, CC> = uf::FunctionOnce3<
+    pub type CalculateAdvicesF<Rt: RuntimeType, CC> = uf::FunctionFn3<
         Rt,
         ast::Array<Rt, ast::PolyLagrange<Rt>>,
         ast::Whatever<Rt, HashMap<usize, Rt::Field>>,
@@ -339,7 +339,7 @@ mod user_functions {
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config, constants)
+            ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config.clone(), constants.clone())
                 .map_err(|e| RuntimeError::Other(format!("{:?}", e)))?;
 
             let r_dominators = r.split_off(num_advice_columns);
@@ -369,7 +369,7 @@ mod user_functions {
             Ok(())
         };
 
-        uf::FunctionOnce3::new(
+        uf::FunctionFn3::new(
             "calculate_advices".to_string(),
             f,
             type2::Typ::Array(Box::new(type2::Typ::lagrange(n)), 2 * num_advice_columns),
@@ -1678,18 +1678,7 @@ where
 
     // Compute constants
 
-    let extended_omega_powers = {
-        let mut power = Scheme::Scalar::ONE;
-        ast::PolyLagrange::constant_from_iter(
-            (0..extended_n).map(|_| {
-                let r = power;
-                power = power * domain.get_extended_omega();
-                r
-            }),
-            extended_n,
-            allocator,
-        )
-    };
+    let extended_omega_powers = ast::PolyLagrange::constant(&pk.extended_omega_powers, allocator);
     let zetas = ast::PolyLagrange::constant(
         &vec![
             Scheme::Scalar::ONE,
@@ -1711,18 +1700,7 @@ where
 
     let omega = ast::Scalar::constant(domain.get_omega());
     let omega_inv = ast::Scalar::constant(domain.get_omega_inv());
-    let omega_powers = {
-        let mut power = Scheme::Scalar::ONE;
-        ast::PolyLagrange::constant_from_iter(
-            (0..domain.n()).map(|_| {
-                let r = power;
-                power = power * domain.get_omega();
-                r
-            }),
-            domain.n(),
-            allocator,
-        )
-    };
+    let omega_powers = ast::PolyLagrange::constant(&pk.omega_powers, allocator);
     let delta = ast::Scalar::constant(Scheme::Scalar::DELTA);
 
     let lagrange_points = ast::PrecomputedPoints::construct(params.lagrange_points(), allocator);

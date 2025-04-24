@@ -152,3 +152,34 @@ pub(crate) fn polynomial_slice_byte_length<F: PrimeField, B>(slice: &[Polynomial
     let field_len = F::default().to_repr().as_ref().len();
     4 + slice.len() * (4 + field_len * slice.get(0).map(|poly| poly.len()).unwrap_or(0))
 }
+
+pub(crate) fn write_polynomial<W: io::Write, F: SerdePrimeField>(
+    p: &[F],
+    writer: &mut W,
+    format: SerdeFormat,
+) -> io::Result<()> {
+    writer.write_all(&(p.len() as u32).to_be_bytes())?;
+    for value in p.iter() {
+        value.write(writer, format)?;
+    }
+    Ok(())
+}
+
+/// Reads a vector of polynomials from buffer
+pub(crate) fn read_polynomial<R: io::Read, F: SerdePrimeField>(
+    reader: &mut R,
+    format: SerdeFormat,
+) -> io::Result<Vec<F>> {
+    let mut poly_len = [0u8; 4];
+    reader.read_exact(&mut poly_len)?;
+    let poly_len = u32::from_be_bytes(poly_len);
+
+    (0..poly_len)
+        .map(|_| F::read(reader, format))
+        .collect::<io::Result<Vec<_>>>()
+}
+
+pub(crate) fn one_polynomial_slice_byte_length<F: PrimeField>(p: &[F]) -> usize {
+    let field_len = F::default().to_repr().as_ref().len();
+    4 + field_len * p.len()
+}

@@ -257,17 +257,57 @@ fn main() {
     }
 
     fn keygen(k: u32) -> (ParamsKZG<Bn256>, ProvingKey<G1Affine>) {
-        let params: ParamsKZG<Bn256> = ParamsKZG::new(k);
         let empty_circuit: MyCircuit<Fr> = MyCircuit {
             a: Value::unknown(),
             k,
         };
-        let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
-        let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
+
+        let params_fname = format!("plonk-params-k{}.bin", k);
+        let vk_fname = format!("plonk-vk-k{}.bin", k);
+        let pk_fname = format!("plonk-pk-k{}.bin", k);
+
+        let params: ParamsKZG<Bn256> = if let Ok(mut params_f) = std::fs::File::open(&params_fname)
+        {
+            ParamsKZG::read_custom(&mut params_f, halo2_proofs::SerdeFormat::RawBytes).unwrap()
+        } else {
+            println!("{} not opened, Generating new params", &params_fname);
+            let params = ParamsKZG::new(k);
+            let mut f = std::fs::File::create(&params_fname).unwrap();
+            params
+                .write_custom(&mut f, halo2_proofs::SerdeFormat::RawBytes)
+                .unwrap();
+            params
+        };
+
+        let vk = if let Ok(mut vk_f) = std::fs::File::open(&vk_fname) {
+            VerifyingKey::read::<_, MyCircuit<_>>(&mut vk_f, halo2_proofs::SerdeFormat::RawBytes)
+                .unwrap()
+        } else {
+            println!("{} not opened, Generating new vk", &vk_fname);
+            let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
+            let mut f = std::fs::File::create(&vk_fname).unwrap();
+            vk.write(&mut f, halo2_proofs::SerdeFormat::RawBytes)
+                .unwrap();
+            vk
+        };
+        let pk = if let Ok(mut pk_f) = std::fs::File::open(&pk_fname) {
+            ProvingKey::read::<_, MyCircuit<_>>(&mut pk_f, halo2_proofs::SerdeFormat::RawBytes)
+                .unwrap()
+        } else {
+            println!("{} not opened, Generating new pk", &pk_fname);
+            let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
+            let mut f = std::fs::File::create(&pk_fname).unwrap();
+            pk.write(&mut f, halo2_proofs::SerdeFormat::RawBytes)
+                .unwrap();
+            pk
+        };
+
+        println!("Extended k = {}", pk.get_vk().get_domain().extended_k());
+
         (params, pk)
     }
 
-    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
+    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>, rebuild: bool) {
         let rng = OsRng;
 
         let circuit: MyCircuit<Fr> = MyCircuit {
@@ -278,7 +318,7 @@ fn main() {
         type E = transcript::Challenge255<G1Affine>;
         type Tr = transcript::Blake2bWrite<Vec<u8>, G1Affine, E>;
 
-        let mut allocator = PinnedMemoryPool::new(20, std::mem::size_of::<u32>());
+        let mut allocator = PinnedMemoryPool::new(30, std::mem::size_of::<u32>());
 
         // let mut trace = Trace::default();
 
@@ -309,6 +349,10 @@ fn main() {
         // transcript.finalize();
         // println!("[Test] End Running Original Prover for Trace");
 
+        unsafe {
+            backtrace_on_stack_overflow::enable();
+        }
+
         println!("[Test] Begin Computation Graph Generation");
         let (cg_ret, cg_inputs_shape) =
             prover_gen::create_proof_validated::<
@@ -324,14 +368,27 @@ fn main() {
 
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
-            .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
+            .with_type2_visualizer(driver::Type2DebugVisualizer::Graphviz);
         let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 1 * 2u64.pow(30),
+            gpu_memory_limit: 8 * 2u64.pow(30),
         };
 
+        let artifect_dir = "target/artifect";
+
         println!("[Test] Begin Compiling to Runtime Instructions");
+        let pjh = driver::PanicJoinHandler::new();
+        let t2prog = driver::ast2type2(cg_ret, &options, allocator, &pjh).unwrap();
+
         let (rt_chunk, rt_const_tab, mem_allocator) =
-            driver::ast2inst(cg_ret, allocator, &options, &hd_info).unwrap();
+            if rebuild || !std::path::Path::new(artifect_dir).exists() {
+                let (rt_chunk, rt_const_tb, mem_alloc) =
+                    driver::type2_to_inst(t2prog, &options, &hd_info, &pjh).unwrap();
+                driver::dump_artifect(&rt_chunk, &rt_const_tb, &artifect_dir).unwrap();
+                (rt_chunk, rt_const_tb, mem_alloc)
+            } else {
+                driver::load_artifect(t2prog, &artifect_dir).unwrap()
+            };
+
         println!("[Test] End Compiling to Runtime Instructions");
 
         let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
@@ -391,5 +448,7 @@ fn main() {
     let (params, pk) = keygen(k);
     println!("Done");
 
-    prover(k, &params, &pk);
+    let rebuild = std::env::args().any(|arg| arg == "--rebuild");
+
+    prover(k, &params, &pk, rebuild);
 }

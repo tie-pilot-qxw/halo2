@@ -10,8 +10,7 @@ use group::ff::{Field, FromUniformBytes, PrimeField};
 
 use crate::arithmetic::CurveAffine;
 use crate::helpers::{
-    polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, SerdeCurveAffine,
-    SerdePrimeField,
+    one_polynomial_slice_byte_length, polynomial_slice_byte_length, read_polynomial, read_polynomial_vec, write_polynomial, write_polynomial_slice, SerdeCurveAffine, SerdePrimeField
 };
 use crate::poly::{
     Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
@@ -345,6 +344,8 @@ pub struct ProvingKey<C: CurveAffine> {
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permutation: permutation::ProvingKey<C>,
+    omega_powers: Vec<C::Scalar>,
+    extended_omega_powers: Vec<C::Scalar>,
     ev: Evaluator<C>,
 }
 
@@ -369,6 +370,8 @@ where
             + polynomial_slice_byte_length(&self.fixed_values)
             + polynomial_slice_byte_length(&self.fixed_polys)
             + polynomial_slice_byte_length(&self.fixed_cosets)
+            + one_polynomial_slice_byte_length(&self.omega_powers)
+            + one_polynomial_slice_byte_length(&self.extended_omega_powers)
             + self.permutation.bytes_length()
     }
 }
@@ -395,6 +398,8 @@ where
         write_polynomial_slice(&self.fixed_values, writer, format)?;
         write_polynomial_slice(&self.fixed_polys, writer, format)?;
         write_polynomial_slice(&self.fixed_cosets, writer, format)?;
+        write_polynomial(&self.omega_powers, writer, format)?;
+        write_polynomial(&self.extended_omega_powers, writer, format)?;
         self.permutation.write(writer, format)?;
         Ok(())
     }
@@ -427,6 +432,8 @@ where
         let fixed_values = read_polynomial_vec(reader, format)?;
         let fixed_polys = read_polynomial_vec(reader, format)?;
         let fixed_cosets = read_polynomial_vec(reader, format)?;
+        let omega_powers= read_polynomial(reader, format)?;
+        let extended_omega_powers= read_polynomial(reader, format)?;
         let permutation = permutation::ProvingKey::read(reader, format)?;
         let ev = Evaluator::new(vk.cs());
         Ok(Self {
@@ -437,6 +444,8 @@ where
             fixed_values,
             fixed_polys,
             fixed_cosets,
+            omega_powers,
+            extended_omega_powers,
             permutation,
             ev,
         })
