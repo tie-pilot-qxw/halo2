@@ -266,7 +266,8 @@ fn main() {
         let vk_fname = format!("plonk-vk-k{}.bin", k);
         let pk_fname = format!("plonk-pk-k{}.bin", k);
 
-        let params: ParamsKZG<Bn256> = if let Ok(mut params_f) = std::fs::File::open(&params_fname) {
+        let params: ParamsKZG<Bn256> = if let Ok(mut params_f) = std::fs::File::open(&params_fname)
+        {
             ParamsKZG::read_custom(&mut params_f, halo2_proofs::SerdeFormat::RawBytes).unwrap()
         } else {
             println!("{} not opened, Generating new params", &params_fname);
@@ -306,7 +307,7 @@ fn main() {
         (params, pk)
     }
 
-    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
+    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>, rebuild: bool) {
         let rng = OsRng;
 
         let circuit: MyCircuit<Fr> = MyCircuit {
@@ -372,9 +373,22 @@ fn main() {
             gpu_memory_limit: 8 * 2u64.pow(30),
         };
 
+        let artifect_dir = "target/artifect";
+
         println!("[Test] Begin Compiling to Runtime Instructions");
+        let pjh = driver::PanicJoinHandler::new();
+        let t2prog = driver::ast2type2(cg_ret, &options, allocator, &pjh).unwrap();
+
         let (rt_chunk, rt_const_tab, mem_allocator) =
-            driver::ast2inst(cg_ret, allocator, &options, &hd_info).unwrap();
+            if rebuild || !std::path::Path::new(artifect_dir).exists() {
+                let (rt_chunk, rt_const_tb, mem_alloc) =
+                    driver::type2_to_inst(t2prog, &options, &hd_info, &pjh).unwrap();
+                driver::dump_artifect(&rt_chunk, &rt_const_tb, &artifect_dir).unwrap();
+                (rt_chunk, rt_const_tb, mem_alloc)
+            } else {
+                driver::load_artifect(t2prog, &artifect_dir).unwrap()
+            };
+
         println!("[Test] End Compiling to Runtime Instructions");
 
         let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
@@ -420,11 +434,13 @@ fn main() {
         }
     }
 
-    let k = 24;
+    let k = 8;
 
     print!("[Test] Keygen...");
     let (params, pk) = keygen(k);
     println!("Done");
 
-    prover(k, &params, &pk);
+    let rebuild = std::env::args().any(|arg| arg == "--rebuild");
+
+    prover(k, &params, &pk, rebuild);
 }
