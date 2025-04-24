@@ -1678,18 +1678,7 @@ where
 
     // Compute constants
 
-    let extended_omega_powers = {
-        let mut power = Scheme::Scalar::ONE;
-        ast::PolyLagrange::constant_from_iter(
-            (0..extended_n).map(|_| {
-                let r = power;
-                power = power * domain.get_extended_omega();
-                r
-            }),
-            extended_n,
-            allocator,
-        )
-    };
+    let extended_omega_powers = ast::PolyLagrange::constant(&pk.extended_omega_powers, allocator);
     let zetas = ast::PolyLagrange::constant(
         &vec![
             Scheme::Scalar::ONE,
@@ -1711,18 +1700,7 @@ where
 
     let omega = ast::Scalar::constant(domain.get_omega());
     let omega_inv = ast::Scalar::constant(domain.get_omega_inv());
-    let omega_powers = {
-        let mut power = Scheme::Scalar::ONE;
-        ast::PolyLagrange::constant_from_iter(
-            (0..domain.n()).map(|_| {
-                let r = power;
-                power = power * domain.get_omega();
-                r
-            }),
-            domain.n(),
-            allocator,
-        )
-    };
+    let omega_powers = ast::PolyLagrange::constant(&pk.omega_powers, allocator);
     let delta = ast::Scalar::constant(Scheme::Scalar::DELTA);
 
     let lagrange_points = ast::PrecomputedPoints::construct(params.lagrange_points(), allocator);

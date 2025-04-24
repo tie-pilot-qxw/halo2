@@ -393,6 +393,30 @@ where
     // Compute the optimized evaluation data structure
     let ev = Evaluator::new(&vk.cs);
 
+    let mut omega_powers = vec![C::Scalar::ZERO; params.n() as usize];
+    {
+        let omega = vk.domain.get_omega();
+        parallelize(&mut omega_powers, |o, start| {
+            let mut cur = omega.pow_vartime([start as u64]);
+            for v in o.iter_mut() {
+                *v = cur;
+                cur *= &omega;
+            }
+        })
+    }
+
+    let mut extended_omega_powers = vec![C::Scalar::ZERO; vk.domain.extended_len()];
+    {
+        let omega = vk.domain.get_extended_omega();
+        parallelize(&mut extended_omega_powers, |o, start| {
+            let mut cur = omega.pow_vartime([start as u64]);
+            for v in o.iter_mut() {
+                *v = cur;
+                cur *= &omega;
+            }
+        })
+    }
+
     Ok(ProvingKey {
         vk,
         l0,
@@ -401,6 +425,8 @@ where
         fixed_values: fixed,
         fixed_polys,
         fixed_cosets,
+        omega_powers,
+        extended_omega_powers,
         permutation: permutation_pk,
         ev,
     })
