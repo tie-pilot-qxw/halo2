@@ -336,7 +336,7 @@ fn main() {
 
         let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
 
-        let runtime = driver::prepare_vm(
+        let mut runtime = driver::prepare_vm(
             rt_chunk,
             rt_const_tab,
             mem_allocator,
@@ -349,11 +349,19 @@ fn main() {
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
         );
 
+        let mut proof = None;
         println!("[Test] Launch VM");
-        let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::None);
+        for i in 0..10 {
+            println!("[Test] Round {}", i);
+            let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::None);
+            let new_proof = r.unwrap().unwrap_transcript_move().take().finalize();
+            if proof.is_some() {
+                assert_eq!(proof.unwrap(), new_proof);
+            }
+            proof = Some(new_proof);
+            runtime.reset();
+        }
         println!("[Test] VM Exited");
-
-        let proof = r.unwrap().unwrap_transcript_move().take().finalize();
 
         println!("[Test] Begin Verify Proof");
         let strategy = SingleStrategy::new(params);
@@ -362,7 +370,7 @@ fn main() {
             _,
             _,
             halo2_proofs::transcript::Challenge255<_>,
-        >::init(&proof[..]);
+        >::init(&proof.as_ref().unwrap()[..]);
         let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
             params,
             pk.get_vk(),

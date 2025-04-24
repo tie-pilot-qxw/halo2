@@ -153,14 +153,20 @@ fn main() {
         println!("[Test] End Running Original Prover for Trace");
 
         println!("[Test] Begin Computation Graph Generation");
-        let (cg_ret, cg_inputs_shape) =
-            prover_gen::create_proof_validated::<
-                KZGCommitmentScheme<Bn256>,
-                ProverSHPLONK<Bn256>,
-                E,
-                Tr,
-                _,
-            >(params, pk, vec![circuit], &vec![], &mut allocator, Some(&trace));
+        let (cg_ret, cg_inputs_shape) = prover_gen::create_proof_validated::<
+            KZGCommitmentScheme<Bn256>,
+            ProverSHPLONK<Bn256>,
+            E,
+            Tr,
+            _,
+        >(
+            params,
+            pk,
+            vec![circuit],
+            &vec![],
+            &mut allocator,
+            Some(&trace),
+        );
         println!("[Test] End Computation Graph Generation");
 
         use zkpoly_compiler::driver;
@@ -179,7 +185,7 @@ fn main() {
 
         let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
 
-        let runtime = driver::prepare_vm(
+        let mut runtime = driver::prepare_vm(
             rt_chunk,
             rt_const_tab,
             mem_allocator,
@@ -193,7 +199,7 @@ fn main() {
         );
 
         println!("[Test] Launch VM");
-        let (r, _) = runtime.run();
+        let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::None);
         println!("[Test] VM Exited");
 
         let proof = r.unwrap().unwrap_transcript_move().take().finalize();

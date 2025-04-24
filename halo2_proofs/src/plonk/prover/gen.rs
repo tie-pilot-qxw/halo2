@@ -1878,8 +1878,7 @@ where
                             |trace| {
                                 advice_value.assert_eq_with_msg(
                                     &ast::PolyLagrange::constant(
-                                        &trace.advice_phases[phase_i][i][j]
-                                            .values,
+                                        &trace.advice_phases[phase_i][i][j].values,
                                         allocator,
                                     ),
                                     format!("advice_{}_{}_{}", phase_i, i, j),
