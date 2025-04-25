@@ -393,7 +393,7 @@ fn main() {
 
         let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
 
-        let runtime = driver::prepare_vm(
+        let mut runtime = driver::prepare_vm(
             rt_chunk,
             rt_const_tab,
             mem_allocator,
@@ -407,7 +407,7 @@ fn main() {
         );
 
         println!("[Test] Launch VM");
-        let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::None);
+        let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::RecordTime);
         println!("[Test] VM Exited");
 
         let proof = r.unwrap().unwrap_transcript_move().take().finalize();
