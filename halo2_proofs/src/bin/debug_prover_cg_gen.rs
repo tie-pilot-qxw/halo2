@@ -370,7 +370,7 @@ fn main() {
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 40 * 2u64.pow(30),
+            gpu_memory_limit: 4 * 2u64.pow(30),
         };
 
         let artifect_dir = "target/artifect";
@@ -391,14 +391,10 @@ fn main() {
 
         println!("[Test] End Compiling to Runtime Instructions");
 
-        let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
-
         let mut runtime = driver::prepare_vm(
             rt_chunk,
             rt_const_tab,
             mem_allocator,
-            inputs,
-            zkpoly_runtime::runtime::ThreadPool::new(8),
             vec![zkpoly_cuda_api::mem::CudaAllocator::new(
                 0,
                 hd_info.gpu_memory_limit as usize,
@@ -406,43 +402,38 @@ fn main() {
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
         );
 
-        let mut proof = None;
         println!("[Test] Launch VM");
         for i in 0..10 {
-            println!("[Test] Round {}", i);
-            let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::None);
-            let new_proof = r.unwrap().unwrap_transcript_move().take().finalize();
-            if proof.is_some() {
-                assert_eq!(proof.unwrap(), new_proof);
+            let mut inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
+            println!("[Test] Proof Round {}", i);
+            let (r, _) = runtime.run(&mut inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
+            let proof = r.unwrap().unwrap_transcript_move().take().finalize();
+            println!("[Test] Begin Verify Proof");
+            let strategy = SingleStrategy::new(params);
+            use halo2_proofs::transcript::TranscriptReadBuffer;
+            let mut transcript = halo2_proofs::transcript::Blake2bRead::<
+                _,
+                _,
+                halo2_proofs::transcript::Challenge255<_>,
+            >::init(&proof[..]);
+            let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
+                params,
+                pk.get_vk(),
+                strategy,
+                &[&[]],
+                &mut transcript,
+            );
+
+            match verify_result {
+                Ok(_) => println!("[Test] Verify Proof Success"),
+                Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
             }
-            proof = Some(new_proof);
             runtime.reset();
         }
         println!("[Test] VM Exited");
-
-        println!("[Test] Begin Verify Proof");
-        let strategy = SingleStrategy::new(params);
-        use halo2_proofs::transcript::TranscriptReadBuffer;
-        let mut transcript = halo2_proofs::transcript::Blake2bRead::<
-            _,
-            _,
-            halo2_proofs::transcript::Challenge255<_>,
-        >::init(&proof.as_ref().unwrap()[..]);
-        let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
-            params,
-            pk.get_vk(),
-            strategy,
-            &[&[]],
-            &mut transcript,
-        );
-
-        match verify_result {
-            Ok(_) => println!("[Test] Verify Proof Success"),
-            Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
-        }
     }
 
-    let k = 22;
+    let k = 10;
 
     print!("[Test] Keygen...");
     let (params, pk) = keygen(k);
