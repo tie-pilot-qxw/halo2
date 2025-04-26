@@ -368,9 +368,9 @@ fn main() {
 
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
-            .with_type2_visualizer(driver::Type2DebugVisualizer::Graphviz);
+            .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 8 * 2u64.pow(30),
+            gpu_memory_limit: 40 * 2u64.pow(30),
         };
 
         let artifect_dir = "target/artifect";
@@ -434,7 +434,7 @@ fn main() {
         }
     }
 
-    let k = 8;
+    let k = 22;
 
     print!("[Test] Keygen...");
     let (params, pk) = keygen(k);
@@ -444,3 +444,4 @@ fn main() {
 
     prover(k, &params, &pk, rebuild);
 }
+
