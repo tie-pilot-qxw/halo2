@@ -153,14 +153,20 @@ fn main() {
         println!("[Test] End Running Original Prover for Trace");
 
         println!("[Test] Begin Computation Graph Generation");
-        let (cg_ret, cg_inputs_shape) =
-            prover_gen::create_proof_validated::<
-                KZGCommitmentScheme<Bn256>,
-                ProverSHPLONK<Bn256>,
-                E,
-                Tr,
-                _,
-            >(params, pk, vec![circuit], &vec![], &mut allocator, Some(&trace));
+        let (cg_ret, cg_inputs_shape) = prover_gen::create_proof_validated::<
+            KZGCommitmentScheme<Bn256>,
+            ProverSHPLONK<Bn256>,
+            E,
+            Tr,
+            _,
+        >(
+            params,
+            pk,
+            vec![circuit],
+            &vec![],
+            &mut allocator,
+            Some(&trace),
+        );
         println!("[Test] End Computation Graph Generation");
 
         use zkpoly_compiler::driver;
