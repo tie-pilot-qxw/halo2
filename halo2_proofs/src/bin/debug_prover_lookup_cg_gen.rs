@@ -1,5 +1,5 @@
 use group::ff::Field;
-use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
@@ -14,7 +14,6 @@ use halo2_proofs::poly::kzg::{
 };
 
 use zkpoly_memory_pool::PinnedMemoryPool;
-use zkpoly_runtime::runtime::Runtime;
 use zkpoly_runtime::transcript::{self, TranscriptWriterBuffer};
 
 use ff::PrimeField;
@@ -183,14 +182,12 @@ fn main() {
             driver::ast2inst(cg_ret, allocator, &options, &hd_info, &driver::PanicJoinHandler::new()).unwrap();
         println!("[Test] End Compiling to Runtime Instructions");
 
-        let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
+        let mut inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
 
         let mut runtime = driver::prepare_vm(
             rt_chunk,
             rt_const_tab,
             mem_allocator,
-            inputs,
-            zkpoly_runtime::runtime::ThreadPool::new(8),
             vec![zkpoly_cuda_api::mem::CudaAllocator::new(
                 0,
                 hd_info.gpu_memory_limit as usize,
@@ -199,7 +196,7 @@ fn main() {
         );
 
         println!("[Test] Launch VM");
-        let (r, _) = runtime.run(zkpoly_runtime::runtime::RuntimeDebug::None);
+        let (r, _) = runtime.run(&mut inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
         println!("[Test] VM Exited");
 
         let proof = r.unwrap().unwrap_transcript_move().take().finalize();
