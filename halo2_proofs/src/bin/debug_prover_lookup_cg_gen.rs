@@ -1,5 +1,5 @@
 use group::ff::Field;
-use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
@@ -14,7 +14,6 @@ use halo2_proofs::poly::kzg::{
 };
 
 use zkpoly_memory_pool::PinnedMemoryPool;
-use zkpoly_runtime::runtime::Runtime;
 use zkpoly_runtime::transcript::{self, TranscriptWriterBuffer};
 
 use ff::PrimeField;
