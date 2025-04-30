@@ -652,8 +652,7 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     table: &Table<Rt>,
     challenges: &[ast::Scalar<Rt>],
     n: u64,
-    unusable_rows_start: u64,
-    permutater: &user_functions::PermuteExpressionPairF<Rt>,
+    unusable_rows_start: u64
 ) -> PermutedPlookupArgument<Rt> {
     let inputs_evaluated = pa
         .input_expressions
@@ -668,9 +667,10 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     let ci_values = compress_expressions(inputs_evaluated.iter().cloned(), theta, n);
     let ct_values = compress_expressions(tables_evaluated.iter().cloned(), theta, n);
 
-    let (pi_values, pt_values) = permutater
-        .call(ci_values.clone(), ct_values.clone())
-        .unpack();
+    let pi_pt_values = ast::Tuple2::plonk_permute(&ci_values, &ct_values, unusable_rows_start as usize);
+    let (pi_values, pt_values) = (pi_pt_values.get0(), pi_pt_values.get1());
+    let pi_values = pi_values.extend(n).blind(unusable_rows_start, n);
+    let pt_values = pt_values.extend(n).blind(unusable_rows_start, n);
 
     let pt_coef = pt_values.to_coef();
     let pi_coef = pi_values.to_coef();
@@ -2041,9 +2041,6 @@ where
         },
     );
 
-    let permute_expression_pair_f =
-        user_functions::permute_expression_pair(meta.blinding_factors(), params.n());
-
     let lookup_permuteds: Vec<Vec<_>> = tables
         .iter()
         .enumerate()
@@ -2060,8 +2057,7 @@ where
                         table,
                         &challenges,
                         params.n(),
-                        unusable_rows_start as u64,
-                        &permute_expression_pair_f,
+                        unusable_rows_start as u64
                     );
                     if let Some(trace) = &trace {
                         ppa.validate(&trace.lookup_permuted[i][j], allocator)
