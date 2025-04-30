@@ -429,6 +429,17 @@ fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: Rn
     // Sort input lookup expression values
     permuted_input_expression.sort();
 
+    let table_expression = if !random_on {
+        // to match the gpu implementation, we need to sort the table
+        let mut table_expression: Vec<C::Scalar> = table_expression.to_vec();
+        table_expression.truncate(usable_rows);
+        // Sort table lookup expression values
+        table_expression.sort();
+        table_expression
+    } else {
+        table_expression.to_vec()
+    };
+
     // A BTreeMap of each unique element in the table expression and its count
     let mut leftover_table_map: BTreeMap<C::Scalar, u32> = table_expression
         .iter()

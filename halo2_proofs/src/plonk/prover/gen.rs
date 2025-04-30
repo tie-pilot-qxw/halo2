@@ -652,7 +652,8 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     table: &Table<Rt>,
     challenges: &[ast::Scalar<Rt>],
     n: u64,
-    unusable_rows_start: u64
+    unusable_rows_start: u64,
+    debug: bool,
 ) -> PermutedPlookupArgument<Rt> {
     let inputs_evaluated = pa
         .input_expressions
@@ -669,8 +670,11 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
 
     let pi_pt_values = ast::Tuple2::plonk_permute(&ci_values, &ct_values, unusable_rows_start as usize);
     let (pi_values, pt_values) = (pi_pt_values.get0(), pi_pt_values.get1());
-    let pi_values = pi_values.extend(n).blind(unusable_rows_start, n);
-    let pt_values = pt_values.extend(n).blind(unusable_rows_start, n);
+    let (pi_values, pt_values) = if debug {
+        (pi_values.extend(n), pt_values.extend(n))
+    } else {
+        (pi_values.extend(n).blind(unusable_rows_start, n), pt_values.extend(n).blind(unusable_rows_start, n))
+    };
 
     let pt_coef = pt_values.to_coef();
     let pi_coef = pi_values.to_coef();
@@ -2057,7 +2061,8 @@ where
                         table,
                         &challenges,
                         params.n(),
-                        unusable_rows_start as u64
+                        unusable_rows_start as u64,
+                        trace.is_some(),
                     );
                     if let Some(trace) = &trace {
                         ppa.validate(&trace.lookup_permuted[i][j], allocator)
