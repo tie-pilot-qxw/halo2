@@ -339,8 +339,13 @@ mod user_functions {
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config.clone(), constants.clone())
-                .map_err(|e| RuntimeError::Other(format!("{:?}", e)))?;
+            ConcreteCircuit::FloorPlanner::synthesize(
+                &mut witness,
+                circuit,
+                config.clone(),
+                constants.clone(),
+            )
+            .map_err(|e| RuntimeError::Other(format!("{:?}", e)))?;
 
             let r_dominators = r.split_off(num_advice_columns);
             let r_numerators = r;
@@ -668,12 +673,16 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     let ci_values = compress_expressions(inputs_evaluated.iter().cloned(), theta, n);
     let ct_values = compress_expressions(tables_evaluated.iter().cloned(), theta, n);
 
-    let pi_pt_values = ast::Tuple2::plonk_permute(&ci_values, &ct_values, unusable_rows_start as usize);
+    let pi_pt_values =
+        ast::Tuple2::plonk_permute(&ci_values, &ct_values, unusable_rows_start as usize);
     let (pi_values, pt_values) = (pi_pt_values.get0(), pi_pt_values.get1());
     let (pi_values, pt_values) = if debug {
         (pi_values.extend(n), pt_values.extend(n))
     } else {
-        (pi_values.extend(n).blind(unusable_rows_start, n), pt_values.extend(n).blind(unusable_rows_start, n))
+        (
+            pi_values.extend(n).blind(unusable_rows_start, n),
+            pt_values.extend(n).blind(unusable_rows_start, n),
+        )
     };
 
     let pt_coef = pt_values.to_coef();

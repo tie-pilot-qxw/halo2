@@ -474,13 +474,24 @@ fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: Rn
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    // Populate permuted table at unfilled rows with leftover table elements
-    for (coeff, count) in leftover_table_map.iter() {
-        for _ in 0..*count {
-            permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = *coeff;
-        }
+    // Collect leftover elements respecting counts
+    let mut leftover_elements: Vec<_> = leftover_table_map
+        .into_iter()
+        .flat_map(|(coeff, count)| std::iter::repeat(coeff).take(count as usize))
+        .collect();
+
+    assert_eq!(leftover_elements.len(), repeated_input_rows.len());
+
+    if !random_on {
+        // Sort leftover elements
+        leftover_elements.sort();
+        // also sort the repeated input rows
+        repeated_input_rows.sort();
     }
-    assert!(repeated_input_rows.is_empty());
+
+    for (row_idx, element) in repeated_input_rows.iter().zip(leftover_elements.iter()) {
+        permuted_table_coeffs[*row_idx] = *element;
+    }
 
     if random_on {
         permuted_input_expression
