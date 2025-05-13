@@ -178,16 +178,16 @@ fn main() {
         };
 
         println!("[Test] Begin Compiling to Runtime Instructions");
-        let (rt_chunk, rt_const_tab, mem_allocator) =
-            driver::ast2inst(cg_ret, allocator, &options, &hd_info, &driver::PanicJoinHandler::new()).unwrap();
+        let pjh = driver::PanicJoinHandler::new();
+        let artifect = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh)
+            .unwrap()
+            .to_artifect(&options, &hd_info, &pjh)
+            .unwrap();
         println!("[Test] End Compiling to Runtime Instructions");
 
         let mut inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
 
-        let mut runtime = driver::prepare_vm(
-            rt_chunk,
-            rt_const_tab,
-            mem_allocator,
+        let mut runtime = artifect.prepare_dispatcher(
             vec![zkpoly_cuda_api::mem::CudaAllocator::new(
                 0,
                 hd_info.gpu_memory_limit as usize,

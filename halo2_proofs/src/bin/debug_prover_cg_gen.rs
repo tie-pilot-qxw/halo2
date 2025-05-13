@@ -377,24 +377,19 @@ fn main() {
 
         println!("[Test] Begin Compiling to Runtime Instructions");
         let pjh = driver::PanicJoinHandler::new();
-        let t2prog = driver::ast2type2(cg_ret, &options, allocator, &pjh).unwrap();
+        let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh).unwrap();
 
-        let (rt_chunk, rt_const_tab, mem_allocator) =
-            if rebuild || !std::path::Path::new(artifect_dir).exists() {
-                let (rt_chunk, rt_const_tb, mem_alloc) =
-                    driver::type2_to_inst(t2prog, &options, &hd_info, &pjh).unwrap();
-                driver::dump_artifect(&rt_chunk, &rt_const_tb, &artifect_dir).unwrap();
-                (rt_chunk, rt_const_tb, mem_alloc)
-            } else {
-                driver::load_artifect(t2prog, &artifect_dir).unwrap()
-            };
+        let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
+            let artifect = type2_fresh.to_artifect(&options, &hd_info, &pjh).unwrap();
+            artifect.dump(&artifect_dir).unwrap();
+            artifect
+        } else {
+            type2_fresh.load_artifect(&artifect_dir).unwrap()
+        };
 
         println!("[Test] End Compiling to Runtime Instructions");
 
-        let mut runtime = driver::prepare_vm(
-            rt_chunk,
-            rt_const_tab,
-            mem_allocator,
+        let mut runtime = artifect.prepare_dispatcher(
             vec![zkpoly_cuda_api::mem::CudaAllocator::new(
                 0,
                 hd_info.gpu_memory_limit as usize,
@@ -443,4 +438,3 @@ fn main() {
 
     prover(k, &params, &pk, rebuild);
 }
-
