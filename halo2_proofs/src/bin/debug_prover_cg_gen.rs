@@ -371,6 +371,7 @@ fn main() {
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo {
             gpu_memory_limit: 4 * 2u64.pow(30),
+            gpu_smithereen_space: 2u64.pow(28)
         };
 
         let artifect_dir = "target/artifect";
