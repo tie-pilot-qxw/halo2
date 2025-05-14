@@ -394,6 +394,7 @@ fn main() {
             vec![zkpoly_cuda_api::mem::CudaAllocator::new(
                 0,
                 hd_info.gpu_memory_limit as usize,
+                true, // check overlap
             )],
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
         );
