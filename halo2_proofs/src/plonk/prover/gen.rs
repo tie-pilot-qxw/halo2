@@ -399,7 +399,7 @@ mod user_functions {
             ),
             f,
             type2::Typ::Any(
-                any::TypeId::of::<HashMap<K, T>>(),
+                any::TypeId::of::<HashMap<K, T>>().into(),
                 std::mem::size_of::<HashMap<K, T>>(),
             ),
         )
@@ -426,7 +426,7 @@ mod user_functions {
             "hash_dict_insert".to_string(),
             f,
             type2::Typ::Any(
-                any::TypeId::of::<HashMap<usize, rt::scalar::Scalar<Rt::Field>>>(),
+                any::TypeId::of::<HashMap<usize, rt::scalar::Scalar<Rt::Field>>>().into(),
                 std::mem::size_of::<HashMap<usize, rt::scalar::Scalar<Rt::Field>>>(),
             ),
         )
