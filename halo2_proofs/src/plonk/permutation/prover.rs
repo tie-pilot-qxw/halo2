@@ -13,7 +13,8 @@ use crate::{
     plonk::{self, Error},
     poly::{
         commitment::{Blind, Params},
-        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
+        Rotation,
     },
     tracing::Trace,
     transcript::{EncodedChallenge, TranscriptWrite},
@@ -30,6 +31,22 @@ pub(crate) struct CommittedSet<C: CurveAffine> {
 #[derive(Debug, Clone)]
 pub(crate) struct Committed<C: CurveAffine> {
     pub(crate) sets: Vec<CommittedSet<C>>,
+}
+
+impl<C: CurveAffine> Committed<C> {
+    pub fn empty(domain: &EvaluationDomain<C::Scalar>, n: usize) -> Self {
+        Self {
+            sets: vec![
+                CommittedSet {
+                    permutation_product_poly: domain.empty_coeff(),
+                    permutation_product_values: domain.empty_lagrange(),
+                    permutation_product_coset: domain.empty_extended(),
+                    permutation_product_blind: Blind(C::Scalar::default())
+                };
+                n
+            ],
+        }
+    }
 }
 
 pub struct ConstructedSet<C: CurveAffine> {

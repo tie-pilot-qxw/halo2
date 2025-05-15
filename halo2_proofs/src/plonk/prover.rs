@@ -59,6 +59,97 @@ where
     )
 }
 
+/// Creates a empty trace filled with zeros
+pub fn empty_trace<
+    'params,
+    Scheme: CommitmentScheme,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E> + std::fmt::Debug,
+    ConcreteCircuit: Circuit<Scheme::Scalar>,
+>(
+    params: &'params Scheme::ParamsProver,
+    pk: &ProvingKey<Scheme::Curve>,
+    circuits: &[ConcreteCircuit],
+    instances: &[&[&[Scheme::Scalar]]],
+    mut rng: R,
+    transcript: &mut T,
+    trace: &mut Trace<Scheme::Curve>,
+) where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    let domain = &pk.vk.domain;
+
+    let n_circuits = circuits.len();
+    let n_instances = instances[0].len();
+    let n = params.n() as usize;
+
+    trace.instance_coefs = vec![vec![domain.empty_coeff(); n_instances]; n_circuits];
+    trace.instance_extended = vec![vec![domain.empty_extended(); n_instances]; n_circuits];
+
+    let n_phases = pk.vk.cs.phases().count();
+    let n_advices = pk.vk.cs.num_advice_columns;
+
+    trace.advice_phases =
+        vec![vec![vec![domain.empty_lagrange(); n_advices]; n_circuits]; n_phases];
+    trace.advice_commitments = vec![vec![Scheme::Curve::default(); n_advices]; n_phases];
+
+    let n_challenges = pk.vk.cs.num_challenges();
+
+    trace.challenges = vec![Scheme::Scalar::ZERO; n_challenges];
+    trace.advice_coefs = vec![vec![domain.empty_coeff(); n_advices]; n_circuits];
+    trace.advice_extended = vec![vec![domain.empty_extended(); n_advices]; n_circuits];
+    trace.advice_values = vec![vec![domain.empty_lagrange(); n_advices]; n_circuits];
+
+    let n_lookups = pk.vk.cs.lookups.len();
+
+    trace.lookup_permuted =
+        vec![vec![lookup::prover::Permuted::empty(domain); n_lookups]; n_circuits];
+    trace.theta = Scheme::Scalar::default();
+    trace.beta = Scheme::Scalar::default();
+    trace.gamma = Scheme::Scalar::default();
+
+    let n_permutations = pk
+        .vk
+        .cs
+        .permutation
+        .columns
+        .chunks(pk.vk.cs_degree - 2)
+        .count();
+
+    trace.permutation_ppps =
+        vec![permutation::prover::Committed::empty(domain, n_permutations); n_circuits];
+    trace.lookup_ppp = vec![vec![domain.empty_lagrange(); n_lookups]; n_circuits];
+    trace.y = Scheme::Scalar::default();
+    trace.custom_gates_constraint = vec![domain.empty_extended(); n_circuits];
+    trace.permutation_constraint = vec![domain.empty_extended(); n_circuits];
+    trace.lookup_constraint = vec![domain.empty_extended(); n_circuits];
+    trace.vanished_h_extended = domain.empty_extended();
+    trace.vanished_h_coefs = trace.vanished_h_extended.values.clone();
+
+    let n_vanished_h_chunked = domain.extended_len() / domain.n() as usize;
+
+    trace.vanishing_pieces = vec![domain.empty_coeff(); n_vanished_h_chunked];
+    trace.vanishing_commitments = vec![Scheme::Curve::default(); n_vanished_h_chunked];
+    trace.x = Scheme::Scalar::default();
+    trace.advice_evals = vec![vec![Scheme::Scalar::default(); n_advices]; n_circuits];
+
+    let n_fixed = pk.vk.cs.num_fixed_columns;
+
+    trace.fixed_evals = vec![Scheme::Scalar::default(); n_fixed];
+
+    let n_common_permutation_evals = pk.permutation.polys.len();
+
+    trace.common_permutation_evals = vec![Scheme::Scalar::default(); n_common_permutation_evals];
+    trace.permutation_evals = vec![vec![vec![Scheme::Scalar::default(); 3]; n_permutations]; n_circuits];
+    trace.lookup_evals =
+        vec![vec![vec![Scheme::Scalar::default(); 5]; n_lookups]; n_circuits];
+    
+    trace.shplonk_y = Scheme::Scalar::default();
+    trace.shplonk_v = Scheme::Scalar::default();
+}
+
 /// Like `create_proof`, but additionally writes the trace to the provided
 pub fn create_proof_traced<
     'params,

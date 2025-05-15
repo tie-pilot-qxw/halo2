@@ -1588,6 +1588,7 @@ fn shplonk_commit<Rt: RuntimeType>(
 }
 
 /// A pack of types for the runtime
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct RtInstance<Scheme, E, T>(PhantomData<(Scheme, E, T)>);
 
 impl<Scheme, E, T> std::fmt::Debug for RtInstance<Scheme, E, T> {

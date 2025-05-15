@@ -36,6 +36,21 @@ pub(crate) struct Permuted<C: CurveAffine> {
     pub(crate) permuted_table_blind: Blind<C::Scalar>,
 }
 
+impl<C: CurveAffine> Permuted<C> {
+    pub fn empty(domain: &EvaluationDomain<C::Scalar>) -> Self {
+        Self {
+            compressed_input_expression: domain.empty_lagrange(),
+            permuted_input_expression: domain.empty_lagrange(),
+            permuted_input_poly: domain.empty_coeff(),
+            permuted_input_blind: Blind(C::Scalar::default()),
+            compressed_table_expression: domain.empty_lagrange(),
+            permuted_table_expression: domain.empty_lagrange(),
+            permuted_table_poly: domain.empty_coeff(),
+            permuted_table_blind: Blind(C::Scalar::default()),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(in crate::plonk) struct Committed<C: CurveAffine> {
     pub(in crate::plonk) permuted_input_poly: Polynomial<C::Scalar, Coeff>,
