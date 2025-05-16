@@ -13,7 +13,7 @@ use halo2_proofs::poly::kzg::{
     strategy::SingleStrategy,
 };
 
-use zkpoly_memory_pool::PinnedMemoryPool;
+use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::runtime::Runtime;
 use zkpoly_runtime::transcript::{self, TranscriptWriterBuffer};
 
@@ -318,7 +318,7 @@ fn main() {
         type E = transcript::Challenge255<G1Affine>;
         type Tr = transcript::Blake2bWrite<Vec<u8>, G1Affine, E>;
 
-        let mut allocator = PinnedMemoryPool::new(30, std::mem::size_of::<u32>());
+        let mut allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());//.use_mmap();
 
         // let mut trace = Trace::default();
 
@@ -371,7 +371,7 @@ fn main() {
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo {
             gpu_memory_limit: 4 * 2u64.pow(30),
-            gpu_smithereen_space: 2u64.pow(28)
+            gpu_smithereen_space: 2u64.pow(28),
         };
 
         let artifect_dir = "target/artifect";

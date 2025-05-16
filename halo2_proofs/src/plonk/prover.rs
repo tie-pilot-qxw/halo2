@@ -142,10 +142,10 @@ pub fn empty_trace<
     let n_common_permutation_evals = pk.permutation.polys.len();
 
     trace.common_permutation_evals = vec![Scheme::Scalar::default(); n_common_permutation_evals];
-    trace.permutation_evals = vec![vec![vec![Scheme::Scalar::default(); 3]; n_permutations]; n_circuits];
-    trace.lookup_evals =
-        vec![vec![vec![Scheme::Scalar::default(); 5]; n_lookups]; n_circuits];
-    
+    trace.permutation_evals =
+        vec![vec![vec![Scheme::Scalar::default(); 3]; n_permutations]; n_circuits];
+    trace.lookup_evals = vec![vec![vec![Scheme::Scalar::default(); 5]; n_lookups]; n_circuits];
+
     trace.shplonk_y = Scheme::Scalar::default();
     trace.shplonk_v = Scheme::Scalar::default();
 }

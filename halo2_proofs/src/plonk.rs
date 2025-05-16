@@ -10,7 +10,9 @@ use group::ff::{Field, FromUniformBytes, PrimeField};
 
 use crate::arithmetic::CurveAffine;
 use crate::helpers::{
-    one_polynomial_slice_byte_length, polynomial_slice_byte_length, read_polynomial, read_polynomial_vec, write_polynomial, write_polynomial_slice, SerdeCurveAffine, SerdePrimeField
+    one_polynomial_slice_byte_length, polynomial_slice_byte_length, read_polynomial,
+    read_polynomial_vec, write_polynomial, write_polynomial_slice, SerdeCurveAffine,
+    SerdePrimeField,
 };
 use crate::poly::{
     Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
@@ -432,8 +434,8 @@ where
         let fixed_values = read_polynomial_vec(reader, format)?;
         let fixed_polys = read_polynomial_vec(reader, format)?;
         let fixed_cosets = read_polynomial_vec(reader, format)?;
-        let omega_powers= read_polynomial(reader, format)?;
-        let extended_omega_powers= read_polynomial(reader, format)?;
+        let omega_powers = read_polynomial(reader, format)?;
+        let extended_omega_powers = read_polynomial(reader, format)?;
         let permutation = permutation::ProvingKey::read(reader, format)?;
         let ev = Evaluator::new(vk.cs());
         Ok(Self {

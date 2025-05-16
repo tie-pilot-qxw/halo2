@@ -13,7 +13,7 @@ use halo2_proofs::poly::kzg::{
     strategy::SingleStrategy,
 };
 
-use zkpoly_memory_pool::PinnedMemoryPool;
+use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::transcript::{self, TranscriptWriterBuffer};
 
 use ff::PrimeField;
@@ -120,7 +120,7 @@ fn main() {
         type E = transcript::Challenge255<G1Affine>;
         type Tr = transcript::Blake2bWrite<Vec<u8>, G1Affine, E>;
 
-        let mut allocator = PinnedMemoryPool::new(30, std::mem::size_of::<u32>());
+        let mut allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
 
         let mut trace = Trace::default();
 
@@ -175,7 +175,7 @@ fn main() {
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo {
             gpu_memory_limit: 2 * 2u64.pow(30),
-            gpu_smithereen_space: 2u64.pow(28)
+            gpu_smithereen_space: 2u64.pow(28),
         };
 
         println!("[Test] Begin Compiling to Runtime Instructions");
@@ -192,7 +192,7 @@ fn main() {
             vec![zkpoly_cuda_api::mem::CudaAllocator::new(
                 0,
                 hd_info.gpu_memory_limit as usize,
-                true
+                true,
             )],
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
         );

@@ -627,7 +627,7 @@ impl<Rt: RuntimeType> PermutedPlookupArgument<Rt> {
     fn validate(
         &self,
         ans: &lookup::prover::Permuted<Rt::PointAffine>,
-        allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+        allocator: &mut zkpoly_memory_pool::CpuMemoryPool,
     ) -> Self {
         let ci_values_ans =
             ast::PolyLagrange::constant(&ans.compressed_input_expression.values, allocator);
@@ -952,7 +952,7 @@ fn construct_vanishing<Rt: RuntimeType>(
     vanishing_divisor: &ast::PolyLagrange<Rt>,
     extended_truncted_n: u64,
     n: u64,
-    allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    allocator: &mut zkpoly_memory_pool::CpuMemoryPool,
     trace: Option<&Trace<Rt::PointAffine>>,
 ) -> Vec<ast::PolyCoef<Rt>> {
     let vanishing = h.clone().distribute_powers(vanishing_divisor);
@@ -1310,7 +1310,7 @@ fn shplonk_commit<Rt: RuntimeType>(
     coef_points: &ast::PrecomputedPoints<Rt>,
     evaluate_vanishing_polynomail_f: user_functions::EvaluateVanishingPolynomailF<Rt>,
     n: u64,
-    allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    allocator: &mut zkpoly_memory_pool::CpuMemoryPool,
     trace: Option<&Trace<Rt::PointAffine>>,
 ) {
     let y = transcript.squeeze_challenge_scalar();
@@ -1640,7 +1640,7 @@ pub fn create_proof<
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
     instance_lengths: &[usize],
-    allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    allocator: &mut zkpoly_memory_pool::CpuMemoryPool,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
@@ -1669,7 +1669,7 @@ pub fn create_proof_validated<
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
     instance_lengths: &[usize],
-    allocator: &mut zkpoly_memory_pool::PinnedMemoryPool,
+    allocator: &mut zkpoly_memory_pool::CpuMemoryPool,
     trace: Option<&Trace<Scheme::Curve>>,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
