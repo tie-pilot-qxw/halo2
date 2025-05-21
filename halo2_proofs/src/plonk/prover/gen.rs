@@ -846,7 +846,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
             h,
         );
 
-        for (i, ppp) in permutation_ppps.iter().skip(1).enumerate() {
+        for (i, ppp) in permutation_ppps.iter().enumerate().skip(1) {
             add_constraint(
                 (ppp.clone() - permutation_ppps[i - 1].rotate(rot_scale * last_rotation))
                     * l0.clone(),
