@@ -751,7 +751,7 @@ pub trait FloorPlanner {
 /// [`ConstraintSystem`] implementation.
 pub trait Circuit<F: Field> {
     /// This is a configuration object that stores things like columns.
-    type Config: Clone;
+    type Config: Clone + Send + Sync;
     /// The floor planner used for this circuit. This is an associated type of the
     /// `Circuit` trait because its behaviour is circuit-critical.
     type FloorPlanner: FloorPlanner;

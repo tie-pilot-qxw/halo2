@@ -360,7 +360,7 @@ impl<F: Field> NumericInstructions<F> for AddChip<F> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MulCircuit<F: Field> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
@@ -413,7 +413,7 @@ impl<F: Field> Circuit<F> for MulCircuit<F> {
 }
 // ANCHOR_END: circuit
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct AddCircuit<F: Field> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
@@ -468,7 +468,7 @@ impl<F: Field> Circuit<F> for AddCircuit<F> {
 
 fn test_prover<C: CurveAffine>(
     k: u32,
-    circuit: impl Circuit<C::Scalar>,
+    circuit: impl Circuit<C::Scalar> + Clone + Send + Sync + 'static,
     expected: bool,
     instances: Vec<C::Scalar>,
 ) -> Vec<u8>
@@ -489,6 +489,7 @@ where
             &[&[&instances]],
             OsRng,
             &mut transcript,
+            &mut None,
         )
         .expect("proof generation should not fail");
 

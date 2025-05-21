@@ -27,7 +27,7 @@ pub trait CommitmentScheme {
         'params,
         Self::Curve,
         ParamsVerifier = Self::ParamsVerifier,
-    >;
+    > + Send + Sync;
 
     /// Constant verifier parameters
     type ParamsVerifier: for<'params> ParamsVerifier<'params, Self::Curve>;

@@ -456,11 +456,11 @@ fn plonk_api() {
 
     fn create_proof<
         'params,
-        Scheme: CommitmentScheme,
+        Scheme: CommitmentScheme + 'static,
         P: Prover<'params, Scheme>,
-        E: EncodedChallenge<Scheme::Curve>,
+        E: EncodedChallenge<Scheme::Curve> + 'static,
         R: RngCore,
-        T: TranscriptWriterBuffer<Vec<u8>, Scheme::Curve, E> + std::fmt::Debug,
+        T: TranscriptWriterBuffer<Vec<u8>, Scheme::Curve, E> + std::fmt::Debug + 'static,
     >(
         rng: R,
         params: &'params Scheme::ParamsProver,
@@ -485,6 +485,7 @@ fn plonk_api() {
             &[&[&[instance]], &[&[instance]]],
             rng,
             &mut transcript,
+            &mut None
         )
         .expect("proof generation should not fail");
 

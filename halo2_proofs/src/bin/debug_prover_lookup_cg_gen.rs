@@ -117,13 +117,6 @@ fn main() {
             _marker: PhantomData,
         };
 
-        type E = transcript::Challenge255<G1Affine>;
-        type Tr = transcript::Blake2bWrite<Vec<u8>, G1Affine, E>;
-
-        let mut allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
-
-        let mut trace = Trace::default();
-
         println!("[Test] Begin Running Original Prover for Trace");
         use halo2_proofs::transcript::TranscriptWriterBuffer;
         let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
@@ -131,7 +124,34 @@ fn main() {
             _,
             halo2_proofs::transcript::Challenge255<G1Affine>,
         >::init(vec![]);
-        halo2_proofs::plonk::create_proof_traced::<
+
+        use zkpoly_compiler::driver;
+
+        let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
+            .with_log(true)
+            .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
+        let hd_info = driver::HardwareInfo {
+            gpu_memory_limit: 2 * 2u64.pow(30),
+            gpu_smithereen_space: 2u64.pow(28),
+        };
+
+        let allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
+        let artifect_dir = "target/artifect";
+
+        let env_info = JitProverEnv::new(
+            Some(allocator),
+            true,
+            options,
+            hd_info,
+            artifect_dir.to_string(),
+            true,
+            "/tmp".to_string(),
+            false,
+            true,
+            zkpoly_runtime::runtime::RuntimeDebug::None,
+        );
+
+        halo2_proofs::plonk::create_proof::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
             _,
@@ -145,63 +165,10 @@ fn main() {
             &[&[]],
             rng,
             &mut transcript,
-            Some(&mut trace),
-        )
-        .expect("proof generation should not fail");
-        transcript.finalize();
-        println!("[Test] End Running Original Prover for Trace");
+            &mut Some(env_info),
+        ).expect("proof generation should not fail");
 
-        println!("[Test] Begin Computation Graph Generation");
-        let (cg_ret, cg_inputs_shape) = prover_gen::create_proof_validated::<
-            KZGCommitmentScheme<Bn256>,
-            ProverSHPLONK<Bn256>,
-            E,
-            Tr,
-            _,
-        >(
-            params,
-            pk,
-            vec![circuit],
-            &vec![],
-            &mut allocator,
-            Some(&trace),
-        );
-        println!("[Test] End Computation Graph Generation");
-
-        use zkpoly_compiler::driver;
-
-        let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
-            .with_log(true)
-            .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
-        let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 2 * 2u64.pow(30),
-            gpu_smithereen_space: 2u64.pow(28),
-        };
-
-        println!("[Test] Begin Compiling to Runtime Instructions");
-        let pjh = driver::PanicJoinHandler::new();
-        let artifect = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh)
-            .unwrap()
-            .to_artifect(&options, &hd_info, &pjh)
-            .unwrap();
-        println!("[Test] End Compiling to Runtime Instructions");
-
-        let mut inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
-
-        let mut runtime = artifect.prepare_dispatcher(
-            vec![zkpoly_cuda_api::mem::CudaAllocator::new(
-                0,
-                hd_info.gpu_memory_limit as usize,
-                true,
-            )],
-            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
-        );
-
-        println!("[Test] Launch VM");
-        let (r, _) = runtime.run(&mut inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
-        println!("[Test] VM Exited");
-
-        let proof = r.unwrap().unwrap_transcript_move().take().finalize();
+        let proof = transcript.finalize();
 
         println!("[Test] Begin Verify Proof");
         let strategy = SingleStrategy::new(params);

@@ -1673,7 +1673,7 @@ pub fn create_proof_validated<
     trace: Option<&Trace<Scheme::Curve>>,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
-    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     ConcreteCircuit::Config: 'static + Send + Sync,
 {
     let domain = &pk.vk.domain;

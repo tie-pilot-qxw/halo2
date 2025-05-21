@@ -290,6 +290,7 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
             &[&[]],
             OsRng,
             &mut transcript,
+            &mut None,
         )
         .expect("proof generation should not fail");
 

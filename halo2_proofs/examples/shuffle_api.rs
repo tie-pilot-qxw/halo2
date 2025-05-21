@@ -80,7 +80,7 @@ impl<F: Field> ShuffleChip<F> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 struct MyCircuit<F: Field> {
     input_0: Vec<Value<F>>,
     input_1: Vec<F>,
@@ -166,6 +166,7 @@ where
             &[&[]],
             OsRng,
             &mut transcript,
+            &mut None,
         )
         .expect("proof generation should not fail");
 
