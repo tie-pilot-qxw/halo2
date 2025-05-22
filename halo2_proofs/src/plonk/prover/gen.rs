@@ -1624,7 +1624,7 @@ pub struct InputsShape {
     n_circuits: usize,
     n_columns: usize,
     n: u64,
-    instance_lengths: Vec<usize>,
+    instance_lengths: Vec<Vec<usize>>,
 }
 
 /// The generator for [`super::create_proof`].
@@ -1639,7 +1639,7 @@ pub fn create_proof<
     params: &Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
-    instance_lengths: &[usize],
+    instance_lengths: &[Vec<usize>],
     allocator: &mut zkpoly_memory_pool::CpuMemoryPool,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
@@ -1668,7 +1668,7 @@ pub fn create_proof_validated<
     params: &Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
-    instance_lengths: &[usize],
+    instance_lengths: &[Vec<usize>],
     allocator: &mut zkpoly_memory_pool::CpuMemoryPool,
     trace: Option<&Trace<Scheme::Curve>>,
 ) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
@@ -1736,8 +1736,8 @@ where
 
     let instances: Vec<Vec<ast::PolyLagrange<RtInstance<Scheme, E, T>>>> = (0..circuits.len())
         .map(|i| {
-            (0..pk.vk.cs.num_instance_columns)
-                .zip(instance_lengths.iter())
+            assert!(pk.vk.cs.num_instance_columns == instance_lengths[i].len());
+            (instance_lengths[i].iter().enumerate())
                 .map(|(j, len)| {
                     entry_definer.define(
                         format!("instance_{}_{}", i, j),
@@ -1775,10 +1775,11 @@ where
 
     let instances: Vec<Vec<_>> = instances
         .into_iter()
-        .map(|instances| {
+        .zip(instance_lengths.iter())
+        .map(|(instances, lengths)| {
             instances
                 .into_iter()
-                .zip(instance_lengths.iter())
+                .zip(lengths.iter())
                 .map(|(instance, len)| {
                     transcript.hash_lagrange(&instance, HashTyp::NoWriteProof);
                     if *len as u64 == params.n() {
@@ -2528,10 +2529,10 @@ impl InputsShape {
         transcript: Rt::Trans,
     ) -> rt::args::EntryTable<Rt> {
         assert!(instances.len() == self.n_circuits);
-        instances.iter().for_each(|ins| {
-            assert!(ins.len() == self.n_columns);
+        instances.iter().zip(self.instance_lengths.iter()).for_each(|(ins, lengths)| {
+            assert!(ins.len() == self.n_columns && self.n_columns == lengths.len());
             ins.iter()
-                .zip(self.instance_lengths.iter())
+                .zip(lengths.iter())
                 .for_each(|(c, len)| assert!(c.len() == *len))
         });
 

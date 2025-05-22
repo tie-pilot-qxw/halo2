@@ -361,7 +361,7 @@ fn main() {
                 E,
                 Tr,
                 _,
-            >(params, pk, vec![circuit], &vec![], &mut allocator, None);
+            >(params, pk, vec![circuit], &vec![vec![]], &mut allocator, None);
         println!("[Test] End Computation Graph Generation");
 
         use zkpoly_compiler::driver;

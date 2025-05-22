@@ -2,13 +2,13 @@ use ark_std::{end_timer, start_timer};
 use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
 use rand_core::{OsRng, RngCore};
-use zkpoly_runtime::runtime::RuntimeDebug;
 use std::collections::{BTreeSet, HashSet};
 use std::ops::{Deref, DerefMut, RangeTo};
 use std::{collections::HashMap, iter};
 use zkpoly_compiler::driver::DebugOptions;
 use zkpoly_compiler::driver::HardwareInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
+use zkpoly_runtime::runtime::RuntimeDebug;
 
 use super::{
     circuit::{
@@ -119,19 +119,17 @@ where
             println!("extended k = {}", pk.get_vk().get_domain().extended_k());
 
             let trace_start = start_timer!(|| "[Test] Begin Running Original Prover for Trace");
-            let _proof = {
-                let mut transcript = transcript.clone();
-                create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
-                    params,
-                    pk,
-                    circuits,
-                    instances,
-                    rng,
-                    &mut transcript,
-                    Some(&mut trace),
-                )
-                .expect("proof generation should not fail");
-            };
+            let mut transcript = transcript.clone();
+            create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
+                params,
+                pk,
+                circuits,
+                instances,
+                rng,
+                &mut transcript,
+                Some(&mut trace),
+            )
+            .expect("proof generation should not fail");
             end_timer!(trace_start);
             Some(&trace)
         } else {
@@ -142,11 +140,10 @@ where
 
         let hd_info = env.hd_info.clone();
 
-        // let instance_refs = instances.iter().map(|v| &v[..]).collect::<Vec<&[_]>>();
         let instance_lengths = instances
             .iter()
-            .map(|ins| ins.len())
-            .collect::<Vec<usize>>();
+            .map(|ins| ins.iter().map(|p| p.len()).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
 
         let (mut artifect, cg_inputs_shape) = std::thread::scope(|s| {
             let handler =
@@ -171,8 +168,13 @@ where
                         let artifect_dir = env.artifect_dir.clone();
                         let processed_type2_dir = env.processed_type2_dir.clone();
                         let pjh = driver::PanicJoinHandler::new();
-                        let fresh_type2 =
-                            driver::FreshType2::from_ast(cg_ret, &options, env.allocator.take().unwrap(), &pjh).unwrap();
+                        let fresh_type2 = driver::FreshType2::from_ast(
+                            cg_ret,
+                            &options,
+                            env.allocator.take().unwrap(),
+                            &pjh,
+                        )
+                        .unwrap();
                         let mut str_buf = String::new();
 
                         let artifect = if env.rebuild
@@ -219,9 +221,11 @@ where
         let instances = instances
             .iter()
             .map(|ins| {
-                ins.iter().map(|ins| {
-                    zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, artifect.allocator())
-                }).collect::<Vec<_>>()
+                ins.iter()
+                    .map(|ins| {
+                        zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, artifect.allocator())
+                    })
+                    .collect::<Vec<_>>()
             })
             .collect();
         let mut inputs = cg_inputs_shape.serialize(instances, transcript.clone());
@@ -236,10 +240,7 @@ where
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
-        let (r, _) = runtime.run(
-            &mut inputs,
-            env.runtime_debug,
-        );
+        let (r, _) = runtime.run(&mut inputs, env.runtime_debug);
         end_timer!(dispatcher_start);
 
         let proof = r.unwrap().unwrap_transcript_move().take();
