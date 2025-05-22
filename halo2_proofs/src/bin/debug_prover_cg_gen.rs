@@ -396,7 +396,7 @@ fn main() {
                 hd_info.gpu_memory_limit as usize,
                 true, // check overlap
             )],
-            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
+            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
         );
 
         println!("[Test] Launch VM");

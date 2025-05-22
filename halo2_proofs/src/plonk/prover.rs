@@ -88,7 +88,7 @@ pub fn create_proof<
     Scheme: CommitmentScheme + 'static,
     P: Prover<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve> + 'static,
-    R: RngCore,
+    R: RngCore + Send + 'static,
     T: TranscriptWrite<Scheme::Curve, E> + std::fmt::Debug + 'static,
     ConcreteCircuit: Circuit<Scheme::Scalar> + Clone + Send + Sync + 'static,
 >(
@@ -120,12 +120,12 @@ where
 
             let trace_start = start_timer!(|| "[Test] Begin Running Original Prover for Trace");
             let mut transcript = transcript.clone();
-            create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
+            create_proof_traced::<Scheme, P, E, _, T, ConcreteCircuit>(
                 params,
                 pk,
                 circuits,
                 instances,
-                rng,
+                OsRng::default(), // traced prover does not use rng, this is just a placeholder
                 &mut transcript,
                 Some(&mut trace),
             )
@@ -236,7 +236,7 @@ where
                 hd_info.gpu_memory_limit as usize,
                 env.gpu_memory_check,
             )],
-            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20)),
+            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
