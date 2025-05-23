@@ -19,13 +19,6 @@ enum PolyOrScalar<Rt: RuntimeType> {
 }
 
 impl<Rt: RuntimeType> PolyOrScalar<Rt> {
-    pub fn unwrap_poly(&self) -> ast::PolyLagrange<Rt> {
-        match self {
-            PolyOrScalar::Poly(poly) => poly.clone(),
-            _ => panic!("called unwrap_poly on a scalar"),
-        }
-    }
-
     pub fn to_poly(&self, deg: u64) -> ast::PolyLagrange<Rt> {
         match self {
             PolyOrScalar::Poly(poly) => poly.clone(),
@@ -663,12 +656,12 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     let inputs_evaluated = pa
         .input_expressions
         .iter()
-        .map(|expr| evaluate_expression::<_, false>(expr, table, challenges, 1).unwrap_poly())
+        .map(|expr| evaluate_expression::<_, false>(expr, table, challenges, 1).to_poly(n))
         .collect::<Vec<_>>();
     let tables_evaluated = pa
         .table_expressions
         .iter()
-        .map(|expr| evaluate_expression::<_, false>(expr, table, challenges, 1).unwrap_poly())
+        .map(|expr| evaluate_expression::<_, false>(expr, table, challenges, 1).to_poly(n))
         .collect::<Vec<_>>();
     let ci_values = compress_expressions(inputs_evaluated.iter().cloned(), theta, n);
     let ct_values = compress_expressions(tables_evaluated.iter().cloned(), theta, n);
@@ -899,14 +892,14 @@ fn construct_primary_constraint<Rt: RuntimeType>(
             .input_expressions
             .iter()
             .map(|expr| {
-                evaluate_expression::<_, true>(expr, table, challenges, rot_scale).unwrap_poly()
+                evaluate_expression::<_, true>(expr, table, challenges, rot_scale).to_poly(extended_n)
             })
             .collect::<Vec<_>>();
         let tables_evaluated = pa
             .table_expressions
             .iter()
             .map(|expr| {
-                evaluate_expression::<_, true>(expr, table, challenges, rot_scale).unwrap_poly()
+                evaluate_expression::<_, true>(expr, table, challenges, rot_scale).to_poly(extended_n)
             })
             .collect::<Vec<_>>();
         let ci_ext = compress_expressions(inputs_evaluated.iter().cloned(), theta, extended_n);
