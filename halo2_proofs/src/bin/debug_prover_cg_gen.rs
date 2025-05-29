@@ -13,9 +13,9 @@ use halo2_proofs::poly::kzg::{
     strategy::SingleStrategy,
 };
 
+use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::runtime::Runtime;
-use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
 
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -318,7 +318,7 @@ fn main() {
         type E = transcript::Challenge255<G1Affine>;
         type Tr = transcript::Blake2bWrite<Vec<u8>, G1Affine, E>;
 
-        let mut allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());//.use_mmap();
+        let mut allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>()); //.use_mmap();
 
         // let mut trace = Trace::default();
 
@@ -354,14 +354,20 @@ fn main() {
         }
 
         println!("[Test] Begin Computation Graph Generation");
-        let (cg_ret, cg_inputs_shape) =
-            prover_gen::create_proof_validated::<
-                KZGCommitmentScheme<Bn256>,
-                ProverSHPLONK<Bn256>,
-                E,
-                Tr,
-                _,
-            >(params, pk, vec![circuit], &vec![vec![]], &mut allocator, None);
+        let (cg_ret, cg_inputs_shape) = prover_gen::create_proof_validated::<
+            KZGCommitmentScheme<Bn256>,
+            ProverSHPLONK<Bn256>,
+            E,
+            Tr,
+            _,
+        >(
+            params,
+            pk,
+            vec![circuit],
+            &vec![vec![]],
+            &mut allocator,
+            None,
+        );
         println!("[Test] End Computation Graph Generation");
 
         use zkpoly_compiler::driver;
@@ -369,10 +375,8 @@ fn main() {
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
-        let hd_info = driver::HardwareInfo {
-            gpu_memory_limit: 4 * 2u64.pow(30),
-            gpu_smithereen_space: 2u64.pow(28),
-        };
+        let hd_info = driver::HardwareInfo::new()
+            .with_gpu(driver::GpuInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
 
         let artifect_dir = "target/artifect";
 
@@ -391,11 +395,12 @@ fn main() {
         println!("[Test] End Compiling to Runtime Instructions");
 
         let mut runtime = artifect.prepare_dispatcher(
-            vec![zkpoly_cuda_api::mem::CudaAllocator::new(
-                0,
-                hd_info.gpu_memory_limit as usize,
-                true, // check overlap
-            )],
+            hd_info
+                .gpus()
+                .map(|gpu| {
+                    zkpoly_cuda_api::mem::CudaAllocator::new(0, gpu.memory_limit() as usize, true)
+                })
+                .collect(),
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
         );
 

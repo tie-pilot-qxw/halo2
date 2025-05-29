@@ -200,7 +200,7 @@ where
                                 .unwrap()
                                 .apply_passes(&options)
                                 .unwrap()
-                                .to_artifect(&options, &pjh)
+                                .to_artifect(&options, &hd_info, &pjh)
                                 .unwrap();
 
                             artifect.dump(&artifect_dir).unwrap();
@@ -231,11 +231,16 @@ where
         let mut inputs = cg_inputs_shape.serialize(instances, transcript.clone());
 
         let mut runtime = artifect.prepare_dispatcher(
-            vec![zkpoly_cuda_api::mem::CudaAllocator::new(
-                0,
-                hd_info.gpu_memory_limit as usize,
-                env.gpu_memory_check,
-            )],
+            hd_info
+                .gpus()
+                .map(|gpu| {
+                    zkpoly_cuda_api::mem::CudaAllocator::new(
+                        0,
+                        gpu.memory_limit() as usize,
+                        env.gpu_memory_check,
+                    )
+                })
+                .collect(),
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
         );
 
