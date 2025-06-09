@@ -15,7 +15,6 @@ use halo2_proofs::poly::kzg::{
 
 use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
 use zkpoly_memory_pool::CpuMemoryPool;
-use zkpoly_runtime::runtime::Runtime;
 
 use std::marker::PhantomData;
 use std::path::PathBuf;

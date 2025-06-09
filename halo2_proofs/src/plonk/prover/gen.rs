@@ -1,5 +1,5 @@
 //! Generator for [`create_proof`]
-use crate::plonk::{evaluation::EvaluationData, ColumnType, Expression};
+use crate::plonk::Expression;
 use crate::poly::commitment::ParamsProver;
 use crate::tracing::Trace;
 
@@ -8,7 +8,7 @@ use ff::PrimeField;
 use std::collections::BTreeMap;
 use std::{any, marker::PhantomData};
 use zkpoly_compiler::{
-    ast::{self, PolyLagrange, Printable},
+    ast::{self},
     transit::{type2, HashTyp},
 };
 use zkpoly_runtime::{self as rt, args::RuntimeType};
@@ -152,17 +152,11 @@ mod user_functions {
     where
         ConcreteCircuit::Config: 'static + Send + Sync,
     {
-        #[derive(Clone)]
-        struct AdviceSingle<C: CurveAffine, B: Basis> {
-            pub advice_polys: Vec<Polynomial<C::Scalar, B>>,
-            pub advice_blinds: Vec<Blind<C::Scalar>>,
-        }
-
         struct WitnessCollection<'a, F: Field> {
             k: u32,
             current_phase: sealed::Phase,
             advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-            unblinded_advice: HashSet<usize>,
+            _unblinded_advice: HashSet<usize>,
             challenges: &'a HashMap<usize, F>,
             instances: Vec<&'a rt::scalar::ScalarArray<F>>,
             usable_rows: RangeTo<usize>,
@@ -320,7 +314,7 @@ mod user_functions {
                 k,
                 current_phase,
                 advice: vec![Polynomial::empty_lagrange_assigned(n as usize); num_advice_columns],
-                unblinded_advice: HashSet::from_iter(unblinded_advice_columns.iter().copied()),
+                _unblinded_advice: HashSet::from_iter(unblinded_advice_columns.iter().copied()),
                 instances,
                 challenges,
                 // The prover will not be allowed to assign values to advice
@@ -493,17 +487,17 @@ mod user_functions {
         )
     }
 
-    pub type PermuteExpressionPairF<Rt: RuntimeType> = uf::FunctionFn2<
+    pub type _PermuteExpressionPairF<Rt: RuntimeType> = uf::FunctionFn2<
         Rt,
         ast::PolyLagrange<Rt>,
         ast::PolyLagrange<Rt>,
         ast::Tuple2<ast::PolyLagrange<Rt>, ast::PolyLagrange<Rt>, Rt>,
     >;
 
-    pub fn permute_expression_pair<'params, Rt: RuntimeType>(
+    pub fn _permute_expression_pair<'params, Rt: RuntimeType>(
         blinding_factors: usize,
         n: u64,
-    ) -> PermuteExpressionPairF<Rt>
+    ) -> _PermuteExpressionPairF<Rt>
     where
         Rt::Field: Ord,
     {
@@ -892,14 +886,16 @@ fn construct_primary_constraint<Rt: RuntimeType>(
             .input_expressions
             .iter()
             .map(|expr| {
-                evaluate_expression::<_, true>(expr, table, challenges, rot_scale).to_poly(extended_n)
+                evaluate_expression::<_, true>(expr, table, challenges, rot_scale)
+                    .to_poly(extended_n)
             })
             .collect::<Vec<_>>();
         let tables_evaluated = pa
             .table_expressions
             .iter()
             .map(|expr| {
-                evaluate_expression::<_, true>(expr, table, challenges, rot_scale).to_poly(extended_n)
+                evaluate_expression::<_, true>(expr, table, challenges, rot_scale)
+                    .to_poly(extended_n)
             })
             .collect::<Vec<_>>();
         let ci_ext = compress_expressions(inputs_evaluated.iter().cloned(), theta, extended_n);
@@ -1126,7 +1122,6 @@ fn kzg_commit_coef_validated<Rt: RuntimeType>(
 
 struct Table<Rt: RuntimeType> {
     instance_values: Vec<ast::PolyLagrange<Rt>>,
-    instance_coefs: Vec<ast::PolyCoef<Rt>>,
     instance_exts: Vec<ast::PolyLagrange<Rt>>,
     advice_values: Vec<ast::PolyLagrange<Rt>>,
     advice_coefs: Vec<ast::PolyCoef<Rt>>,
@@ -1494,8 +1489,7 @@ fn shplonk_commit<Rt: RuntimeType>(
                 .commitments
                 .iter()
                 .zip(r_evaluations.into_iter())
-                .enumerate()
-                .map(|(j, (f, ru))| f.clone() - ru)
+                .map(|(f, ru)| f.clone() - ru)
                 .collect();
 
             let numerators = trace.as_ref().map_or_else(
@@ -1616,7 +1610,6 @@ where
 pub struct InputsShape {
     n_circuits: usize,
     n_columns: usize,
-    n: u64,
     instance_lengths: Vec<Vec<usize>>,
 }
 
@@ -1723,7 +1716,6 @@ where
     let inputs_shape = InputsShape {
         n_circuits: circuits.len(),
         n_columns: pk.vk.cs.num_instance_columns,
-        n: params.n(),
         instance_lengths: instance_lengths.to_vec(),
     };
 
@@ -1792,8 +1784,7 @@ where
 
     let circuits = circuits
         .into_iter()
-        .enumerate()
-        .map(|(i, circuit)| ast::Whatever::constant(circuit, "circuit".to_string()))
+        .map(|circuit| ast::Whatever::constant(circuit, "circuit".to_string()))
         .collect::<Vec<_>>();
 
     let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
@@ -2027,7 +2018,6 @@ where
 
             Table {
                 instance_values: instance,
-                instance_coefs,
                 instance_exts,
                 advice_values: advice,
                 advice_coefs,
@@ -2522,12 +2512,15 @@ impl InputsShape {
         transcript: Rt::Trans,
     ) -> rt::args::EntryTable<Rt> {
         assert!(instances.len() == self.n_circuits);
-        instances.iter().zip(self.instance_lengths.iter()).for_each(|(ins, lengths)| {
-            assert!(ins.len() == self.n_columns && self.n_columns == lengths.len());
-            ins.iter()
-                .zip(lengths.iter())
-                .for_each(|(c, len)| assert!(c.len() == *len))
-        });
+        instances
+            .iter()
+            .zip(self.instance_lengths.iter())
+            .for_each(|(ins, lengths)| {
+                assert!(ins.len() == self.n_columns && self.n_columns == lengths.len());
+                ins.iter()
+                    .zip(lengths.iter())
+                    .for_each(|(c, len)| assert!(c.len() == *len))
+            });
 
         let mut entry_table = rt::args::EntryTable::new();
 

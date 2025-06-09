@@ -14,7 +14,6 @@ use halo2_proofs::poly::kzg::{
 };
 
 use zkpoly_memory_pool::CpuMemoryPool;
-use zkpoly_runtime::transcript::{self, TranscriptWriterBuffer};
 
 use ff::PrimeField;
 use std::marker::PhantomData;
@@ -110,7 +109,7 @@ fn main() {
         (params, pk)
     }
 
-    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
+    fn prover(_k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
         let rng = OsRng;
 
         let circuit: MyCircuit<Fr> = MyCircuit {
