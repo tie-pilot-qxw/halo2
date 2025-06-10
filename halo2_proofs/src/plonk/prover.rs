@@ -242,6 +242,7 @@ where
                 })
                 .collect(),
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
+            0
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");

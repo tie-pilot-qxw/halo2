@@ -401,6 +401,7 @@ fn main() {
                 })
                 .collect(),
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
+            0
         );
 
         println!("[Test] Launch VM");
