@@ -383,10 +383,10 @@ fn main() {
         let pjh = driver::PanicJoinHandler::new();
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh).unwrap();
 
-        let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
-            let artifect = type2_fresh.to_artifect(&options, &hd_info, &pjh).unwrap();
+        let (artifect, cpu_pool) = if rebuild || !std::path::Path::new(artifect_dir).exists() {
+            let (artifect, cpu_pool) = type2_fresh.to_artifect(&options, &hd_info, &pjh).unwrap();
             artifect.dump(&artifect_dir).unwrap();
-            artifect
+            (artifect, cpu_pool)
         } else {
             type2_fresh.load_artifect(&artifect_dir).unwrap()
         };
@@ -394,6 +394,7 @@ fn main() {
         println!("[Test] End Compiling to Runtime Instructions");
 
         let mut runtime = artifect.prepare_dispatcher(
+            cpu_pool,
             hd_info
                 .gpus()
                 .map(|gpu| {

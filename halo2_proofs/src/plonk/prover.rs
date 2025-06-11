@@ -145,7 +145,7 @@ where
             .map(|ins| ins.iter().map(|p| p.len()).collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let (mut artifect, cg_inputs_shape) = std::thread::scope(|s| {
+        let ((artifect, mut const_pool), cg_inputs_shape) = std::thread::scope(|s| {
             let handler =
                 std::thread::Builder::new()
                     .stack_size(64 * 1024 * 1024)
@@ -195,7 +195,7 @@ where
                                 pt2
                             };
 
-                            let artifect = processed_type2
+                            let (artifect, const_pool) = processed_type2
                                 .to_type3(&options, &hd_info, &pjh)
                                 .unwrap()
                                 .apply_passes(&options)
@@ -204,7 +204,7 @@ where
                                 .unwrap();
 
                             artifect.dump(&artifect_dir).unwrap();
-                            artifect
+                            (artifect, const_pool)
                         } else {
                             fresh_type2.load_artifect(&artifect_dir).unwrap()
                         };
@@ -223,7 +223,7 @@ where
             .map(|ins| {
                 ins.iter()
                     .map(|ins| {
-                        zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, artifect.allocator())
+                        zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, &mut const_pool)
                     })
                     .collect::<Vec<_>>()
             })
@@ -231,6 +231,7 @@ where
         let mut inputs = cg_inputs_shape.serialize(instances, transcript.clone());
 
         let mut runtime = artifect.prepare_dispatcher(
+            const_pool, // currently, we use the same cpu memory pool
             hd_info
                 .gpus()
                 .map(|gpu| {
