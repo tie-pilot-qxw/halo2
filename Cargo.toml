@@ -4,5 +4,6 @@ members = [
     "halo2",
     "halo2_proofs",
     "zkpoly-compiler/compiler",
-    "zkpoly-compiler/runtime"
+    "zkpoly-compiler/runtime",
+    "zkpoly-compiler/scheduler",
 ]

@@ -15,6 +15,7 @@ use halo2_proofs::poly::kzg::{
 
 use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
 use zkpoly_memory_pool::CpuMemoryPool;
+use zkpoly_scheduler::scheduler::Scheduler;
 
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -391,27 +392,42 @@ fn main() {
             type2_fresh.load_artifect(&artifect_dir).unwrap()
         };
 
-        println!("[Test] End Compiling to Runtime Instructions");
+        let scheduler = Scheduler::new(1, 2);
 
-        let mut runtime = artifect.prepare_dispatcher(
-            cpu_pool,
-            hd_info
-                .gpus()
-                .map(|gpu| {
-                    zkpoly_cuda_api::mem::CudaAllocator::new(0, gpu.memory_limit() as usize, true)
-                })
-                .collect(),
-            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
-            0
-        );
+        // println!("[Test] End Compiling to Runtime Instructions");
+
+        // let mut runtime = artifect.prepare_dispatcher(
+        //     cpu_pool,
+        //     hd_info
+        //         .gpus()
+        //         .map(|gpu| {
+        //             zkpoly_cuda_api::mem::CudaAllocator::new(0, gpu.memory_limit() as usize, true)
+        //         })
+        //         .collect(),
+        //     zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
+        //     0
+        // );
 
         println!("[Test] Launch VM");
-        for i in 0..10 {
-            let mut inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
-            println!("[Test] Proof Round {}", i);
-            let (r, _) = runtime.run(&mut inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
+
+        let results = (0..10).into_iter().map(|_| {
+            let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
+            let (_, res) = scheduler.add_request(
+                artifect.clone(),
+                hd_info.clone(),
+                zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
+                inputs,
+                zkpoly_runtime::runtime::RuntimeDebug::None,
+            );
+            res
+        }).collect::<Vec<_>>();
+        println!("[Test] VM Launched");
+
+        for (i, res) in results.into_iter().enumerate() {
+            println!("[Test] Waiting for result {}", i);
+            let (r, _) = res.recv().unwrap();
             let proof = r.unwrap().unwrap_transcript_move().take().finalize();
-            println!("[Test] Begin Verify Proof");
+            println!("[Test] Begin Verify Proof {}", i);
             let strategy = SingleStrategy::new(params);
             use halo2_proofs::transcript::TranscriptReadBuffer;
             let mut transcript = halo2_proofs::transcript::Blake2bRead::<
@@ -431,8 +447,41 @@ fn main() {
                 Ok(_) => println!("[Test] Verify Proof Success"),
                 Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
             }
-            runtime.reset();
         }
+        // for i in 0..1 {
+
+        //     let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
+
+        //     println!("[Test] Proof Round {}", i);
+        //     let (_, res) = scheduler.add_request(artifect.clone(), hd_info.clone(), zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()), 
+        //     inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
+
+        //     let (r, _) = res.recv().unwrap();
+
+        //     // let (r, _) = runtime.run(&mut inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
+        //     let proof = r.unwrap().unwrap_transcript_move().take().finalize();
+        //     println!("[Test] Begin Verify Proof");
+        //     let strategy = SingleStrategy::new(params);
+        //     use halo2_proofs::transcript::TranscriptReadBuffer;
+        //     let mut transcript = halo2_proofs::transcript::Blake2bRead::<
+        //         _,
+        //         _,
+        //         halo2_proofs::transcript::Challenge255<_>,
+        //     >::init(&proof[..]);
+        //     let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
+        //         params,
+        //         pk.get_vk(),
+        //         strategy,
+        //         &[&[]],
+        //         &mut transcript,
+        //     );
+
+        //     match verify_result {
+        //         Ok(_) => println!("[Test] Verify Proof Success"),
+        //         Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
+        //     }
+        //     // runtime.reset();
+        // }
         println!("[Test] VM Exited");
     }
 

@@ -4,6 +4,7 @@ use group::Curve;
 use rand_core::{OsRng, RngCore};
 use std::collections::{BTreeSet, HashSet};
 use std::ops::{Deref, DerefMut, RangeTo};
+use std::sync::Arc;
 use std::{collections::HashMap, iter};
 use zkpoly_compiler::driver::DebugOptions;
 use zkpoly_compiler::driver::HardwareInfo;
@@ -233,28 +234,28 @@ where
         let mut runtime = artifect.prepare_dispatcher(
             const_pool, // currently, we use the same cpu memory pool
             hd_info
-                .gpus()
-                .map(|gpu| {
-                    zkpoly_cuda_api::mem::CudaAllocator::new(
+                .gpus().enumerate()
+                .map(|(id, gpu)| {
+                    (id as i32, zkpoly_cuda_api::mem::CudaAllocator::new(
                         0,
                         gpu.memory_limit() as usize,
                         env.gpu_memory_check,
-                    )
+                    ))
                 })
                 .collect(),
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
-            0
+            Arc::new(|x| x)
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
-        let (r, _) = runtime.run(&mut inputs, env.runtime_debug);
+        let ((r, _), cpu_allocator) = runtime.run(&mut inputs, env.runtime_debug);
         end_timer!(dispatcher_start);
 
         let proof = r.unwrap().unwrap_transcript_move().take();
 
         *transcript = proof;
         runtime.reset();
-        env.allocator = Some(runtime.mem_allocator.take().unwrap());
+        env.allocator = Some(cpu_allocator);
         Ok(())
     }
 }

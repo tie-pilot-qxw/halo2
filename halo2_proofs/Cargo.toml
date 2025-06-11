@@ -74,6 +74,7 @@ zkpoly_compiler = { path = "../zkpoly-compiler/compiler" }
 zkpoly_runtime = { path = "../zkpoly-compiler/runtime" }
 zkpoly_memory_pool = { path = "../zkpoly-compiler/memory_pool" }
 zkpoly_cuda_api = { path = "../zkpoly-compiler/cuda_api" }
+zkpoly_scheduler = { path = "../zkpoly-compiler/scheduler" }
 
 backtrace-on-stack-overflow = "0.3.0"
 
