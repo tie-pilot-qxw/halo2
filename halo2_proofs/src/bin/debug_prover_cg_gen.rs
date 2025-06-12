@@ -14,6 +14,7 @@ use halo2_proofs::poly::kzg::{
 };
 
 use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
+use zkpoly_compiler::driver::MemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_scheduler::scheduler::Scheduler;
 
@@ -375,8 +376,8 @@ fn main() {
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
-        let hd_info = driver::HardwareInfo::new()
-            .with_gpu(driver::GpuInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
+        let hd_info = driver::HardwareInfo::new(MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
+            .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
 
         let artifect_dir = "target/artifect";
 
@@ -385,14 +386,14 @@ fn main() {
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh).unwrap();
 
         let (artifect, cpu_pool) = if rebuild || !std::path::Path::new(artifect_dir).exists() {
-            let (artifect, cpu_pool) = type2_fresh.to_artifect(&options, &hd_info, &pjh).unwrap();
+            let (artifect, cpu_pool) = type2_fresh.to_artifect(&options, &hd_info, &mut vec![], &pjh).unwrap();
             artifect.dump(&artifect_dir).unwrap();
             (artifect, cpu_pool)
         } else {
-            type2_fresh.load_artifect(&artifect_dir).unwrap()
+            type2_fresh.load_artifect(&artifect_dir, &mut vec![]).unwrap()
         };
 
-        let scheduler = Scheduler::new(1, 2);
+        let scheduler = Scheduler::new(1, 1);
 
         // println!("[Test] End Compiling to Runtime Instructions");
 
@@ -417,7 +418,7 @@ fn main() {
                 hd_info.clone(),
                 zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
                 inputs,
-                zkpoly_runtime::runtime::RuntimeDebug::None,
+                zkpoly_runtime::runtime::RuntimeDebug::DebugInstruction,
             );
             res
         }).collect::<Vec<_>>();
