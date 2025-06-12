@@ -7,6 +7,7 @@ use std::ops::{Deref, DerefMut, RangeTo};
 use std::{collections::HashMap, iter};
 use zkpoly_compiler::driver::DebugOptions;
 use zkpoly_compiler::driver::HardwareInfo;
+use zkpoly_memory_pool::static_allocator::CpuStaticAllocator;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::runtime::RuntimeDebug;
 
@@ -145,7 +146,7 @@ where
             .map(|ins| ins.iter().map(|p| p.len()).collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let (mut artifect, cg_inputs_shape) = std::thread::scope(|s| {
+        let (mut artifect, mut cpu_allocator, cg_inputs_shape) = std::thread::scope(|s| {
             let handler =
                 std::thread::Builder::new()
                     .stack_size(64 * 1024 * 1024)
@@ -177,7 +178,7 @@ where
                         .unwrap();
                         let mut str_buf = String::new();
 
-                        let artifect = if env.rebuild
+                        let (artifect, cpu_allocator) = if env.rebuild
                             || !std::path::Path::new(&artifect_dir).exists()
                         {
                             let processed_type2 = if env.prefer_no_reapply_type2_passes
@@ -195,23 +196,23 @@ where
                                 pt2
                             };
 
-                            let artifect = processed_type2
+                            let (artifect, cpu_allocator) = processed_type2
                                 .to_type3(&options, &hd_info, &pjh)
                                 .unwrap()
                                 .apply_passes(&options)
                                 .unwrap()
-                                .to_artifect(&options, &hd_info, &pjh)
+                                .to_artifect(&options, &hd_info, todo!("disk allocator"), &pjh)
                                 .unwrap();
 
                             artifect.dump(&artifect_dir).unwrap();
-                            artifect
+                            (artifect, cpu_allocator)
                         } else {
-                            fresh_type2.load_artifect(&artifect_dir).unwrap()
+                            fresh_type2.load_artifect(&artifect_dir, todo!("disk allocator")).unwrap()
                         };
 
                         end_timer!(compile_start);
 
-                        (artifect, cg_inputs_shape)
+                        (artifect, cpu_allocator, cg_inputs_shape)
                     })
                     .unwrap();
 
@@ -223,7 +224,7 @@ where
             .map(|ins| {
                 ins.iter()
                     .map(|ins| {
-                        zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, artifect.allocator())
+                        zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, &mut cpu_allocator)
                     })
                     .collect::<Vec<_>>()
             })
@@ -231,6 +232,7 @@ where
         let mut inputs = cg_inputs_shape.serialize(instances, transcript.clone());
 
         let mut runtime = artifect.prepare_dispatcher(
+            CpuStaticAllocator::new(hd_info.cpu().memory_limit() as usize, true),
             hd_info
                 .gpus()
                 .map(|gpu| {
@@ -242,6 +244,7 @@ where
                 })
                 .collect(),
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
+            todo!("gpu offset"),
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
@@ -252,7 +255,7 @@ where
 
         *transcript = proof;
         runtime.reset();
-        env.allocator = Some(runtime.mem_allocator.take().unwrap());
+        env.allocator = Some(cpu_allocator);
         Ok(())
     }
 }
