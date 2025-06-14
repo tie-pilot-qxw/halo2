@@ -129,8 +129,9 @@ fn main() {
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
-        let hd_info = driver::HardwareInfo::new()
-            .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)));
+        let hd_info =
+            driver::HardwareInfo::new(driver::MemoryInfo::new(300 * 2u64.pow(30), 2u64.pow(28)))
+                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)));
 
         let allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
         let artifect_dir = "target/artifect";

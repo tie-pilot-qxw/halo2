@@ -390,24 +390,11 @@ fn main() {
             artifect.dump(&artifect_dir).unwrap();
             (artifect, cpu_pool)
         } else {
+            println!("[Test] Loading Artifect from {}", &artifect_dir);
             type2_fresh.load_artifect(&artifect_dir, &mut vec![]).unwrap()
         };
 
         let scheduler = Scheduler::new(1, 1);
-
-        // println!("[Test] End Compiling to Runtime Instructions");
-
-        // let mut runtime = artifect.prepare_dispatcher(
-        //     cpu_pool,
-        //     hd_info
-        //         .gpus()
-        //         .map(|gpu| {
-        //             zkpoly_cuda_api::mem::CudaAllocator::new(0, gpu.memory_limit() as usize, true)
-        //         })
-        //         .collect(),
-        //     zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
-        //     0
-        // );
 
         println!("[Test] Launch VM");
 
@@ -449,40 +436,6 @@ fn main() {
                 Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
             }
         }
-        // for i in 0..1 {
-
-        //     let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
-
-        //     println!("[Test] Proof Round {}", i);
-        //     let (_, res) = scheduler.add_request(artifect.clone(), hd_info.clone(), zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()), 
-        //     inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
-
-        //     let (r, _) = res.recv().unwrap();
-
-        //     // let (r, _) = runtime.run(&mut inputs, zkpoly_runtime::runtime::RuntimeDebug::None);
-        //     let proof = r.unwrap().unwrap_transcript_move().take().finalize();
-        //     println!("[Test] Begin Verify Proof");
-        //     let strategy = SingleStrategy::new(params);
-        //     use halo2_proofs::transcript::TranscriptReadBuffer;
-        //     let mut transcript = halo2_proofs::transcript::Blake2bRead::<
-        //         _,
-        //         _,
-        //         halo2_proofs::transcript::Challenge255<_>,
-        //     >::init(&proof[..]);
-        //     let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
-        //         params,
-        //         pk.get_vk(),
-        //         strategy,
-        //         &[&[]],
-        //         &mut transcript,
-        //     );
-
-        //     match verify_result {
-        //         Ok(_) => println!("[Test] Verify Proof Success"),
-        //         Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
-        //     }
-        //     // runtime.reset();
-        // }
         println!("[Test] VM Exited");
     }
 

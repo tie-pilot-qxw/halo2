@@ -187,7 +187,7 @@ where
                             {
                                 println!("[Test] Skip applying Type2 passes");
                                 fresh_type2
-                                    .load_processed_type2(&mut str_buf, &processed_type2_dir)
+                                    .load_processed_type2(&mut str_buf, &processed_type2_dir, todo!("disk allocator"))
                                     .unwrap()
                             } else {
                                 println!("[Test] Applying Type2 passes and lowering to Artifect");
