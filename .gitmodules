@@ -1,4 +1,4 @@
 
 [submodule "zkpoly-compiler"]
 	path = zkpoly-compiler
-	url = https://github.com/danzou1ge6/zkpoly-compiler.git
+	url = git@github.com:danzou1ge6/zkpoly-compiler.git
