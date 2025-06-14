@@ -187,7 +187,11 @@ where
                             {
                                 println!("[Test] Skip applying Type2 passes");
                                 fresh_type2
-                                    .load_processed_type2(&mut str_buf, &processed_type2_dir, todo!("disk allocator"))
+                                    .load_processed_type2(
+                                        &mut str_buf,
+                                        &processed_type2_dir,
+                                        todo!("disk allocator"),
+                                    )
                                     .unwrap()
                             } else {
                                 println!("[Test] Applying Type2 passes and lowering to Artifect");
@@ -208,7 +212,9 @@ where
                             artifect.dump(&artifect_dir).unwrap();
                             (artifect, const_pool)
                         } else {
-                            fresh_type2.load_artifect(&artifect_dir, todo!("disk allocator")).unwrap()
+                            fresh_type2
+                                .load_artifect(&artifect_dir, todo!("disk allocator"))
+                                .unwrap()
                         };
 
                         end_timer!(compile_start);
@@ -224,28 +230,39 @@ where
             .iter()
             .map(|ins| {
                 ins.iter()
-                    .map(|ins| {
-                        zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, &mut const_pool)
-                    })
+                    .map(|ins| zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, &mut const_pool))
                     .collect::<Vec<_>>()
             })
             .collect();
         let mut inputs = cg_inputs_shape.serialize(instances, transcript.clone());
 
+        use zkpoly_cuda_api::mem;
+
         let mut runtime = artifect.prepare_dispatcher(
             CpuStaticAllocator::new(hd_info.cpu().memory_limit() as usize, true),
             hd_info
-                .gpus().enumerate()
+                .gpus()
+                .enumerate()
                 .map(|(id, gpu)| {
-                    (id as i32, zkpoly_cuda_api::mem::CudaAllocator::new(
-                        0,
-                        gpu.memory_limit() as usize,
-                        env.gpu_memory_check,
-                    ))
+                    (
+                        id as i32,
+                        mem::CudaAllocator {
+                            statik: mem::StaticAllocator::new(
+                                0,
+                                gpu.memory_limit() as usize,
+                                env.gpu_memory_check,
+                            ),
+                            page: mem::PageAllocator::new(
+                                zkpoly_common::devices::DeviceType::GPU { device_id: 0 },
+                                hd_info.page_size() as usize,
+                                gpu.page_number(hd_info.page_size()) as usize,
+                            ),
+                        },
+                    )
                 })
                 .collect(),
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
-            Arc::new(|x| x)
+            Arc::new(|x| x),
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
