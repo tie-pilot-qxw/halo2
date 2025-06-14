@@ -377,6 +377,7 @@ fn main() {
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info = driver::HardwareInfo::new(MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
+            .with_page_size(16 * 2u64.pow(20))
             .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
 
         let artifect_dir = "target/artifect";
