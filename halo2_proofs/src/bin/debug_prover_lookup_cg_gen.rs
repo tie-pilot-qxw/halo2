@@ -131,13 +131,15 @@ fn main() {
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info =
             driver::HardwareInfo::new(driver::MemoryInfo::new(300 * 2u64.pow(30), 2u64.pow(28)))
-                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)));
+                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
+                .with_disk();
 
         let allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
         let artifect_dir = "target/artifect";
 
         let env_info = JitProverEnv::new(
             Some(allocator),
+            hd_info.disk_allocator(16 * 2usize.pow(30)),
             true,
             options,
             hd_info,

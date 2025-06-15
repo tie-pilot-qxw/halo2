@@ -386,30 +386,37 @@ fn main() {
         let pjh = driver::PanicJoinHandler::new();
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh).unwrap();
 
-        let (artifect, cpu_pool) = if rebuild || !std::path::Path::new(artifect_dir).exists() {
-            let (artifect, cpu_pool) = type2_fresh.to_artifect(&options, &hd_info, &mut vec![], &pjh).unwrap();
+        let (artifect, _constant_cpu_pool) = if rebuild || !std::path::Path::new(artifect_dir).exists() {
+            let (artifect, cpu_pool) = type2_fresh
+                .to_artifect(&options, &hd_info, &mut vec![], &pjh)
+                .unwrap();
             artifect.dump(&artifect_dir).unwrap();
             (artifect, cpu_pool)
         } else {
             println!("[Test] Loading Artifect from {}", &artifect_dir);
-            type2_fresh.load_artifect(&artifect_dir, &mut vec![]).unwrap()
+            type2_fresh
+                .load_artifect(&artifect_dir, &mut vec![])
+                .unwrap()
         };
 
         let scheduler = Scheduler::new(1, 1);
 
         println!("[Test] Launch VM");
 
-        let results = (0..10).into_iter().map(|_| {
-            let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
-            let (_, res) = scheduler.add_request(
-                artifect.clone(),
-                hd_info.clone(),
-                zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
-                inputs,
-                zkpoly_runtime::runtime::RuntimeDebug::DebugInstruction,
-            );
-            res
-        }).collect::<Vec<_>>();
+        let results = (0..10)
+            .into_iter()
+            .map(|_| {
+                let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
+                let (_, res) = scheduler.add_request(
+                    artifect.clone(),
+                    hd_info.clone(),
+                    zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
+                    inputs,
+                    zkpoly_runtime::runtime::RuntimeDebug::DebugInstruction,
+                );
+                res
+            })
+            .collect::<Vec<_>>();
         println!("[Test] VM Launched");
 
         for (i, res) in results.into_iter().enumerate() {

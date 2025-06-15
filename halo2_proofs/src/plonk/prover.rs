@@ -6,8 +6,10 @@ use std::collections::{BTreeSet, HashSet};
 use std::ops::{Deref, DerefMut, RangeTo};
 use std::sync::Arc;
 use std::{collections::HashMap, iter};
+use zkpoly_compiler::driver::artifect::Pools;
 use zkpoly_compiler::driver::DebugOptions;
 use zkpoly_compiler::driver::HardwareInfo;
+use zkpoly_memory_pool::buddy_disk_pool::DiskMemoryPool;
 use zkpoly_memory_pool::static_allocator::CpuStaticAllocator;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::runtime::RuntimeDebug;
@@ -42,6 +44,7 @@ use group::prime::PrimeCurveAffine;
 #[derive(Debug)]
 pub struct JitProverEnv {
     allocator: Option<CpuMemoryPool>,
+    disk_allocator: DiskMemoryPool,
     assert: bool,
     options: DebugOptions,
     hd_info: HardwareInfo,
@@ -49,13 +52,14 @@ pub struct JitProverEnv {
     rebuild: bool,
     processed_type2_dir: String,
     prefer_no_reapply_type2_passes: bool,
-    gpu_memory_check: bool,
+    memory_check: bool,
     runtime_debug: RuntimeDebug,
 }
 
 impl JitProverEnv {
     pub fn new(
         allocator: Option<CpuMemoryPool>,
+        disk_allocator: DiskMemoryPool,
         assert: bool,
         options: DebugOptions,
         hd_info: HardwareInfo,
@@ -63,11 +67,12 @@ impl JitProverEnv {
         rebuild: bool,
         processed_type2_dir: String,
         prefer_no_reapply_type2_passes: bool,
-        gpu_memory_check: bool,
+        memory_check: bool,
         runtime_debug: RuntimeDebug,
     ) -> Self {
         Self {
             allocator,
+            disk_allocator,
             assert,
             options,
             hd_info,
@@ -75,7 +80,7 @@ impl JitProverEnv {
             rebuild,
             processed_type2_dir,
             prefer_no_reapply_type2_passes,
-            gpu_memory_check,
+            memory_check,
             runtime_debug,
         }
     }
@@ -147,7 +152,7 @@ where
             .map(|ins| ins.iter().map(|p| p.len()).collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let (artifect, mut const_pool, cg_inputs_shape) = std::thread::scope(|s| {
+        let (artifect, mut cpu_constant_allocator, cg_inputs_shape) = std::thread::scope(|s| {
             let handler =
                 std::thread::Builder::new()
                     .stack_size(64 * 1024 * 1024)
@@ -179,7 +184,7 @@ where
                         .unwrap();
                         let mut str_buf = String::new();
 
-                        let (artifect, cpu_allocator) = if env.rebuild
+                        let (artifect, constant_cpu_allocator) = if env.rebuild
                             || !std::path::Path::new(&artifect_dir).exists()
                         {
                             let processed_type2 = if env.prefer_no_reapply_type2_passes
@@ -190,7 +195,7 @@ where
                                     .load_processed_type2(
                                         &mut str_buf,
                                         &processed_type2_dir,
-                                        todo!("disk allocator"),
+                                        &mut env.disk_allocator,
                                     )
                                     .unwrap()
                             } else {
@@ -206,20 +211,20 @@ where
                                 .unwrap()
                                 .apply_passes(&options)
                                 .unwrap()
-                                .to_artifect(&options, &hd_info, todo!("disk allocator"), &pjh)
+                                .to_artifect(&options, &hd_info, &mut env.disk_allocator, &pjh)
                                 .unwrap();
 
                             artifect.dump(&artifect_dir).unwrap();
                             (artifect, const_pool)
                         } else {
                             fresh_type2
-                                .load_artifect(&artifect_dir, todo!("disk allocator"))
+                                .load_artifect(&artifect_dir, &mut env.disk_allocator)
                                 .unwrap()
                         };
 
                         end_timer!(compile_start);
 
-                        (artifect, cpu_allocator, cg_inputs_shape)
+                        (artifect, constant_cpu_allocator, cg_inputs_shape)
                     })
                     .unwrap();
 
@@ -230,37 +235,20 @@ where
             .iter()
             .map(|ins| {
                 ins.iter()
-                    .map(|ins| zkpoly_runtime::scalar::ScalarArray::from_vec(&ins, &mut const_pool))
+                    .map(|ins| {
+                        zkpoly_runtime::scalar::ScalarArray::from_vec(
+                            &ins,
+                            &mut cpu_constant_allocator,
+                        )
+                    })
                     .collect::<Vec<_>>()
             })
             .collect();
         let mut inputs = cg_inputs_shape.serialize(instances, transcript.clone());
 
-        use zkpoly_cuda_api::mem;
-
+        let pools = artifect.create_pools(&hd_info, env.memory_check);
         let mut runtime = artifect.prepare_dispatcher(
-            CpuStaticAllocator::new(hd_info.cpu().memory_limit() as usize, true),
-            hd_info
-                .gpus()
-                .enumerate()
-                .map(|(id, gpu)| {
-                    (
-                        id as i32,
-                        mem::CudaAllocator {
-                            statik: mem::StaticAllocator::new(
-                                0,
-                                gpu.memory_limit() as usize,
-                                env.gpu_memory_check,
-                            ),
-                            page: mem::PageAllocator::new(
-                                zkpoly_common::devices::DeviceType::GPU { device_id: 0 },
-                                hd_info.page_size() as usize,
-                                gpu.page_number(hd_info.page_size()) as usize,
-                            ),
-                        },
-                    )
-                })
-                .collect(),
+            pools,
             zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
             Arc::new(|x| x),
         );
@@ -273,7 +261,7 @@ where
 
         *transcript = proof;
         runtime.reset();
-        env.allocator = Some(const_pool);
+        env.allocator = Some(cpu_constant_allocator);
         Ok(())
     }
 }
