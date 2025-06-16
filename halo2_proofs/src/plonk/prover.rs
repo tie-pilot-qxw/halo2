@@ -206,16 +206,16 @@ where
                                 pt2
                             };
 
-                            let (artifect, const_pool) = processed_type2
+                            let artifect = processed_type2
                                 .to_type3(&options, &hd_info, &pjh)
                                 .unwrap()
                                 .apply_passes(&options)
                                 .unwrap()
-                                .to_artifect(&options, &hd_info, &mut env.disk_allocator, &pjh)
+                                .to_artifect(&options, &hd_info, &pjh)
                                 .unwrap();
 
                             artifect.dump(&artifect_dir).unwrap();
-                            (artifect, const_pool)
+                            artifect.finish(&mut env.disk_allocator)
                         } else {
                             fresh_type2
                                 .load_artifect(&artifect_dir, &mut env.disk_allocator)

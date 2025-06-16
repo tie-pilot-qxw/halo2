@@ -386,18 +386,19 @@ fn main() {
         let pjh = driver::PanicJoinHandler::new();
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh).unwrap();
 
-        let (artifect, _constant_cpu_pool) = if rebuild || !std::path::Path::new(artifect_dir).exists() {
-            let (artifect, cpu_pool) = type2_fresh
-                .to_artifect(&options, &hd_info, &mut vec![], &pjh)
-                .unwrap();
-            artifect.dump(&artifect_dir).unwrap();
-            (artifect, cpu_pool)
-        } else {
-            println!("[Test] Loading Artifect from {}", &artifect_dir);
-            type2_fresh
-                .load_artifect(&artifect_dir, &mut vec![])
-                .unwrap()
-        };
+        let (artifect, _constant_cpu_pool) =
+            if rebuild || !std::path::Path::new(artifect_dir).exists() {
+                let artifect = type2_fresh
+                    .to_semi_artifect(&options, &hd_info, &pjh)
+                    .unwrap();
+                artifect.dump(&artifect_dir).unwrap();
+                artifect.finish(&mut vec![])
+            } else {
+                println!("[Test] Loading Artifect from {}", &artifect_dir);
+                type2_fresh
+                    .load_artifect(&artifect_dir, &mut vec![])
+                    .unwrap()
+            };
 
         let scheduler = Scheduler::new(1, 1);
 
