@@ -13,6 +13,7 @@ use halo2_proofs::poly::kzg::{
     strategy::SingleStrategy,
 };
 
+use zkpoly_compiler::driver::DiskMemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
 
 use ff::PrimeField;
@@ -132,7 +133,7 @@ fn main() {
         let hd_info =
             driver::HardwareInfo::new(driver::MemoryInfo::new(300 * 2u64.pow(30), 2u64.pow(28)))
                 .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
-                .with_disk();
+                .with_disk(DiskMemoryInfo::new(None));
 
         let allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
         let artifect_dir = "target/artifect";
