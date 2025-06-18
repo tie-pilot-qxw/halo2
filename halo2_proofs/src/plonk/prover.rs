@@ -254,7 +254,7 @@ where
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
-        let ((r, _), _) = runtime.run(&mut inputs, env.runtime_debug);
+        let ((r, _, _), _) = runtime.run(&mut inputs, env.runtime_debug);
         end_timer!(dispatcher_start);
 
         let proof = r.unwrap().unwrap_transcript_move().take();
