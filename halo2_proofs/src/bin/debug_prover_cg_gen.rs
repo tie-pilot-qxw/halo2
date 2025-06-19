@@ -366,7 +366,7 @@ fn main() {
             pk,
             vec![circuit],
             &vec![vec![]],
-            &mut allocator,
+            &mut zkpoly_compiler::ast::ConstantPool { cpu: &mut allocator, disk: &mut vec![] },
             None,
         );
         println!("[Test] End Computation Graph Generation");
@@ -422,7 +422,7 @@ fn main() {
 
         for (i, res) in results.into_iter().enumerate() {
             println!("[Test] Waiting for result {}", i);
-            let (r, _) = res.recv().unwrap();
+            let (r, _, _) = res.recv().unwrap();
             let proof = r.unwrap().unwrap_transcript_move().take().finalize();
             println!("[Test] Begin Verify Proof {}", i);
             let strategy = SingleStrategy::new(params);

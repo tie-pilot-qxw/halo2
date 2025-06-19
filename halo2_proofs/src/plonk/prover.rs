@@ -164,7 +164,10 @@ where
                                 &pk,
                                 circuits.to_vec(),
                                 &instance_lengths,
-                                &mut env.allocator.as_mut().unwrap(),
+                                &mut zkpoly_compiler::ast::ConstantPool {
+                                    cpu: env.allocator.as_mut().unwrap(),
+                                    disk: &mut env.disk_allocator,
+                                },
                                 trace,
                             );
                         end_timer!(cg_gen_start);
@@ -254,7 +257,7 @@ where
         );
 
         let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
-        let ((r, _), _) = runtime.run(&mut inputs, env.runtime_debug);
+        let ((r, _, _), _) = runtime.run(&mut inputs, env.runtime_debug);
         end_timer!(dispatcher_start);
 
         let proof = r.unwrap().unwrap_transcript_move().take();
