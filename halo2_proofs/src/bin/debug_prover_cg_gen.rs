@@ -257,7 +257,7 @@ fn main() {
         }
     }
 
-    fn keygen(k: u32) -> (ParamsKZG<Bn256>, ProvingKey<G1Affine>) {
+    fn keygen(k: u32) -> (ParamsKZG<Bn256>, VerifyingKey<G1Affine>) {
         let empty_circuit: MyCircuit<Fr> = MyCircuit {
             a: Value::unknown(),
             k,
@@ -291,24 +291,24 @@ fn main() {
                 .unwrap();
             vk
         };
-        let pk = if let Ok(mut pk_f) = std::fs::File::open(&pk_fname) {
-            ProvingKey::read::<_, MyCircuit<_>>(&mut pk_f, halo2_proofs::SerdeFormat::RawBytes)
-                .unwrap()
-        } else {
-            println!("{} not opened, Generating new pk", &pk_fname);
-            let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
-            let mut f = std::fs::File::create(&pk_fname).unwrap();
-            pk.write(&mut f, halo2_proofs::SerdeFormat::RawBytes)
-                .unwrap();
-            pk
-        };
+        // let pk = if let Ok(mut pk_f) = std::fs::File::open(&pk_fname) {
+        //     ProvingKey::read::<_, MyCircuit<_>>(&mut pk_f, halo2_proofs::SerdeFormat::RawBytes)
+        //         .unwrap()
+        // } else {
+        //     println!("{} not opened, Generating new pk", &pk_fname);
+        //     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
+        //     let mut f = std::fs::File::create(&pk_fname).unwrap();
+        //     pk.write(&mut f, halo2_proofs::SerdeFormat::RawBytes)
+        //         .unwrap();
+        //     pk
+        // };
 
-        println!("Extended k = {}", pk.get_vk().get_domain().extended_k());
+        println!("Extended k = {}", vk.get_domain().extended_k());
 
-        (params, pk)
+        (params, vk)
     }
 
-    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>, rebuild: bool) {
+    fn prover(k: u32, params: &ParamsKZG<Bn256>, vk: &VerifyingKey<G1Affine>, rebuild: bool) {
         let rng = OsRng;
 
         let circuit: MyCircuit<Fr> = MyCircuit {
@@ -363,7 +363,7 @@ fn main() {
             _,
         >(
             params,
-            pk,
+            vk,
             vec![circuit],
             &vec![vec![]],
             &mut zkpoly_compiler::ast::ConstantPool { cpu: &mut allocator, disk: &mut vec![] },
@@ -434,7 +434,7 @@ fn main() {
             >::init(&proof[..]);
             let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
                 params,
-                pk.get_vk(),
+                vk,
                 strategy,
                 &[&[]],
                 &mut transcript,
@@ -451,10 +451,10 @@ fn main() {
     let k = 10;
 
     print!("[Test] Keygen...");
-    let (params, pk) = keygen(k);
+    let (params, vk) = keygen(k);
     println!("Done");
 
     let rebuild = std::env::args().any(|arg| arg == "--rebuild");
 
-    prover(k, &params, &pk, rebuild);
+    prover(k, &params, &vk, rebuild);
 }

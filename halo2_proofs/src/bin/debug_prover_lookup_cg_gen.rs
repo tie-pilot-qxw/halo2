@@ -100,17 +100,17 @@ fn main() {
         }
     }
 
-    fn keygen(k: u32) -> (ParamsKZG<Bn256>, ProvingKey<G1Affine>) {
+    fn keygen(k: u32) -> (ParamsKZG<Bn256>, VerifyingKey<G1Affine>) {
         let params: ParamsKZG<Bn256> = ParamsKZG::new(k);
         let empty_circuit: MyCircuit<Fr> = MyCircuit {
             _marker: PhantomData,
         };
         let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
-        let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
-        (params, pk)
+        // let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
+        (params, vk)
     }
 
-    fn prover(_k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
+    fn prover(_k: u32, params: &ParamsKZG<Bn256>, vk: &VerifyingKey<G1Affine>) {
         let rng = OsRng;
 
         let circuit: MyCircuit<Fr> = MyCircuit {
@@ -161,7 +161,7 @@ fn main() {
             _,
         >(
             params,
-            pk,
+            vk,
             &[circuit.clone()],
             &[&[]],
             rng,
@@ -182,7 +182,7 @@ fn main() {
         >::init(&proof[..]);
         let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
             params,
-            pk.get_vk(),
+            vk,
             strategy,
             &[&[]],
             &mut transcript,
@@ -197,8 +197,8 @@ fn main() {
     let k = 14;
 
     print!("[Test] Keygen...");
-    let (params, pk) = keygen(k);
+    let (params, vk) = keygen(k);
     println!("Done");
 
-    prover(k, &params, &pk);
+    prover(k, &params, &vk);
 }

@@ -14,6 +14,7 @@ use zkpoly_memory_pool::static_allocator::CpuStaticAllocator;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::runtime::RuntimeDebug;
 
+use super::VerifyingKey;
 use super::{
     circuit::{
         sealed::{self},
@@ -100,7 +101,7 @@ pub fn create_proof<
     ConcreteCircuit: Circuit<Scheme::Scalar> + Clone + Send + Sync + 'static,
 >(
     params: &'params Scheme::ParamsProver,
-    pk: &ProvingKey<Scheme::Curve>,
+    vk: &VerifyingKey<Scheme::Curve>,
     circuits: &[ConcreteCircuit],
     instances: &[&[&[Scheme::Scalar]]],
     rng: R,
@@ -112,33 +113,35 @@ where
 {
     if env.is_none() {
         // origin cpu version
-        create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
-            params, pk, circuits, instances, rng, transcript, None,
-        )
+        // create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
+        //     params, pk, circuits, instances, rng, transcript, None,
+        // )
+        panic!("cannot trace CPU execution with dummy pk")
     } else {
         let env = env.as_mut().unwrap();
 
         // create proof and verify
-        let mut trace = Trace::default();
+        let mut trace = Trace::<Scheme::Curve>::default();
         let trace_run = env.assert;
 
         let trace = if trace_run {
-            println!("extended k = {}", pk.get_vk().get_domain().extended_k());
+            // println!("extended k = {}", vk.get_domain().extended_k());
 
-            let trace_start = start_timer!(|| "[Test] Begin Running Original Prover for Trace");
-            let mut transcript = transcript.clone();
-            create_proof_traced::<Scheme, P, E, _, T, ConcreteCircuit>(
-                params,
-                pk,
-                circuits,
-                instances,
-                OsRng::default(), // traced prover does not use rng, this is just a placeholder
-                &mut transcript,
-                Some(&mut trace),
-            )
-            .expect("proof generation should not fail");
-            end_timer!(trace_start);
-            Some(&trace)
+            // let trace_start = start_timer!(|| "[Test] Begin Running Original Prover for Trace");
+            // let mut transcript = transcript.clone();
+            // create_proof_traced::<Scheme, P, E, _, T, ConcreteCircuit>(
+            //     params,
+            //     vk,
+            //     circuits,
+            //     instances,
+            //     OsRng::default(), // traced prover does not use rng, this is just a placeholder
+            //     &mut transcript,
+            //     Some(&mut trace),
+            // )
+            // .expect("proof generation should not fail");
+            // end_timer!(trace_start);
+            // Some(&trace)
+            panic!("cannot trace CPU execution with dummy pk")
         } else {
             None
         };
@@ -161,7 +164,7 @@ where
                         let (cg_ret, cg_inputs_shape) =
                             gen::create_proof_validated::<Scheme, P, E, T, _>(
                                 params,
-                                &pk,
+                                vk,
                                 circuits.to_vec(),
                                 &instance_lengths,
                                 &mut zkpoly_compiler::ast::ConstantPool {
@@ -1127,13 +1130,13 @@ fn test_create_proof() {
 
     let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, OsRng);
     let vk = keygen_vk(&params, &MyCircuit).expect("keygen_vk should not fail");
-    let pk = keygen_pk(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
+    // let pk = keygen_pk(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
     // Create proof with wrong number of instances
     let proof = create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
         &params,
-        &pk,
+        &vk,
         &[MyCircuit, MyCircuit],
         &[],
         OsRng,
@@ -1145,7 +1148,7 @@ fn test_create_proof() {
     // Create proof with correct number of instances
     create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
         &params,
-        &pk,
+        &vk,
         &[MyCircuit, MyCircuit],
         &[&[], &[]],
         OsRng,

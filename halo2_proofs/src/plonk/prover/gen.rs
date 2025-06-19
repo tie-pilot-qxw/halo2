@@ -1,5 +1,7 @@
 //! Generator for [`create_proof`]
+use crate::dev::VerifyFailure;
 use crate::plonk::Expression;
+use crate::plonk::VerifyingKey;
 use crate::poly::commitment::ParamsProver;
 use crate::tracing::Trace;
 
@@ -687,7 +689,7 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
 
 fn compute_permutation_ppp<Rt: RuntimeType>(
     columns: &Vec<Column<Any>>,
-    ppk: &ProvingKey<Rt::PointAffine>,
+    vk: &VerifyingKey<Rt::PointAffine>,
     permutations: &[ast::PolyLagrange<Rt>],
     n: u64,
     table: &Table<Rt>,
@@ -697,8 +699,8 @@ fn compute_permutation_ppp<Rt: RuntimeType>(
     delta: &ast::Scalar<Rt>,
     blind_with_random: bool,
 ) -> Vec<ast::PolyLagrange<Rt>> {
-    let chunk_len = ppk.vk.cs_degree - 2;
-    let blinding_factors = ppk.vk.cs.blinding_factors();
+    let chunk_len = vk.cs_degree - 2;
+    let blinding_factors = vk.cs.blinding_factors();
 
     let mut last_z = ast::Scalar::one();
 
@@ -771,7 +773,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
     plas: &[PermutedPlookupArgument<Rt>],
     lookup_ppp_coefs: &[ast::PolyCoef<Rt>],
     table: &Table<Rt>,
-    pk: &ProvingKey<Rt::PointAffine>,
+    vk: &VerifyingKey<Rt::PointAffine>,
     challenges: &[ast::Scalar<Rt>],
     zetas: &ast::PolyLagrange<Rt>,
     l0: &ast::PolyLagrange<Rt>,
@@ -790,7 +792,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
 ) where
     Rt::Field: WithSmallOrderMulGroup<3>,
 {
-    let domain = &pk.vk.domain;
+    let domain = &vk.domain;
     let rot_scale = 1 << (domain.extended_k() - domain.k());
     let extended_n = domain.extended_len() as u64;
 
@@ -799,8 +801,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
     };
 
     // Custom gates
-    pk.vk
-        .cs
+    vk.cs
         .gates()
         .iter()
         .flat_map(|gate| {
@@ -819,10 +820,10 @@ fn construct_primary_constraint<Rt: RuntimeType>(
 
     // Premutation constraints
     if !permutation_ppps.is_empty() {
-        let blinding_factors = pk.vk.cs.blinding_factors();
+        let blinding_factors = vk.cs.blinding_factors();
         let last_rotation = -((blinding_factors + 1) as i32);
 
-        let chunk_len = pk.vk.cs_degree - 2;
+        let chunk_len = vk.cs_degree - 2;
         add_constraint(
             (ast::Scalar::one() - permutation_ppps.first().unwrap().clone()) * l0.clone(),
             h,
@@ -842,8 +843,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
         }
 
         let mut delta_power = beta_mul_zeta.clone();
-        for ((columns, perm_exts), ppp) in pk
-            .vk
+        for ((columns, perm_exts), ppp) in vk
             .cs
             .permutation
             .columns
@@ -973,11 +973,11 @@ fn evaluate_permutation<Rt: RuntimeType>(
     permutation_ppp_coefs: &[ast::PolyCoef<Rt>],
     x: &ast::Scalar<Rt>,
     transcript: &mut ast::Transcript<Rt>,
-    pk: &ProvingKey<Rt::PointAffine>,
+    vk: &VerifyingKey<Rt::PointAffine>,
     get_x_mul_omega_power: &mut impl FnMut(i32) -> ast::Scalar<Rt>,
     trace: Option<Vec<Vec<ast::Scalar<Rt>>>>,
 ) {
-    let blinding_facotrs = pk.vk.cs.blinding_factors();
+    let blinding_facotrs = vk.cs.blinding_factors();
     let mut iter = permutation_ppp_coefs.iter().enumerate();
 
     while let Some((i, ppp)) = iter.next() {
@@ -1155,9 +1155,9 @@ struct ProverQuery<Rt: RuntimeType> {
 
 fn open_permutation<'a, Rt: RuntimeType>(
     ppps: &'a [ast::PolyCoef<Rt>],
-    pk: &ProvingKey<Rt::PointAffine>,
+    vk: &VerifyingKey<Rt::PointAffine>,
 ) -> impl Iterator<Item = ProverQuery<Rt>> + 'a {
-    let blinding_facotrs = pk.vk.cs.blinding_factors();
+    let blinding_facotrs = vk.cs.blinding_factors();
 
     ppps.iter()
         .flat_map(move |ppp| {
@@ -1634,7 +1634,7 @@ where
 {
     create_proof_validated::<Scheme, P, E, T, ConcreteCircuit>(
         params,
-        pk,
+        &pk.vk,
         circuits,
         instance_lengths,
         allocator,
@@ -1652,7 +1652,7 @@ pub fn create_proof_validated<
     ConcreteCircuit: Circuit<Scheme::Scalar> + 'static + Send + Sync,
 >(
     params: &Scheme::ParamsProver,
-    pk: &ProvingKey<Scheme::Curve>,
+    vk: &VerifyingKey<Scheme::Curve>,
     circuits: Vec<ConcreteCircuit>,
     instance_lengths: &[Vec<usize>],
     allocator: &mut ast::ConstantPool,
@@ -1662,7 +1662,7 @@ where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     ConcreteCircuit::Config: 'static + Send + Sync,
 {
-    let domain = &pk.vk.domain;
+    let domain = &vk.domain;
     let extended_n: u64 = 2u64.pow(domain.extended_k());
     let mut meta = ConstraintSystem::default();
     #[cfg(feature = "circuit-params")]
@@ -1670,7 +1670,7 @@ where
     #[cfg(not(feature = "circuit-params"))]
     let config = ConcreteCircuit::configure(&mut meta);
 
-    let meta = &pk.vk.cs;
+    let meta = &vk.cs;
 
     assert!(P::QUERY_INSTANCE == false);
 
@@ -1678,7 +1678,7 @@ where
 
     // Compute constants
 
-    let extended_omega_powers = ast::PolyLagrange::constant(&pk.extended_omega_powers, allocator);
+    let extended_omega_powers = ast::PolyLagrange::ones(extended_n);
     let zetas = ast::PolyLagrange::constant(
         &vec![
             Scheme::Scalar::ONE,
@@ -1700,28 +1700,28 @@ where
 
     let omega = ast::Scalar::constant(domain.get_omega());
     let omega_inv = ast::Scalar::constant(domain.get_omega_inv());
-    let omega_powers = ast::PolyLagrange::constant(&pk.omega_powers, allocator);
+    let omega_powers = ast::PolyLagrange::ones(domain.n());
     let delta = ast::Scalar::constant(Scheme::Scalar::DELTA);
 
     let lagrange_points = ast::PrecomputedPoints::construct(params.lagrange_points(), allocator);
     let coef_points = ast::PrecomputedPoints::construct(params.coef_points(), allocator);
 
-    let l0 = ast::PolyLagrange::constant(&pk.l0.values, allocator);
-    let l_last = ast::PolyLagrange::constant(&pk.l_last.values, allocator);
-    let l_active_row = ast::PolyLagrange::constant(&pk.l_active_row.values, allocator);
+    let l0 = ast::PolyLagrange::ones(extended_n);
+    let l_last = ast::PolyLagrange::ones(extended_n);
+    let l_active_row = ast::PolyLagrange::ones(extended_n);
 
     let vanishing_divisor = { ast::PolyLagrange::constant(domain.get_t_evaluations(), allocator) };
 
     // Declare inputs
     let inputs_shape = InputsShape {
         n_circuits: circuits.len(),
-        n_columns: pk.vk.cs.num_instance_columns,
+        n_columns: vk.cs.num_instance_columns,
         instance_lengths: instance_lengths.to_vec(),
     };
 
     let instances: Vec<Vec<ast::PolyLagrange<RtInstance<Scheme, E, T>>>> = (0..circuits.len())
         .map(|i| {
-            assert!(pk.vk.cs.num_instance_columns == instance_lengths[i].len());
+            assert!(vk.cs.num_instance_columns == instance_lengths[i].len());
             (instance_lengths[i].iter().enumerate())
                 .map(|(j, len)| {
                     entry_definer.define(
@@ -1736,26 +1736,20 @@ where
     let mut transcript: ast::Transcript<RtInstance<Scheme, E, T>> =
         entry_definer.define("transcript".to_string(), type2::Typ::Transcript);
 
-    let fixed_values: Vec<_> = pk
-        .fixed_values
-        .iter()
-        .map(|p| ast::PolyLagrange::constant(&p.values, allocator))
+    let fixed_values: Vec<_> = (0..vk.cs.num_fixed_columns)
+        .map(|p| ast::PolyLagrange::ones(domain.n()))
         .collect();
 
-    let fixed_coefs: Vec<_> = pk
-        .fixed_polys
-        .iter()
-        .map(|p| ast::PolyCoef::constant(&p.values, allocator))
+    let fixed_coefs: Vec<_> = (0..vk.cs.num_fixed_columns)
+        .map(|p| ast::PolyCoef::one(domain.n()))
         .collect();
 
-    let fixed_exts: Vec<_> = pk
-        .fixed_cosets
-        .iter()
-        .map(|p| ast::PolyLagrange::constant(&p.values, allocator))
+    let fixed_exts: Vec<_> = (0..vk.cs.num_fixed_columns)
+        .map(|p| ast::PolyLagrange::ones(extended_n))
         .collect();
 
     // Hash verfication key into transcript
-    let vk_scalar = ast::Scalar::constant(pk.vk.transcript_repr.clone());
+    let vk_scalar = ast::Scalar::constant(vk.transcript_repr.clone());
     transcript.hash_scalar(&vk_scalar, HashTyp::NoWriteProof);
 
     let instances: Vec<Vec<_>> = instances
@@ -1788,7 +1782,7 @@ where
         .collect::<Vec<_>>();
 
     let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
-    for (phase_i, current_phase) in pk.vk.cs.phases().enumerate() {
+    for (phase_i, current_phase) in vk.cs.phases().enumerate() {
         let column_indices = meta
             .advice_column_phase
             .iter()
@@ -2043,8 +2037,7 @@ where
         .iter()
         .enumerate()
         .map(|(i, table)| {
-            pk.vk
-                .cs
+            vk.cs
                 .lookups
                 .iter()
                 .enumerate()
@@ -2099,19 +2092,21 @@ where
         },
     );
 
-    let pk_permutations: Vec<_> = pk
+    // TODO: know how many permutations in pk
+    let pk_permutations: Vec<_> = vk
+        .cs
         .permutation
-        .permutations
+        .columns
         .iter()
-        .map(|p| ast::PolyLagrange::constant(&p.values, allocator))
+        .map(|_| ast::PolyLagrange::ones(domain.n()))
         .collect();
     let permutation_ppps: Vec<_> = tables
         .iter()
         .enumerate()
         .map(|(i, table)| {
             let sets = compute_permutation_ppp(
-                &pk.vk.cs.permutation.columns,
-                pk,
+                &vk.cs.permutation.columns,
+                vk,
                 &pk_permutations,
                 params.n(),
                 table,
@@ -2223,7 +2218,7 @@ where
         .collect();
 
     // Shuffles are not used in zkevm-circuits, skipping here
-    assert!(pk.vk.cs.shuffles.len() == 0);
+    assert!(vk.cs.shuffles.len() == 0);
 
     let random_poly = if trace.is_some() {
         ast::PolyCoef::zero(params.n())
@@ -2248,11 +2243,12 @@ where
         },
     );
 
-    let pk_permutation_exts: Vec<_> = pk
+    let pk_permutation_exts: Vec<_> = vk
+        .cs
         .permutation
-        .cosets
+        .columns
         .iter()
-        .map(|p| ast::PolyLagrange::constant(&p.values, allocator))
+        .map(|_| ast::PolyLagrange::ones(extended_n))
         .collect();
 
     let beta_mul_zeta = beta.clone() * zeta.clone();
@@ -2270,11 +2266,11 @@ where
                     &mut h,
                     &pk_permutation_exts,
                     permutation_ppp_exts,
-                    &pk.vk.cs.lookups,
+                    &vk.cs.lookups,
                     plas,
                     lookup_ppp_coefs,
                     table,
-                    pk,
+                    vk,
                     &challenges,
                     &zetas,
                     &l0,
@@ -2391,11 +2387,13 @@ where
     let random_eval = random_poly.evaluate(&x);
     transcript.hash_scalar(&random_eval, HashTyp::WriteProof);
 
-    let pk_permutation_coefs: Vec<_> = pk
+    // TODO
+    let pk_permutation_coefs: Vec<_> = vk
+        .cs
         .permutation
-        .polys
+        .columns
         .iter()
-        .map(|p| ast::PolyCoef::constant(&p.values, allocator))
+        .map(|_| ast::PolyCoef::one(domain.n()))
         .collect();
 
     pk_permutation_coefs.iter().enumerate().for_each(|(i, p)| {
@@ -2418,7 +2416,7 @@ where
                 ppps,
                 &x,
                 &mut transcript,
-                pk,
+                vk,
                 &mut get_x_mul_omega_power,
                 trace.as_ref().map(|trace| {
                     trace.permutation_evals[i]
@@ -2450,31 +2448,24 @@ where
         .zip(plookup_ppp_coefs.iter())
         .zip(permutation_ppp_coefs.iter())
         .flat_map(|(((table, plas), lookup_ppps), permutation_ppps)| {
-            pk.vk
-                .cs
+            vk.cs
                 .advice_queries
                 .iter()
                 .map(|(column, at)| ProverQuery {
                     poly: table.advice_coefs[column.index()].clone(),
                     rotation: at.0,
                 })
-                .chain(open_permutation(permutation_ppps, pk))
+                .chain(open_permutation(permutation_ppps, vk))
                 .chain(
                     plas.iter()
                         .zip(lookup_ppps.iter())
                         .flat_map(|(pla, ppp)| open_lookup(pla, ppp)),
                 )
         })
-        .chain(
-            pk.vk
-                .cs
-                .fixed_queries
-                .iter()
-                .map(|(column, at)| ProverQuery {
-                    rotation: at.0,
-                    poly: tables[0].fixed_coefs[column.index()].clone(),
-                }),
-        )
+        .chain(vk.cs.fixed_queries.iter().map(|(column, at)| ProverQuery {
+            rotation: at.0,
+            poly: tables[0].fixed_coefs[column.index()].clone(),
+        }))
         .chain(open_permutation_indices(&pk_permutation_coefs))
         .chain(
             [
