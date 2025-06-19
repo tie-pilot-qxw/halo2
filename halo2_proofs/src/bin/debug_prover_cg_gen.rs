@@ -355,7 +355,7 @@ fn main() {
         }
 
         println!("[Test] Begin Computation Graph Generation");
-        let (cg_ret, cg_inputs_shape) = prover_gen::create_proof_validated::<
+        let ((cg_ret, cg_inputs_shape), _) = prover_gen::create_proof_validated::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
             E,
@@ -363,7 +363,7 @@ fn main() {
             _,
         >(
             params,
-            pk,
+            pk.clone(),
             vec![circuit],
             &vec![vec![]],
             &mut allocator,
