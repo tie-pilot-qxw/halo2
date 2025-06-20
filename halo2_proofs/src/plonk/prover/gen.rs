@@ -793,6 +793,7 @@ fn construct_primary_constraint<Rt: RuntimeType>(
     Rt::Field: WithSmallOrderMulGroup<3>,
 {
     let domain = &vk.domain;
+    let domain = &vk.domain;
     let rot_scale = 1 << (domain.extended_k() - domain.k());
     let extended_n = domain.extended_len() as u64;
 
@@ -821,8 +822,10 @@ fn construct_primary_constraint<Rt: RuntimeType>(
     // Premutation constraints
     if !permutation_ppps.is_empty() {
         let blinding_factors = vk.cs.blinding_factors();
+        let blinding_factors = vk.cs.blinding_factors();
         let last_rotation = -((blinding_factors + 1) as i32);
 
+        let chunk_len = vk.cs_degree - 2;
         let chunk_len = vk.cs_degree - 2;
         add_constraint(
             (ast::Scalar::one() - permutation_ppps.first().unwrap().clone()) * l0.clone(),
@@ -977,6 +980,7 @@ fn evaluate_permutation<Rt: RuntimeType>(
     get_x_mul_omega_power: &mut impl FnMut(i32) -> ast::Scalar<Rt>,
     trace: Option<Vec<Vec<ast::Scalar<Rt>>>>,
 ) {
+    let blinding_facotrs = vk.cs.blinding_factors();
     let blinding_facotrs = vk.cs.blinding_factors();
     let mut iter = permutation_ppp_coefs.iter().enumerate();
 
@@ -1632,14 +1636,15 @@ where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
     ConcreteCircuit::Config: 'static + Send + Sync,
 {
-    create_proof_validated::<Scheme, P, E, T, ConcreteCircuit>(
+    let (res, _) = create_proof_validated::<Scheme, P, E, T, ConcreteCircuit>(
         params,
         &pk.vk,
         circuits,
         instance_lengths,
         allocator,
         None,
-    )
+    );
+    res
 }
 
 /// The generator for [`super::create_proof`].
@@ -1657,7 +1662,7 @@ pub fn create_proof_validated<
     instance_lengths: &[Vec<usize>],
     allocator: &mut ast::ConstantPool,
     trace: Option<&Trace<Scheme::Curve>>,
-) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
+) -> ((ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape), VerifyingKey<Scheme::Curve>)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     ConcreteCircuit::Config: 'static + Send + Sync,
@@ -1670,6 +1675,7 @@ where
     #[cfg(not(feature = "circuit-params"))]
     let config = ConcreteCircuit::configure(&mut meta);
 
+    let meta = &vk.cs;
     let meta = &vk.cs;
 
     assert!(P::QUERY_INSTANCE == false);
@@ -1716,11 +1722,13 @@ where
     let inputs_shape = InputsShape {
         n_circuits: circuits.len(),
         n_columns: vk.cs.num_instance_columns,
+        n_columns: vk.cs.num_instance_columns,
         instance_lengths: instance_lengths.to_vec(),
     };
 
     let instances: Vec<Vec<ast::PolyLagrange<RtInstance<Scheme, E, T>>>> = (0..circuits.len())
         .map(|i| {
+            assert!(vk.cs.num_instance_columns == instance_lengths[i].len());
             assert!(vk.cs.num_instance_columns == instance_lengths[i].len());
             (instance_lengths[i].iter().enumerate())
                 .map(|(j, len)| {
@@ -1748,7 +1756,9 @@ where
         .map(|p| ast::PolyLagrange::ones(extended_n))
         .collect();
 
+
     // Hash verfication key into transcript
+    let vk_scalar = ast::Scalar::constant(vk.transcript_repr.clone());
     let vk_scalar = ast::Scalar::constant(vk.transcript_repr.clone());
     transcript.hash_scalar(&vk_scalar, HashTyp::NoWriteProof);
 
@@ -2092,7 +2102,6 @@ where
         },
     );
 
-    // TODO: know how many permutations in pk
     let pk_permutations: Vec<_> = vk
         .cs
         .permutation
@@ -2219,6 +2228,7 @@ where
 
     // Shuffles are not used in zkevm-circuits, skipping here
     assert!(vk.cs.shuffles.len() == 0);
+    assert!(vk.cs.shuffles.len() == 0);
 
     let random_poly = if trace.is_some() {
         ast::PolyCoef::zero(params.n())
@@ -2266,6 +2276,7 @@ where
                     &mut h,
                     &pk_permutation_exts,
                     permutation_ppp_exts,
+                    &vk.cs.lookups,
                     &vk.cs.lookups,
                     plas,
                     lookup_ppp_coefs,
@@ -2387,7 +2398,6 @@ where
     let random_eval = random_poly.evaluate(&x);
     transcript.hash_scalar(&random_eval, HashTyp::WriteProof);
 
-    // TODO
     let pk_permutation_coefs: Vec<_> = vk
         .cs
         .permutation
@@ -2492,7 +2502,7 @@ where
         trace,
     );
 
-    (transcript, inputs_shape)
+    ((transcript, inputs_shape), vk)
 }
 
 impl InputsShape {

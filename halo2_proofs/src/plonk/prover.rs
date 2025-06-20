@@ -6,11 +6,9 @@ use std::collections::{BTreeSet, HashSet};
 use std::ops::{Deref, DerefMut, RangeTo};
 use std::sync::Arc;
 use std::{collections::HashMap, iter};
-use zkpoly_compiler::driver::artifect::Pools;
 use zkpoly_compiler::driver::DebugOptions;
 use zkpoly_compiler::driver::HardwareInfo;
 use zkpoly_memory_pool::buddy_disk_pool::DiskMemoryPool;
-use zkpoly_memory_pool::static_allocator::CpuStaticAllocator;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::runtime::RuntimeDebug;
 
@@ -161,7 +159,7 @@ where
                     .stack_size(64 * 1024 * 1024)
                     .spawn_scoped(s, || {
                         let cg_gen_start = start_timer!(|| "Create proof");
-                        let (cg_ret, cg_inputs_shape) =
+                        let ((cg_ret, cg_inputs_shape), _) =
                             gen::create_proof_validated::<Scheme, P, E, T, _>(
                                 params,
                                 vk,
