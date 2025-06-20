@@ -1636,7 +1636,7 @@ where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
     ConcreteCircuit::Config: 'static + Send + Sync,
 {
-    let (res, _) = create_proof_validated::<Scheme, P, E, T, ConcreteCircuit>(
+    let res = create_proof_validated::<Scheme, P, E, T, ConcreteCircuit>(
         params,
         &pk.vk,
         circuits,
@@ -1662,7 +1662,7 @@ pub fn create_proof_validated<
     instance_lengths: &[Vec<usize>],
     allocator: &mut ast::ConstantPool,
     trace: Option<&Trace<Scheme::Curve>>,
-) -> ((ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape), VerifyingKey<Scheme::Curve>)
+) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     ConcreteCircuit::Config: 'static + Send + Sync,
@@ -1722,7 +1722,6 @@ where
     let inputs_shape = InputsShape {
         n_circuits: circuits.len(),
         n_columns: vk.cs.num_instance_columns,
-        n_columns: vk.cs.num_instance_columns,
         instance_lengths: instance_lengths.to_vec(),
     };
 
@@ -1756,9 +1755,7 @@ where
         .map(|p| ast::PolyLagrange::ones(extended_n))
         .collect();
 
-
     // Hash verfication key into transcript
-    let vk_scalar = ast::Scalar::constant(vk.transcript_repr.clone());
     let vk_scalar = ast::Scalar::constant(vk.transcript_repr.clone());
     transcript.hash_scalar(&vk_scalar, HashTyp::NoWriteProof);
 
@@ -1786,10 +1783,10 @@ where
     let new_hash_dict_f = user_functions::new_hash_dict();
     let mut challenges = new_hash_dict_f.call();
 
-    let circuits = circuits
-        .into_iter()
-        .map(|circuit| ast::Whatever::constant(circuit, "circuit".to_string()))
-        .collect::<Vec<_>>();
+    // let circuits = circuits
+    //     .into_iter()
+    //     .map(|circuit| ast::Whatever::constant(circuit, "circuit".to_string()))
+    //     .collect::<Vec<_>>();
 
     let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
     for (phase_i, current_phase) in vk.cs.phases().enumerate() {
@@ -1812,32 +1809,26 @@ where
             .zip(instances.iter())
             .enumerate()
         {
-            let calculate_advice_f = user_functions::calculate_advices::<_, ConcreteCircuit>(
-                params.n(),
-                params.k(),
-                current_phase,
-                meta,
-                config.clone(),
-            );
-            let advices_numerator_dominators = calculate_advice_f.call(
-                ast::Array::construct(instance_values.iter().cloned()),
-                challenges.clone(),
-                circuit.clone(),
-            );
+            // let calculate_advice_f = user_functions::calculate_advices::<_, ConcreteCircuit>(
+            //     params.n(),
+            //     params.k(),
+            //     current_phase,
+            //     meta,
+            //     config.clone(),
+            // );
+            // let advices_numerator_dominators = calculate_advice_f.call(
+            //     ast::Array::construct(instance_values.iter().cloned()),
+            //     challenges.clone(),
+            //     circuit.clone(),
+            // );
 
-            let advice_numerators: Vec<_> = advices_numerator_dominators
-                .iter()
-                .take(meta.num_advice_columns)
-                .enumerate()
-                .filter(|(i, _)| column_indices.contains(i))
-                .map(|(_, x)| x)
+            let advice_numerators: Vec<_> = (0..meta.num_advice_columns)
+                .filter(|i| column_indices.contains(i))
+                .map(|_| ast::PolyLagrange::ones(params.n()))
                 .collect();
-            let advice_dominators: Vec<_> = advices_numerator_dominators
-                .iter()
-                .skip(meta.num_advice_columns)
-                .enumerate()
-                .filter(|(i, _)| column_indices.contains(i))
-                .map(|(_, x)| x)
+            let advice_dominators: Vec<_> = (0..meta.num_advice_columns)
+                .filter(|i| column_indices.contains(i))
+                .map(|_| ast::PolyLagrange::ones(params.n()))
                 .collect();
 
             let advice_values: Vec<_> = advice_numerators
@@ -2277,7 +2268,6 @@ where
                     &pk_permutation_exts,
                     permutation_ppp_exts,
                     &vk.cs.lookups,
-                    &vk.cs.lookups,
                     plas,
                     lookup_ppp_coefs,
                     table,
@@ -2502,7 +2492,7 @@ where
         trace,
     );
 
-    ((transcript, inputs_shape), vk)
+    (transcript, inputs_shape)
 }
 
 impl InputsShape {

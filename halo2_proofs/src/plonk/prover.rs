@@ -159,7 +159,7 @@ where
                     .stack_size(64 * 1024 * 1024)
                     .spawn_scoped(s, || {
                         let cg_gen_start = start_timer!(|| "Create proof");
-                        let ((cg_ret, cg_inputs_shape), _) =
+                        let (cg_ret, cg_inputs_shape) =
                             gen::create_proof_validated::<Scheme, P, E, T, _>(
                                 params,
                                 vk,
