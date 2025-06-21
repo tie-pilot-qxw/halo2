@@ -166,7 +166,7 @@ where
                                 &instance_lengths,
                                 &mut zkpoly_compiler::ast::ConstantPool {
                                     cpu: env.allocator.as_mut().unwrap(),
-                                    disk: &mut env.disk_allocator,
+                                    disk: Some(&mut env.disk_allocator),
                                 },
                                 trace,
                             );
