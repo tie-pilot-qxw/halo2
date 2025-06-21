@@ -366,7 +366,7 @@ fn main() {
             vk,
             vec![circuit],
             &vec![vec![]],
-            &mut zkpoly_compiler::ast::ConstantPool { cpu: &mut allocator, disk: &mut vec![] },
+            &mut zkpoly_compiler::ast::ConstantPool { cpu: &mut allocator, disk: None },
             None,
         );
         println!("[Test] End Computation Graph Generation");
@@ -375,7 +375,7 @@ fn main() {
 
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
-            .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
+            .with_type2_visualizer(driver::Type2DebugVisualizer::Graphviz);
         let hd_info = driver::HardwareInfo::new(MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
             .with_page_size(2 * 2u64.pow(20))
             .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
