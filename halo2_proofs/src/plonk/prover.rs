@@ -204,13 +204,13 @@ where
                                     .unwrap()
                             } else {
                                 println!("[Test] Applying Type2 passes and lowering to Artifect");
-                                let pt2 =
-                                    fresh_type2.apply_passes(&options, &hd_info, &pjh).unwrap();
+                                let mut pt2 =
+                                    fresh_type2.apply_passes(&options, &hd_info, &pjh, &mut env.disk_allocator).unwrap();
                                 pt2.dump(&processed_type2_dir).unwrap();
                                 pt2
                             };
 
-                            let artifect = processed_type2
+                            let mut artifect = processed_type2
                                 .to_type3(&options, &hd_info, &pjh)
                                 .unwrap()
                                 .apply_passes(&options)
