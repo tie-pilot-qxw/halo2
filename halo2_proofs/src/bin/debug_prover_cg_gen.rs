@@ -401,7 +401,7 @@ fn main() {
                 .unwrap()
         };
 
-        let scheduler = Scheduler::new(1, 1, 400 * 2u64.pow(30), 400 * 2u64.pow(30));
+        let scheduler = Scheduler::new(1, 1, 1024 * 10, 1024 * 10);
 
         println!("[Test] Launch VM");
 
