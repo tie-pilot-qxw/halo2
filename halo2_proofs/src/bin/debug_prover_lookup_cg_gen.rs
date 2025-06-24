@@ -139,8 +139,7 @@ fn main() {
         let artifect_dir = "target/artifect";
 
         let env_info = JitProverEnv::new(
-            Some(allocator),
-            hd_info.disk_allocator(16 * 2usize.pow(30)),
+            driver::ConstantPool::with_disk(allocator, hd_info.disk_allocator(16 * 2usize.pow(30))),
             true,
             options,
             hd_info,
@@ -152,7 +151,7 @@ fn main() {
             zkpoly_runtime::runtime::RuntimeDebug::None,
         );
 
-        halo2_proofs::plonk::create_proof::<
+        halo2_proofs::plonk::create_proof_vk::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
             _,
