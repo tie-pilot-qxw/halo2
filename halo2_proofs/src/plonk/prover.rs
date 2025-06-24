@@ -85,11 +85,35 @@ impl JitProverEnv {
     }
 }
 
+/// Dummy function to maintain API
+pub fn create_proof<
+    'params,
+    Scheme: CommitmentScheme + 'static,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve> + 'static,
+    R: RngCore + Send + 'static,
+    T: TranscriptWrite<Scheme::Curve, E> + std::fmt::Debug + 'static,
+    ConcreteCircuit: Circuit<Scheme::Scalar> + Clone + Send + Sync + 'static,
+>(
+    params: &'params Scheme::ParamsProver,
+    pk: &ProvingKey<Scheme::Curve>,
+    circuits: &[ConcreteCircuit],
+    instances: &[&[&[Scheme::Scalar]]],
+    rng: R,
+    transcript: &mut T,
+    env: &mut Option<JitProverEnv>,
+) -> Result<(), Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    unimplemented!()
+}
+
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit. The provided `instances`
 /// are zero-padded internally.
-pub fn create_proof<
+pub fn create_proof_vk<
     'params,
     Scheme: CommitmentScheme + 'static,
     P: Prover<'params, Scheme>,
@@ -1128,13 +1152,13 @@ fn test_create_proof() {
 
     let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, OsRng);
     let vk = keygen_vk(&params, &MyCircuit).expect("keygen_vk should not fail");
-    // let pk = keygen_pk(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
+    let pk = keygen_pk(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
     // Create proof with wrong number of instances
     let proof = create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
         &params,
-        &vk,
+        &pk,
         &[MyCircuit, MyCircuit],
         &[],
         OsRng,
@@ -1146,7 +1170,7 @@ fn test_create_proof() {
     // Create proof with correct number of instances
     create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
         &params,
-        &vk,
+        &pk,
         &[MyCircuit, MyCircuit],
         &[&[], &[]],
         OsRng,

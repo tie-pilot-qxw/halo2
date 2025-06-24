@@ -388,8 +388,8 @@ fn main() {
 
         let (artifect, _constant_cpu_pool) =
             if rebuild || !std::path::Path::new(artifect_dir).exists() {
-                let artifect = type2_fresh
-                    .to_semi_artifect(&options, &hd_info, &pjh)
+                let mut artifect = type2_fresh
+                    .to_semi_artifect(&options, &hd_info, &mut vec![], &pjh)
                     .unwrap();
                 artifect.dump(&artifect_dir).unwrap();
                 artifect.finish(&mut vec![])
