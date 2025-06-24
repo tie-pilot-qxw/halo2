@@ -319,7 +319,9 @@ fn main() {
         type E = transcript::Challenge255<G1Affine>;
         type Tr = transcript::Blake2bWrite<Vec<u8>, G1Affine, E>;
 
-        let mut allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>()); //.use_mmap();
+        println!("[Test] Create Constant Pools");
+        let allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
+        let mut constant_pool = driver::ConstantPool::only_cpu(allocator);
 
         // let mut trace = Trace::default();
 
@@ -366,7 +368,7 @@ fn main() {
             pk,
             vec![circuit],
             &vec![vec![]],
-            &mut zkpoly_compiler::ast::ConstantPool { cpu: &mut allocator, disk: None },
+            &mut constant_pool,
             None,
         );
         println!("[Test] End Computation Graph Generation");
@@ -384,19 +386,19 @@ fn main() {
 
         println!("[Test] Begin Compiling to Runtime Instructions");
         let pjh = driver::PanicJoinHandler::new();
-        let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, allocator, &pjh).unwrap();
+        let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
 
-        let (artifect, _constant_cpu_pool) =
+        let artifect =
             if rebuild || !std::path::Path::new(artifect_dir).exists() {
-                let artifect = type2_fresh
-                    .to_semi_artifect(&options, &hd_info, &pjh)
+                let mut artifect = type2_fresh
+                    .to_semi_artifect(&options, &hd_info, &mut constant_pool, &pjh)
                     .unwrap();
-                artifect.dump(&artifect_dir).unwrap();
-                artifect.finish(&mut vec![])
+                artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
+                artifect.finish(&mut constant_pool)
             } else {
                 println!("[Test] Loading Artifect from {}", &artifect_dir);
                 type2_fresh
-                    .load_artifect(&artifect_dir, &mut vec![])
+                    .load_artifect(&artifect_dir, &mut constant_pool)
                     .unwrap()
             };
 

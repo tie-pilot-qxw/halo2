@@ -6,9 +6,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::ops::{Deref, DerefMut, RangeTo};
 use std::sync::Arc;
 use std::{collections::HashMap, iter};
-use zkpoly_compiler::driver::artifect::Pools;
-use zkpoly_compiler::driver::DebugOptions;
-use zkpoly_compiler::driver::HardwareInfo;
+use zkpoly_compiler::driver::{ConstantPool, DebugOptions, HardwareInfo};
 use zkpoly_memory_pool::buddy_disk_pool::DiskMemoryPool;
 use zkpoly_memory_pool::static_allocator::CpuStaticAllocator;
 use zkpoly_memory_pool::CpuMemoryPool;
@@ -43,8 +41,7 @@ use group::prime::PrimeCurveAffine;
 /// This is a JIT Prover environment that can be used to run the gpu prover
 #[derive(Debug)]
 pub struct JitProverEnv {
-    allocator: Option<CpuMemoryPool>,
-    disk_allocator: DiskMemoryPool,
+    constant_pool: ConstantPool,
     assert: bool,
     options: DebugOptions,
     hd_info: HardwareInfo,
@@ -58,8 +55,7 @@ pub struct JitProverEnv {
 
 impl JitProverEnv {
     pub fn new(
-        allocator: Option<CpuMemoryPool>,
-        disk_allocator: DiskMemoryPool,
+        constant_pool: ConstantPool,
         assert: bool,
         options: DebugOptions,
         hd_info: HardwareInfo,
@@ -71,8 +67,7 @@ impl JitProverEnv {
         runtime_debug: RuntimeDebug,
     ) -> Self {
         Self {
-            allocator,
-            disk_allocator,
+            constant_pool,
             assert,
             options,
             hd_info,
@@ -152,7 +147,7 @@ where
             .map(|ins| ins.iter().map(|p| p.len()).collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let (artifect, mut cpu_constant_allocator, cg_inputs_shape) = std::thread::scope(|s| {
+        let (artifect, cg_inputs_shape) = std::thread::scope(|s| {
             let handler =
                 std::thread::Builder::new()
                     .stack_size(64 * 1024 * 1024)
@@ -164,10 +159,7 @@ where
                                 &pk,
                                 circuits.to_vec(),
                                 &instance_lengths,
-                                &mut zkpoly_compiler::ast::ConstantPool {
-                                    cpu: env.allocator.as_mut().unwrap(),
-                                    disk: Some(&mut env.disk_allocator),
-                                },
+                                &mut env.constant_pool,
                                 trace,
                             );
                         end_timer!(cg_gen_start);
@@ -178,16 +170,11 @@ where
                         let artifect_dir = env.artifect_dir.clone();
                         let processed_type2_dir = env.processed_type2_dir.clone();
                         let pjh = driver::PanicJoinHandler::new();
-                        let fresh_type2 = driver::FreshType2::from_ast(
-                            cg_ret,
-                            &options,
-                            env.allocator.take().unwrap(),
-                            &pjh,
-                        )
-                        .unwrap();
+                        let fresh_type2 =
+                            driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
                         let mut str_buf = String::new();
 
-                        let (artifect, constant_cpu_allocator) = if env.rebuild
+                        let artifect = if env.rebuild
                             || !std::path::Path::new(&artifect_dir).exists()
                         {
                             let processed_type2 = if env.prefer_no_reapply_type2_passes
@@ -198,36 +185,40 @@ where
                                     .load_processed_type2(
                                         &mut str_buf,
                                         &processed_type2_dir,
-                                        &mut env.disk_allocator,
+                                        &mut env.constant_pool,
                                     )
                                     .unwrap()
                             } else {
                                 println!("[Test] Applying Type2 passes and lowering to Artifect");
-                                let mut pt2 =
-                                    fresh_type2.apply_passes(&options, &hd_info, &pjh, &mut env.disk_allocator).unwrap();
-                                pt2.dump(&processed_type2_dir).unwrap();
+                                let mut pt2 = fresh_type2
+                                    .apply_passes(&options, &hd_info, &mut env.constant_pool, &pjh)
+                                    .unwrap();
+                                pt2.dump(&processed_type2_dir, &mut env.constant_pool)
+                                    .unwrap();
                                 pt2
                             };
 
                             let mut artifect = processed_type2
-                                .to_type3(&options, &hd_info, &pjh)
+                                .to_type3(&options, &hd_info, &mut env.constant_pool, &pjh)
                                 .unwrap()
                                 .apply_passes(&options)
                                 .unwrap()
-                                .to_artifect(&options, &hd_info, &pjh)
+                                .to_artifect(&options, &hd_info)
                                 .unwrap();
 
-                            artifect.dump(&artifect_dir).unwrap();
-                            artifect.finish(&mut env.disk_allocator)
+                            artifect
+                                .dump(&artifect_dir, &mut env.constant_pool)
+                                .unwrap();
+                            artifect.finish(&mut env.constant_pool)
                         } else {
                             fresh_type2
-                                .load_artifect(&artifect_dir, &mut env.disk_allocator)
+                                .load_artifect(&artifect_dir, &mut env.constant_pool)
                                 .unwrap()
                         };
 
                         end_timer!(compile_start);
 
-                        (artifect, constant_cpu_allocator, cg_inputs_shape)
+                        (artifect, cg_inputs_shape)
                     })
                     .unwrap();
 
@@ -241,7 +232,7 @@ where
                     .map(|ins| {
                         zkpoly_runtime::scalar::ScalarArray::from_vec(
                             &ins,
-                            &mut cpu_constant_allocator,
+                            &mut env.constant_pool.cpu,
                         )
                     })
                     .collect::<Vec<_>>()
@@ -264,7 +255,6 @@ where
 
         *transcript = proof;
         runtime.reset();
-        env.allocator = Some(cpu_constant_allocator);
         Ok(())
     }
 }
