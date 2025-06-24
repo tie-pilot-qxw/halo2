@@ -16,7 +16,7 @@ use halo2_proofs::poly::kzg::{
 use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
 use zkpoly_compiler::driver::MemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
-use zkpoly_scheduler::scheduler::Scheduler;
+use zkpoly_scheduler::scheduler::{ResourceRequirement, Scheduler};
 
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -402,7 +402,7 @@ fn main() {
                     .unwrap()
             };
 
-        let scheduler = Scheduler::new(1, 1);
+        let scheduler = Scheduler::new(1, 1, 1024 * 10, 1024 * 10);
 
         println!("[Test] Launch VM");
 
@@ -416,6 +416,10 @@ fn main() {
                     zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
                     inputs,
                     zkpoly_runtime::runtime::RuntimeDebug::DebugInstruction,
+                    ResourceRequirement{
+                        cpu_memory_mb: (hd_info.cpu().memory_limit() / 1024 / 1024) as u64,
+                        disk_space_mb: 1024, // TODO: use static disk allocation
+                    }
                 );
                 res
             })
