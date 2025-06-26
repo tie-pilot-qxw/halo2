@@ -148,7 +148,9 @@ fn main() {
             "/tmp".to_string(),
             false,
             true,
-            zkpoly_runtime::runtime::RuntimeDebug::None,
+            zkpoly_runtime::runtime::RuntimeDebug::none()
+                .with_print_instruction(true)
+                .with_record_time(true)
         );
 
         halo2_proofs::plonk::create_proof_vk::<

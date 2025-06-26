@@ -77,6 +77,8 @@ zkpoly_cuda_api = { path = "../zkpoly-compiler/cuda_api" }
 zkpoly_scheduler = { path = "../zkpoly-compiler/scheduler" }
 zkpoly_common ={ path = "../zkpoly-compiler/common" }
 
+serde_json = "1"
+
 backtrace-on-stack-overflow = "0.3.0"
 
 
@@ -86,7 +88,6 @@ criterion = "0.3"
 gumdrop = "0.8"
 proptest = "1"
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
-serde_json = "1"
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }
