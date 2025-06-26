@@ -16,7 +16,7 @@ use halo2_proofs::poly::kzg::{
 use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
 use zkpoly_compiler::driver::MemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
-use zkpoly_scheduler::scheduler::Scheduler;
+use zkpoly_scheduler::scheduler::{ResourceRequirement, Scheduler};
 
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -388,21 +388,20 @@ fn main() {
         let pjh = driver::PanicJoinHandler::new();
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
 
-        let artifect =
-            if rebuild || !std::path::Path::new(artifect_dir).exists() {
-                let mut artifect = type2_fresh
-                    .to_semi_artifect(&options, &hd_info, &mut constant_pool, &pjh)
-                    .unwrap();
-                artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
-                artifect.finish(&mut constant_pool)
-            } else {
-                println!("[Test] Loading Artifect from {}", &artifect_dir);
-                type2_fresh
-                    .load_artifect(&artifect_dir, &mut constant_pool)
-                    .unwrap()
-            };
+        let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
+            let mut artifect = type2_fresh
+                .to_semi_artifect(&options, &hd_info, &mut constant_pool, &pjh)
+                .unwrap();
+            artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
+            artifect.finish(&mut constant_pool)
+        } else {
+            println!("[Test] Loading Artifect from {}", &artifect_dir);
+            type2_fresh
+                .load_artifect(&artifect_dir, &mut constant_pool)
+                .unwrap()
+        };
 
-        let scheduler = Scheduler::new(1, 1);
+        let scheduler = Scheduler::new(1, 1, 400 * 2u64.pow(30), 400 * 2u64.pow(30));
 
         println!("[Test] Launch VM");
 
@@ -415,7 +414,9 @@ fn main() {
                     hd_info.clone(),
                     zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
                     inputs,
-                    zkpoly_runtime::runtime::RuntimeDebug::DebugInstruction,
+                    zkpoly_runtime::runtime::RuntimeDebug::none()
+                        .with_print_instruction(true)
+                        .with_record_time(true),
                 );
                 res
             })
@@ -424,7 +425,13 @@ fn main() {
 
         for (i, res) in results.into_iter().enumerate() {
             println!("[Test] Waiting for result {}", i);
-            let (r, _, _) = res.recv().unwrap();
+            let (r, log, _) = res.recv().unwrap();
+
+            if i == 0 {
+                let debug_log_f = std::fs::File::create("./runtime_debug.json").unwrap();
+                serde_json::to_writer_pretty(debug_log_f, &log).unwrap();
+            }
+
             let proof = r.unwrap().unwrap_transcript_move().take().finalize();
             println!("[Test] Begin Verify Proof {}", i);
             let strategy = SingleStrategy::new(params);
