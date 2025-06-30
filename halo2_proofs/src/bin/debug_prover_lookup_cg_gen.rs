@@ -153,7 +153,7 @@ fn main() {
                 .with_record_time(true)
         );
 
-        halo2_proofs::plonk::create_proof_vk::<
+        halo2_proofs::plonk::create_proof::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
             _,
