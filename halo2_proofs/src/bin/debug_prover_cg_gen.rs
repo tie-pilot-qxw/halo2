@@ -430,6 +430,9 @@ fn main() {
             if i == 0 {
                 let debug_log_f = std::fs::File::create("./runtime_debug.json").unwrap();
                 serde_json::to_writer_pretty(debug_log_f, &log).unwrap();
+
+                let mut f = std::fs::File::create("./runtime_debug.html").unwrap();
+                log.waterfall().build(&mut f).unwrap();
             }
 
             let proof = r.unwrap().unwrap_transcript_move().take().finalize();
