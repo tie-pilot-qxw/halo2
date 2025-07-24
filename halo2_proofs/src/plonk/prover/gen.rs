@@ -445,7 +445,7 @@ mod user_functions {
         )
     }
 
-    pub type PseudoRandomPoly<Rt: RuntimeType> = uf::FunctionFn0<Rt, ast::PolyCoef<Rt>>;
+    pub type PseudoRandomPoly<Rt: RuntimeType> = uf::FunctionUd0<Rt, ast::PolyCoef<Rt>>;
 
     pub fn pseudo_random_poly<Rt: RuntimeType>(n: usize) -> PseudoRandomPoly<Rt> {
         use rand_core::SeedableRng;
@@ -482,10 +482,28 @@ mod user_functions {
             Ok(())
         };
 
-        uf::FunctionFn0::new(
+        uf::FunctionUd0::new(
             "pseudo_random_poly".to_string(),
             f,
             type2::Typ::coef(n as u64),
+        )
+    }
+
+    pub type SimulatedOnesPoly<Rt: RuntimeType> = uf::FunctionUd0<Rt, ast::PolyLagrange<Rt>>;
+
+    pub fn simulated_ones_poly<Rt: RuntimeType>(n: usize) -> SimulatedOnesPoly<Rt> {
+        let f = move |r: &mut zkpoly_runtime::scalar::ScalarArray<Rt::Field>| {
+            crate::arithmetic::parallelize(r.as_mut(), |chunk, _offset| {
+                chunk.iter_mut().for_each(|v| *v = Rt::Field::ONE);
+            });
+
+            Ok(())
+        };
+
+        uf::FunctionUd0::new(
+            "pseudo_random_poly".to_string(),
+            f,
+            type2::Typ::lagrange(n as u64),
         )
     }
 
@@ -1822,13 +1840,14 @@ where
             //     circuit.clone(),
             // );
 
+            let simulated_ones = user_functions::simulated_ones_poly(params.n() as usize);
             let advice_numerators: Vec<_> = (0..meta.num_advice_columns)
                 .filter(|i| column_indices.contains(i))
-                .map(|_| ast::PolyLagrange::ones(params.n()))
+                .map(|_| simulated_ones.call())
                 .collect();
             let advice_dominators: Vec<_> = (0..meta.num_advice_columns)
                 .filter(|i| column_indices.contains(i))
-                .map(|_| ast::PolyLagrange::ones(params.n()))
+                .map(|_| simulated_ones.call())
                 .collect();
 
             let advice_values: Vec<_> = advice_numerators
