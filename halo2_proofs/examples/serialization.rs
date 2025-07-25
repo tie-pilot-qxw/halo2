@@ -169,7 +169,6 @@ fn main() {
         &[instances],
         OsRng,
         &mut transcript,
-        &mut None,
     )
     .expect("prover should not fail");
     let proof = transcript.finalize();

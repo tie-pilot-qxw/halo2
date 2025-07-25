@@ -38,61 +38,16 @@ use crate::{
 };
 use group::prime::PrimeCurveAffine;
 
-/// This is a JIT Prover environment that can be used to run the gpu prover
-#[derive(Debug)]
-pub struct JitProverEnv {
-    constant_pool: ConstantPool,
-    assert: bool,
-    options: DebugOptions,
-    hd_info: HardwareInfo,
-    artifect_dir: String,
-    rebuild: bool,
-    processed_type2_dir: String,
-    prefer_no_reapply_type2_passes: bool,
-    memory_check: bool,
-    runtime_debug: RuntimeDebug,
-}
+pub mod jit;
 
-impl JitProverEnv {
-    pub fn new(
-        constant_pool: ConstantPool,
-        assert: bool,
-        options: DebugOptions,
-        hd_info: HardwareInfo,
-        artifect_dir: String,
-        rebuild: bool,
-        processed_type2_dir: String,
-        prefer_no_reapply_type2_passes: bool,
-        memory_check: bool,
-        runtime_debug: RuntimeDebug,
-    ) -> Self {
-        Self {
-            constant_pool,
-            assert,
-            options,
-            hd_info,
-            artifect_dir,
-            rebuild,
-            processed_type2_dir,
-            prefer_no_reapply_type2_passes,
-            memory_check,
-            runtime_debug,
-        }
-    }
-}
-
-/// This creates a proof for the provided `circuit` when given the public
-/// parameters `params` and the proving key [`ProvingKey`] that was
-/// generated previously for the same circuit. The provided `instances`
-/// are zero-padded internally.
 pub fn create_proof<
     'params,
-    Scheme: CommitmentScheme + 'static,
+    Scheme: CommitmentScheme,
     P: Prover<'params, Scheme>,
-    E: EncodedChallenge<Scheme::Curve> + 'static,
-    R: RngCore + Send + 'static,
-    T: TranscriptWrite<Scheme::Curve, E> + std::fmt::Debug + 'static,
-    ConcreteCircuit: Circuit<Scheme::Scalar> + Clone + Send + Sync + 'static,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E> + std::fmt::Debug,
+    ConcreteCircuit: Circuit<Scheme::Scalar>,
 >(
     params: &'params Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
@@ -100,163 +55,13 @@ pub fn create_proof<
     instances: &[&[&[Scheme::Scalar]]],
     rng: R,
     transcript: &mut T,
-    env: &mut Option<JitProverEnv>,
 ) -> Result<(), Error>
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
 {
-    if env.is_none() {
-        // origin cpu version
-        create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
-            params, pk, circuits, instances, rng, transcript, None,
-        )
-    } else {
-        let env = env.as_mut().unwrap();
-
-        // create proof and verify
-        let mut trace = Trace::default();
-        let trace_run = env.assert;
-
-        let trace = if trace_run {
-            println!("extended k = {}", pk.get_vk().get_domain().extended_k());
-
-            let trace_start = start_timer!(|| "[Test] Begin Running Original Prover for Trace");
-            let mut transcript = transcript.clone();
-            create_proof_traced::<Scheme, P, E, _, T, ConcreteCircuit>(
-                params,
-                pk,
-                circuits,
-                instances,
-                OsRng::default(), // traced prover does not use rng, this is just a placeholder
-                &mut transcript,
-                Some(&mut trace),
-            )
-            .expect("proof generation should not fail");
-            end_timer!(trace_start);
-            Some(&trace)
-        } else {
-            None
-        };
-
-        let options = env.options.clone();
-
-        let hd_info = env.hd_info.clone();
-
-        let instance_lengths = instances
-            .iter()
-            .map(|ins| ins.iter().map(|p| p.len()).collect::<Vec<_>>())
-            .collect::<Vec<_>>();
-
-        let (artifect, cg_inputs_shape) = std::thread::scope(|s| {
-            let handler =
-                std::thread::Builder::new()
-                    .stack_size(64 * 1024 * 1024)
-                    .spawn_scoped(s, || {
-                        let cg_gen_start = start_timer!(|| "Create proof");
-                        let (cg_ret, cg_inputs_shape) =
-                            gen::create_proof_validated::<Scheme, P, E, T, _>(
-                                params,
-                                &pk,
-                                circuits.to_vec(),
-                                &instance_lengths,
-                                &mut env.constant_pool,
-                                trace,
-                            );
-                        end_timer!(cg_gen_start);
-
-                        let compile_start =
-                            start_timer!(|| "[Test] Begin Compiling to Runtime Instructions");
-                        use zkpoly_compiler::driver;
-                        let artifect_dir = env.artifect_dir.clone();
-                        let processed_type2_dir = env.processed_type2_dir.clone();
-                        let pjh = driver::PanicJoinHandler::new();
-                        let fresh_type2 =
-                            driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
-                        let mut str_buf = String::new();
-
-                        let artifect = if env.rebuild
-                            || !std::path::Path::new(&artifect_dir).exists()
-                        {
-                            let processed_type2 = if env.prefer_no_reapply_type2_passes
-                                && std::path::Path::new(&processed_type2_dir).exists()
-                            {
-                                println!("[Test] Skip applying Type2 passes");
-                                fresh_type2
-                                    .load_processed_type2(
-                                        &mut str_buf,
-                                        &processed_type2_dir,
-                                        &mut env.constant_pool,
-                                    )
-                                    .unwrap()
-                            } else {
-                                println!("[Test] Applying Type2 passes and lowering to Artifect");
-                                let mut pt2 = fresh_type2
-                                    .apply_passes(&options, &hd_info, &mut env.constant_pool, &pjh)
-                                    .unwrap();
-                                pt2.dump(&processed_type2_dir, &mut env.constant_pool)
-                                    .unwrap();
-                                pt2
-                            };
-
-                            let mut artifect = processed_type2
-                                .to_type3(&options, &hd_info, &mut env.constant_pool, &pjh)
-                                .unwrap()
-                                .apply_passes(&options)
-                                .unwrap()
-                                .to_artifect(&options, &hd_info)
-                                .unwrap();
-
-                            artifect
-                                .dump(&artifect_dir, &mut env.constant_pool)
-                                .unwrap();
-                            artifect.finish(&mut env.constant_pool)
-                        } else {
-                            fresh_type2
-                                .load_artifect(&artifect_dir, &mut env.constant_pool)
-                                .unwrap()
-                        };
-
-                        end_timer!(compile_start);
-
-                        (artifect, cg_inputs_shape)
-                    })
-                    .unwrap();
-
-            handler.join().unwrap()
-        });
-
-        let instances = instances
-            .iter()
-            .map(|ins| {
-                ins.iter()
-                    .map(|ins| {
-                        zkpoly_runtime::scalar::ScalarArray::from_vec(
-                            &ins,
-                            &mut env.constant_pool.cpu,
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-        let mut inputs = cg_inputs_shape.serialize(instances, transcript.clone());
-
-        let pools = artifect.create_pools(&hd_info, env.memory_check);
-        let mut runtime = artifect.prepare_dispatcher(
-            pools,
-            zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), rng),
-            Arc::new(|x| x),
-        );
-
-        let dispatcher_start = start_timer!(|| "[Test] Begin Running Dispatcher");
-        let ((r, _, _), _) = runtime.run(&mut inputs, env.runtime_debug);
-        end_timer!(dispatcher_start);
-
-        let proof = r.unwrap().unwrap_transcript_move().take();
-
-        *transcript = proof;
-        runtime.reset();
-        Ok(())
-    }
+    create_proof_traced::<Scheme, P, E, R, T, ConcreteCircuit>(
+        params, pk, circuits, instances, rng, transcript, None,
+    )
 }
 
 /// Like `create_proof`, but additionally writes the trace to the provided
@@ -1121,26 +926,26 @@ fn test_create_proof() {
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
     // Create proof with wrong number of instances
-    let proof = create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
+    let proof = create_proof_traced::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
         &params,
         &pk,
         &[MyCircuit, MyCircuit],
         &[],
         OsRng,
         &mut transcript,
-        &mut None,
+        None,
     );
     assert!(matches!(proof.unwrap_err(), Error::InvalidInstances));
 
     // Create proof with correct number of instances
-    create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
+    create_proof_traced::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
         &params,
         &pk,
         &[MyCircuit, MyCircuit],
         &[&[], &[]],
         OsRng,
         &mut transcript,
-        &mut None,
+        None,
     )
     .expect("proof generation should not fail");
 }

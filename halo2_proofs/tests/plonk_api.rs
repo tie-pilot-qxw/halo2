@@ -468,7 +468,7 @@ fn plonk_api() {
     ) -> Vec<u8>
     where
         Scheme::Scalar: Ord + WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
-        R: Send + 'static
+        R: Send + 'static,
     {
         let (a, instance, lookup_table) = common!(Scheme);
 
@@ -486,7 +486,6 @@ fn plonk_api() {
             &[&[&[instance]], &[&[instance]]],
             rng,
             &mut transcript,
-            &mut None
         )
         .expect("proof generation should not fail");
 

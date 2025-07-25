@@ -3,7 +3,6 @@ use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
-use halo2_proofs::tracing::Trace;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 use rand_core::OsRng;
 
@@ -14,9 +13,11 @@ use halo2_proofs::poly::kzg::{
 };
 
 use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
+use zkpoly_common::heap::Heap;
 use zkpoly_compiler::driver::MemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
-use zkpoly_scheduler::scheduler::{ResourceRequirement, Scheduler};
+use zkpoly_runtime::async_rng::AsyncRng;
+use zkpoly_scheduler::scheduler::{make_scheduler, SchedulerConfig, SubmittedTask};
 
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -389,8 +390,8 @@ fn main() {
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
 
         let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
-            let mut artifect = type2_fresh
-                .to_semi_artifect(&options, &hd_info, &mut constant_pool, &pjh)
+            let artifect = type2_fresh
+                .to_semi_artifect(&options, &hd_info, &mut constant_pool, 0..=0, &pjh)
                 .unwrap();
             artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
             artifect.finish(&mut constant_pool)
@@ -401,7 +402,13 @@ fn main() {
                 .unwrap()
         };
 
-        let scheduler = Scheduler::new(1, 1, 1024 * 10, 1024 * 10);
+        let sconfig = SchedulerConfig::default();
+        let mut programs = Heap::new();
+        let disk_pool = hd_info.disk_allocator(artifect.max_bs());
+        let program = programs.push(artifect);
+        let rng = AsyncRng::new(2usize.pow(20), OsRng);
+        let (scheduler, submitter) = make_scheduler(hd_info, sconfig, rng, disk_pool, programs);
+        let scheduler = scheduler.launch();
 
         println!("[Test] Launch VM");
 
@@ -409,33 +416,31 @@ fn main() {
             .into_iter()
             .map(|_| {
                 let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
-                let (_, res) = scheduler.add_request(
-                    artifect.clone(),
-                    hd_info.clone(),
-                    zkpoly_runtime::async_rng::AsyncRng::new(2usize.pow(20), OsRng::default()),
-                    inputs,
-                    zkpoly_runtime::runtime::RuntimeDebug::none()
-                        .with_print_instruction(true)
-                        .with_record_time(true),
-                );
-                res
+                submitter
+                    .submit(SubmittedTask::new(program, inputs))
+                    .expect("submit task failure")
             })
             .collect::<Vec<_>>();
         println!("[Test] VM Launched");
 
         for (i, res) in results.into_iter().enumerate() {
             println!("[Test] Waiting for result {}", i);
-            let (r, log, _) = res.recv().unwrap();
+            let result = res.recv().unwrap();
 
             if i == 0 {
                 let debug_log_f = std::fs::File::create("./runtime_debug.json").unwrap();
-                serde_json::to_writer_pretty(debug_log_f, &log).unwrap();
+                serde_json::to_writer_pretty(debug_log_f, &result.log).unwrap();
 
                 let mut f = std::fs::File::create("./runtime_debug.html").unwrap();
-                log.waterfall().build(&mut f).unwrap();
+                result.log.waterfall().build(&mut f).unwrap();
             }
 
-            let proof = r.unwrap().unwrap_transcript_move().take().finalize();
+            let proof = result
+                .ret_value
+                .unwrap()
+                .unwrap_transcript_move()
+                .take()
+                .finalize();
             println!("[Test] Begin Verify Proof {}", i);
             let strategy = SingleStrategy::new(params);
             use halo2_proofs::transcript::TranscriptReadBuffer;
@@ -457,6 +462,8 @@ fn main() {
                 Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
             }
         }
+
+        scheduler.shutdown();
         println!("[Test] VM Exited");
     }
 

@@ -288,7 +288,6 @@ fn criterion_benchmark(c: &mut Criterion) {
             &[&[]],
             rng,
             &mut transcript,
-            &mut None,
         )
         .expect("proof generation should not fail");
         transcript.finalize()

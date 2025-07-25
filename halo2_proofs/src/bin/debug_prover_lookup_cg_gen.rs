@@ -1,11 +1,10 @@
 use group::ff::Field;
 use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::plonk::jit::{JitConfig, JitProverEnv};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
-use halo2_proofs::tracing::Trace;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::OsRng;
 
 use halo2_proofs::poly::kzg::{
     commitment::{KZGCommitmentScheme, ParamsKZG},
@@ -13,12 +12,12 @@ use halo2_proofs::poly::kzg::{
     strategy::SingleStrategy,
 };
 
-use zkpoly_compiler::driver::DiskMemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
 
 use ff::PrimeField;
 use std::marker::PhantomData;
 use std::path::PathBuf;
+use zkpoly_scheduler::scheduler::SchedulerConfig;
 
 fn main() {
     #[derive(Clone, Default)]
@@ -111,8 +110,6 @@ fn main() {
     }
 
     fn prover(_k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
-        let rng = OsRng;
-
         let circuit: MyCircuit<Fr> = MyCircuit {
             _marker: PhantomData,
         };
@@ -132,31 +129,29 @@ fn main() {
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
         let hd_info =
             driver::HardwareInfo::new(driver::MemoryInfo::new(300 * 2u64.pow(30), 2u64.pow(28)))
-                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
-                .with_disk(DiskMemoryInfo::new(None));
+                .with_page_size(2u64.pow(24))
+                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)));
 
-        let allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
-        let artifect_dir = "target/artifect";
+        let cpu_pool = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
+        let artifect_dir = "target/lookup";
 
-        let env_info = JitProverEnv::new(
-            driver::ConstantPool::with_disk(allocator, hd_info.disk_allocator(16 * 2usize.pow(30))),
-            true,
-            options,
-            hd_info,
-            artifect_dir.to_string(),
-            true,
-            "/tmp".to_string(),
-            false,
-            true,
-            zkpoly_runtime::runtime::RuntimeDebug::none()
-                .with_print_instruction(true)
-                .with_record_time(true)
+        let constant_pool = driver::ConstantPool::only_cpu(cpu_pool);
+
+        let rebuild = std::env::args().any(|arg| arg == "--rebuild");
+
+        let mut jit = JitProverEnv::new(
+            JitConfig::new(artifect_dir.into())
+                .with_debug_options(options)
+                .with_force_rebuild(rebuild),
+            SchedulerConfig::default(),
+            hd_info.disk_allocator(2usize.pow(30)),
+            constant_pool,
+            hd_info.clone(),
         );
 
-        halo2_proofs::plonk::create_proof::<
+        halo2_proofs::plonk::jit::create_proof::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
-            _,
             _,
             _,
             _,
@@ -165,9 +160,9 @@ fn main() {
             pk,
             &[circuit.clone()],
             &[&[]],
-            rng,
             &mut transcript,
-            &mut Some(env_info),
+            &mut jit,
+            "lookup-test",
         )
         .expect("proof generation should not fail");
 
@@ -193,6 +188,8 @@ fn main() {
             Ok(_) => println!("[Test] Verify Proof Success"),
             Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
         }
+
+        jit.shutdown();
     }
 
     let k = 14;
