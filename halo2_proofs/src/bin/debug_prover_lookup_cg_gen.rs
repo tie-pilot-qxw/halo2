@@ -1,6 +1,6 @@
 use group::ff::Field;
 use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
-use halo2_proofs::plonk::jit::{JitConfig, JitProverEnv};
+use halo2_proofs::plonk::jit::{make_env, JitConfig};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
@@ -139,7 +139,7 @@ fn main() {
 
         let rebuild = std::env::args().any(|arg| arg == "--rebuild");
 
-        let mut jit = JitProverEnv::new(
+        let (mut jit, scheduler) = make_env(
             JitConfig::new(artifect_dir.into())
                 .with_debug_options(options)
                 .with_force_rebuild(rebuild),
@@ -149,7 +149,7 @@ fn main() {
             hd_info.clone(),
         );
 
-        halo2_proofs::plonk::jit::create_proof::<
+        halo2_proofs::plonk::jit::create_proof_gpu::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,
             _,
@@ -189,7 +189,7 @@ fn main() {
             Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
         }
 
-        jit.shutdown();
+        scheduler.shutdown();
     }
 
     let k = 14;

@@ -17,7 +17,7 @@ use zkpoly_common::heap::Heap;
 use zkpoly_compiler::driver::MemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::async_rng::AsyncRng;
-use zkpoly_scheduler::scheduler::{make_scheduler, SchedulerConfig, SubmittedTask};
+use zkpoly_scheduler::scheduler::{make_scheduler, Programs, SchedulerConfig, SubmittedTask};
 
 use std::marker::PhantomData;
 use std::path::PathBuf;
@@ -403,7 +403,7 @@ fn main() {
         };
 
         let sconfig = SchedulerConfig::default();
-        let mut programs = Heap::new();
+        let mut programs = Programs::new();
         let disk_pool = hd_info.disk_allocator(artifect.max_bs());
         let program = programs.push(artifect);
         let rng = AsyncRng::new(2usize.pow(20), OsRng);
@@ -425,7 +425,7 @@ fn main() {
 
         for (i, res) in results.into_iter().enumerate() {
             println!("[Test] Waiting for result {}", i);
-            let result = res.recv().unwrap();
+            let result = res.read().unwrap();
 
             if i == 0 {
                 let debug_log_f = std::fs::File::create("./runtime_debug.json").unwrap();
