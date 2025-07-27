@@ -384,6 +384,7 @@ fn main() {
             .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
 
         let artifect_dir = "target/artifect";
+        let kernels_dir = "target/kernels";
 
         println!("[Test] Begin Compiling to Runtime Instructions");
         let pjh = driver::PanicJoinHandler::new();
@@ -391,7 +392,14 @@ fn main() {
 
         let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
             let artifect = type2_fresh
-                .to_semi_artifect(&options, &hd_info, &mut constant_pool, 0..=0, &pjh)
+                .to_semi_artifect(
+                    &options,
+                    &hd_info,
+                    &mut constant_pool,
+                    0..=0,
+                    &pjh,
+                    Some(kernels_dir.into()),
+                )
                 .unwrap();
             artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
             artifect.finish(&mut constant_pool)

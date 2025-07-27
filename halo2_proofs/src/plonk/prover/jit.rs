@@ -211,7 +211,7 @@ impl Compiler {
                                     &pjh,
                                 )?
                                 .apply_passes(&options)?
-                                .to_artifect(&options, &self.hardware_info)?;
+                                .to_artifect(&options, &self.hardware_info, None)?;
 
                             artifect
                                 .dump(&artifect_dir, &mut self.constant_pool)
