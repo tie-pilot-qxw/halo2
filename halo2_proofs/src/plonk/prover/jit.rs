@@ -20,6 +20,7 @@ pub struct JitConfig {
     debug_options: DebugOptions,
     artifect_dir: PathBuf,
     force_rebuild: bool,
+    artifect_versions_cpu_memory_divisions: Vec<u32>,
 }
 
 impl JitConfig {
@@ -29,6 +30,7 @@ impl JitConfig {
             debug_options: DebugOptions::none(artifect_dir.clone()),
             artifect_dir: artifect_dir,
             force_rebuild: false,
+            artifect_versions_cpu_memory_divisions: vec![1, 2, 3],
         }
     }
 
@@ -49,6 +51,13 @@ impl JitConfig {
     pub fn with_force_rebuild(self, x: bool) -> Self {
         Self {
             force_rebuild: x,
+            ..self
+        }
+    }
+
+    pub fn with_artifect_versions_cpu_memory_divisions(self, x: Vec<u32>) -> Self {
+        Self {
+            artifect_versions_cpu_memory_divisions: x,
             ..self
         }
     }
@@ -175,19 +184,21 @@ impl Compiler {
                             start_timer!(|| "[Test] Begin Compiling to Runtime Instructions");
                         use zkpoly_compiler::driver;
 
+                        let name = circuit_identifier;
+
                         let options = self
                             .config
                             .debug_options
                             .clone()
-                            .with_debug_dir(self.config.artifect_dir.join("name"));
+                            .with_debug_dir(self.config.artifect_dir.join(name));
 
                         let pjh = driver::PanicJoinHandler::new();
 
                         let fresh_type2 =
                             driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
 
-                        let name = circuit_identifier;
                         let artifect_dir = self.config.artifect_dir.join(name).join("artifect");
+                        let kerneld_dir = self.config.artifect_dir.join(name).join("kernels");
 
                         let artifect = if self.config.force_rebuild
                             || !std::path::Path::new(&artifect_dir).exists()
@@ -203,7 +214,15 @@ impl Compiler {
                                 .unwrap();
 
                             let artifect = processed_type2
-                                .fuse(&options, &self.hardware_info, 0..=2, &pjh)?
+                                .fuse(
+                                    &options,
+                                    &self.hardware_info,
+                                    self.config
+                                        .artifect_versions_cpu_memory_divisions
+                                        .iter()
+                                        .cloned(),
+                                    &pjh,
+                                )?
                                 .to_type3(
                                     &options,
                                     &self.hardware_info,
@@ -211,7 +230,7 @@ impl Compiler {
                                     &pjh,
                                 )?
                                 .apply_passes(&options)?
-                                .to_artifect(&options, &self.hardware_info, None)?;
+                                .to_artifect(&options, &self.hardware_info, kerneld_dir)?;
 
                             artifect
                                 .dump(&artifect_dir, &mut self.constant_pool)

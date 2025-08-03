@@ -470,6 +470,11 @@ mod user_functions {
                 }))
                 .collect::<HashMap<_, _>>();
 
+            println!("Try acecess r");
+            unsafe {
+                println!("{:?}", (r.values as *mut u8).as_ref().unwrap());
+            }
+
             crate::arithmetic::parallelize(r.as_mut(), |chunk, offset| {
                 let mut rng = thread_seeds[&offset].clone();
                 chunk

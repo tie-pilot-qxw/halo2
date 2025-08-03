@@ -130,6 +130,7 @@ fn main() {
         let hd_info =
             driver::HardwareInfo::new(driver::MemoryInfo::new(300 * 2u64.pow(30), 2u64.pow(28)))
                 .with_page_size(2u64.pow(24))
+                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
                 .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)));
 
         let cpu_pool = CpuMemoryPool::new(30, std::mem::size_of::<u32>());

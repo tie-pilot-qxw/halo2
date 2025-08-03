@@ -13,10 +13,10 @@ use halo2_proofs::poly::kzg::{
 };
 
 use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
-use zkpoly_common::heap::Heap;
 use zkpoly_compiler::driver::MemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::async_rng::AsyncRng;
+use zkpoly_runtime::runtime::RuntimeDebug;
 use zkpoly_scheduler::scheduler::{make_scheduler, Programs, SchedulerConfig, SubmittedTask};
 
 use std::marker::PhantomData;
@@ -379,8 +379,9 @@ fn main() {
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Graphviz);
-        let hd_info = driver::HardwareInfo::new(MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
+        let hd_info = driver::HardwareInfo::new(MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)))
             .with_page_size(2 * 2u64.pow(20))
+            .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)))
             .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
 
         let artifect_dir = "target/artifect";
@@ -396,9 +397,9 @@ fn main() {
                     &options,
                     &hd_info,
                     &mut constant_pool,
-                    0..=0,
+                    1..=1,
                     &pjh,
-                    Some(kernels_dir.into()),
+                    kernels_dir.into(),
                 )
                 .unwrap();
             artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
@@ -410,7 +411,8 @@ fn main() {
                 .unwrap()
         };
 
-        let sconfig = SchedulerConfig::default();
+        let sconfig = SchedulerConfig::default()
+            .with_runtime_debug(RuntimeDebug::none().with_print_instruction(true));
         let mut programs = Programs::new();
         let disk_pool = hd_info.disk_allocator(artifect.max_bs());
         let program = programs.push(artifect);
@@ -472,6 +474,7 @@ fn main() {
         }
 
         scheduler.shutdown();
+        let _ = constant_pool;
         println!("[Test] VM Exited");
     }
 
