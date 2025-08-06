@@ -95,11 +95,11 @@ impl Compiler {
 /// Let p be `config.artifect_dir`, then debug files will be dumped to p/id,
 /// and artifect will be at p/id/'artifect',
 /// where id is the `circuit_identifier` passed to `create_proof`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JitProverEnv<Rt: RuntimeType> {
     compiler: Arc<Mutex<Compiler>>,
     submitter: Submitter<Rt>,
-    artifect_registry: HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape)>,
+    artifect_registry: Arc<Mutex<HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape)>>>,
 }
 
 impl<Rt: RuntimeType> JitProverEnv<Rt> {
@@ -108,7 +108,7 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
         Self {
             compiler: Arc::new(Mutex::new(compiler)),
             submitter,
-            artifect_registry: HashMap::new(),
+            artifect_registry: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -118,7 +118,7 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
         JitProverEnv {
             compiler: self.compiler.clone(),
             submitter: self.submitter.alternative_rt(),
-            artifect_registry: HashMap::new(),
+            artifect_registry: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -330,12 +330,10 @@ pub fn create_proof_gpu<
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
 {
-    let (program, inputs_shape) = if let Some(x) = env
-        .artifect_registry
-        .get(std::any::type_name::<ConcreteCircuit>())
-        .cloned()
-    {
-        x
+    let mut artifect_registry = env.artifect_registry.lock().unwrap();
+
+    let (program, inputs_shape) = if artifect_registry.get(circuit_identifier).is_some() {
+        artifect_registry.get(circuit_identifier).cloned().unwrap()
     } else {
         let mut trace = Trace::default();
         let trace = if env.compiler_lock().config.assertions {
@@ -381,8 +379,7 @@ where
             .add_artifect(artifect)
             .expect("add artifect to scheduler failure");
 
-        env.artifect_registry
-            .insert(circuit_identifier, (program, inputs_shape.clone()));
+        artifect_registry.insert(circuit_identifier, (program, inputs_shape.clone()));
         (program, inputs_shape)
     };
 
