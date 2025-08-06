@@ -1,3 +1,5 @@
+//! Compile the create_proof computation graph if it has not been compiled, then running it.
+
 use super::*;
 use std::{
     path::PathBuf,
@@ -9,12 +11,13 @@ use zkpoly_compiler::driver::{self, Artifect, DebugOptions, HardwareInfo};
 use zkpoly_memory_pool::buddy_disk_pool::DiskMemoryPool;
 use zkpoly_runtime::{args::RuntimeType, async_rng::AsyncRng};
 use zkpoly_scheduler::scheduler::{
-    make_scheduler, ProgramToken, Programs, SchedulerHandle, SubmittedTask, Submitter,
+    make_scheduler, ProgramToken, Programs, SubmittedTask, Submitter,
 };
 
-pub use zkpoly_scheduler::scheduler::SchedulerConfig;
+pub use zkpoly_scheduler::scheduler::{SchedulerConfig, SchedulerHandle};
 
 #[derive(Debug, Clone)]
+/// Configuratios for the Just-In-Time compiler.
 pub struct JitConfig {
     assertions: bool,
     debug_options: DebugOptions,
@@ -24,6 +27,7 @@ pub struct JitConfig {
 }
 
 impl JitConfig {
+    /// Default configuration, with compiled artifects and kernels put to `artifect_dir`.
     pub fn new(artifect_dir: PathBuf) -> Self {
         Self {
             assertions: false,
@@ -34,6 +38,7 @@ impl JitConfig {
         }
     }
 
+    /// Enable asserations in computation graph, for debugging.
     pub fn with_assertions(self, x: bool) -> Self {
         Self {
             assertions: x,
@@ -41,6 +46,7 @@ impl JitConfig {
         }
     }
 
+    /// Configure debug options for compiler.
     pub fn with_debug_options(self, x: DebugOptions) -> Self {
         Self {
             debug_options: x,
@@ -48,6 +54,7 @@ impl JitConfig {
         }
     }
 
+    /// Always run the whole compilation process without loading from dumped artifects.
     pub fn with_force_rebuild(self, x: bool) -> Self {
         Self {
             force_rebuild: x,
@@ -55,6 +62,8 @@ impl JitConfig {
         }
     }
 
+    /// Configure versions compiled for the artifect.
+    /// See [`driver::UnfusedType2::fuse`] for details.
     pub fn with_artifect_versions_cpu_memory_divisions(self, x: Vec<u32>) -> Self {
         Self {
             artifect_versions_cpu_memory_divisions: x,
@@ -63,6 +72,7 @@ impl JitConfig {
     }
 }
 
+/// The JIT compiler.
 #[derive(Debug)]
 pub struct Compiler {
     config: JitConfig,
@@ -93,6 +103,7 @@ pub struct JitProverEnv<Rt: RuntimeType> {
 }
 
 impl<Rt: RuntimeType> JitProverEnv<Rt> {
+    /// Assemble a [`JitProverEnv`] from compiler and scheduler submitter.
     pub fn assemble(compiler: Compiler, submitter: Submitter<Rt>) -> Self {
         Self {
             compiler: Arc::new(Mutex::new(compiler)),
@@ -101,6 +112,8 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
         }
     }
 
+    /// Clone a [`JitProverEnv`] that accepts requests for alternative [`RuntimeType`],
+    /// but submits to the same scheduler.
     pub fn alternative_rt<Rt2: RuntimeType>(&self) -> JitProverEnv<Rt2> {
         JitProverEnv {
             compiler: self.compiler.clone(),
@@ -110,6 +123,7 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
     }
 }
 
+/// Make a [`JitProverEnv`], also returning the handle to the scheudler thread.
 pub fn make_env<Rt: RuntimeType>(
     config: JitConfig,
     scheduler_config: SchedulerConfig,
@@ -289,10 +303,14 @@ where
         )
     }
 }
-/// This creates a proof for the provided `circuit` when given the public
-/// parameters `params` and the proving key [`ProvingKey`] that was
-/// generated previously for the same circuit. The provided `instances`
-/// are zero-padded internally.
+
+/// Similar to [`super::create_proof`], but uses GPU and compiles artifects just-in-time.
+///
+/// The only differences are two extra arguments:
+/// - `env` is the JIT env used.
+/// - The `circuit_identifier` must be unique for each circuit and pk,vk.
+///   If an artifect associated with `circuit_identifier` is already built, the compiler
+///   won't compile again.
 pub fn create_proof_gpu<
     'params,
     Scheme: CommitmentScheme + 'static,

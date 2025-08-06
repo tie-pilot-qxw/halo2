@@ -1,16 +1,12 @@
 use ark_std::{end_timer, start_timer};
 use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
-use rand_core::{OsRng, RngCore};
+use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
 use std::ops::{Deref, DerefMut, RangeTo};
 use std::sync::Arc;
 use std::{collections::HashMap, iter};
-use zkpoly_compiler::driver::{ConstantPool, DebugOptions, HardwareInfo};
-use zkpoly_memory_pool::buddy_disk_pool::DiskMemoryPool;
-use zkpoly_memory_pool::static_allocator::CpuStaticAllocator;
-use zkpoly_memory_pool::CpuMemoryPool;
-use zkpoly_runtime::runtime::RuntimeDebug;
+use zkpoly_compiler::driver::ConstantPool;
 
 use super::{
     circuit::{
@@ -40,6 +36,10 @@ use group::prime::PrimeCurveAffine;
 
 pub mod jit;
 
+/// This creates a proof for the provided `circuit` when given the public
+/// parameters `params` and the proving key [`ProvingKey`] that was
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
 pub fn create_proof<
     'params,
     Scheme: CommitmentScheme,

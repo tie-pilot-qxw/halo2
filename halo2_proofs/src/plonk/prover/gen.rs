@@ -1,4 +1,6 @@
-//! Generator for [`create_proof`]
+//! Generator for [`super::create_proof`].
+//! The generator function take similar arguments to the original create_proof function,
+//! but returns a computation graph AST that can be compiled and run efficiently on GPU.
 use crate::plonk::Expression;
 use crate::poly::commitment::ParamsProver;
 use crate::tracing::Trace;

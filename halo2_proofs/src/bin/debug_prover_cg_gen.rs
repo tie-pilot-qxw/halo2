@@ -397,7 +397,7 @@ fn main() {
                     &options,
                     &hd_info,
                     &mut constant_pool,
-                    1..=1,
+                    1..=3,
                     &pjh,
                     kernels_dir.into(),
                 )
@@ -412,7 +412,9 @@ fn main() {
         };
 
         let sconfig = SchedulerConfig::default()
-            .with_runtime_debug(RuntimeDebug::none().with_print_instruction(true));
+            .with_runtime_debug(RuntimeDebug::none().with_print_instruction(true))
+            .with_num_executors(2)
+            .with_schedule_window_size(4);
         let mut programs = Programs::new();
         let disk_pool = hd_info.disk_allocator(artifect.max_bs());
         let program = programs.push(artifect);
