@@ -357,6 +357,8 @@ fn main() {
             backtrace_on_stack_overflow::enable();
         }
 
+        let circuits = [circuit];
+
         println!("[Test] Begin Computation Graph Generation");
         let (cg_ret, cg_inputs_shape) = prover_gen::create_proof_validated::<
             KZGCommitmentScheme<Bn256>,
@@ -367,7 +369,7 @@ fn main() {
         >(
             params,
             pk,
-            vec![circuit],
+            &circuits,
             &vec![vec![]],
             &mut constant_pool,
             None,
@@ -427,7 +429,8 @@ fn main() {
         let results = (0..10)
             .into_iter()
             .map(|_| {
-                let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
+                let inputs =
+                    cg_inputs_shape.serialize(vec![vec![]], circuits.to_vec(), Tr::init(vec![]));
                 submitter
                     .submit(SubmittedTask::new(program, inputs))
                     .expect("submit task failure")

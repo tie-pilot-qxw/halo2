@@ -96,13 +96,14 @@ impl Compiler {
 /// and artifect will be at p/id/'artifect',
 /// where id is the `circuit_identifier` passed to `create_proof`.
 #[derive(Debug, Clone)]
-pub struct JitProverEnv<Rt: RuntimeType> {
+pub struct JitProverEnv<Rt: RuntimeType, CC> {
     compiler: Arc<Mutex<Compiler>>,
     submitter: Submitter<Rt>,
-    artifect_registry: Arc<Mutex<HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape)>>>,
+    artifect_registry:
+        Arc<Mutex<HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape<Rt, CC>)>>>,
 }
 
-impl<Rt: RuntimeType> JitProverEnv<Rt> {
+impl<Rt: RuntimeType, CC: Circuit<Rt::Field>> JitProverEnv<Rt, CC> {
     /// Assemble a [`JitProverEnv`] from compiler and scheduler submitter.
     pub fn assemble(compiler: Compiler, submitter: Submitter<Rt>) -> Self {
         Self {
@@ -114,7 +115,9 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
 
     /// Clone a [`JitProverEnv`] that accepts requests for alternative [`RuntimeType`],
     /// but submits to the same scheduler.
-    pub fn alternative_rt<Rt2: RuntimeType>(&self) -> JitProverEnv<Rt2> {
+    pub fn alternative_rt<Rt2: RuntimeType, CC2: Circuit<Rt2::Field>>(
+        &self,
+    ) -> JitProverEnv<Rt2, CC2> {
         JitProverEnv {
             compiler: self.compiler.clone(),
             submitter: self.submitter.alternative_rt(),
@@ -124,13 +127,13 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
 }
 
 /// Make a [`JitProverEnv`], also returning the handle to the scheudler thread.
-pub fn make_env<Rt: RuntimeType>(
+pub fn make_env<Rt: RuntimeType, CC: Circuit<Rt::Field>>(
     config: JitConfig,
     scheduler_config: SchedulerConfig,
     disk_pool: DiskMemoryPool,
     constant_pool: ConstantPool,
     hd_info: HardwareInfo,
-) -> (JitProverEnv<Rt>, SchedulerHandle) {
+) -> (JitProverEnv<Rt, CC>, SchedulerHandle) {
     let rng = AsyncRng::new(2usize.pow(24), OsRng);
     let (scheduler, submitter) = make_scheduler(
         hd_info.clone(),
@@ -147,7 +150,7 @@ pub fn make_env<Rt: RuntimeType>(
     (env, scheduler)
 }
 
-impl<Rt: RuntimeType> JitProverEnv<Rt> {
+impl<Rt: RuntimeType, CC: Circuit<Rt::Field>> JitProverEnv<Rt, CC> {
     pub fn compiler_lock<'a>(&'a self) -> MutexGuard<'a, Compiler> {
         self.compiler.lock().unwrap()
     }
@@ -171,7 +174,10 @@ impl Compiler {
         trace: Option<&Trace<Scheme::Curve>>,
         circuit_identifier: &'static str,
     ) -> Result<
-        (Artifect<gen::RtInstance<Scheme, E, T>>, gen::InputsShape),
+        (
+            Artifect<gen::RtInstance<Scheme, E, T>>,
+            gen::InputsShape<gen::RtInstance<Scheme, E, T>, ConcreteCircuit>,
+        ),
         driver::Error<'s, gen::RtInstance<Scheme, E, T>>,
     >
     where
@@ -182,20 +188,19 @@ impl Compiler {
                 std::thread::Builder::new()
                     .stack_size(64 * 1024 * 1024)
                     .spawn_scoped(s, || {
-                        let cg_gen_start = start_timer!(|| "Create proof");
+                        let cg_gen_start = start_timer!(|| "Generating Computation Graph");
                         let (cg_ret, cg_inputs_shape) =
                             gen::create_proof_validated::<Scheme, P, E, T, _>(
                                 params,
                                 &pk,
-                                circuits.to_vec(),
+                                circuits,
                                 &instance_lengths,
                                 &mut self.constant_pool,
                                 trace,
                             );
                         end_timer!(cg_gen_start);
 
-                        let compile_start =
-                            start_timer!(|| "[Test] Begin Compiling to Runtime Instructions");
+                        let compile_start = start_timer!(|| "Compiling to Runtime Instructions");
                         use zkpoly_compiler::driver;
 
                         let name = circuit_identifier;
@@ -217,7 +222,6 @@ impl Compiler {
                         let artifect = if self.config.force_rebuild
                             || !std::path::Path::new(&artifect_dir).exists()
                         {
-                            println!("[Test] Applying Type2 passes and lowering to Artifect");
                             let processed_type2 = fresh_type2
                                 .apply_passes(
                                     &options,
@@ -281,7 +285,7 @@ pub fn create_proof<
     instances: &[&[&[Scheme::Scalar]]],
     rng: R,
     transcript: &mut T,
-    env: Option<&mut JitProverEnv<gen::RtInstance<Scheme, E, T>>>,
+    env: Option<&mut JitProverEnv<gen::RtInstance<Scheme, E, T>, ConcreteCircuit>>,
     circuit_identifier: &'static str,
 ) -> Result<(), Error>
 where
@@ -324,7 +328,7 @@ pub fn create_proof_gpu<
     circuits: &[ConcreteCircuit],
     instances: &[&[&[Scheme::Scalar]]],
     transcript: &mut T,
-    env: &mut JitProverEnv<gen::RtInstance<Scheme, E, T>>,
+    env: &mut JitProverEnv<gen::RtInstance<Scheme, E, T>, ConcreteCircuit>,
     circuit_identifier: &'static str,
 ) -> Result<(), Error>
 where
@@ -383,6 +387,8 @@ where
         (program, inputs_shape)
     };
 
+    drop(artifect_registry);
+
     let instances = instances
         .iter()
         .map(|ins| {
@@ -396,7 +402,7 @@ where
                 .collect::<Vec<_>>()
         })
         .collect();
-    let inputs = inputs_shape.serialize(instances, transcript.clone());
+    let inputs = inputs_shape.serialize(instances, circuits.to_vec(), transcript.clone());
 
     let result_receiver = env
         .submitter
