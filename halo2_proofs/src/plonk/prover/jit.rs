@@ -406,12 +406,14 @@ where
 
     let result_receiver = env
         .submitter
-        .submit(SubmittedTask::new(program, inputs))
+        .submit(SubmittedTask::new(program, inputs.clone()))
         .expect("submit to scheduler failure");
 
     let result = result_receiver
         .read()
         .expect("result pipe disconnected unexpectedly");
+
+    env.compiler_lock().constant_pool.deallocate_inputs(inputs);
 
     let proof = result.ret_value.unwrap().unwrap_transcript_move().take();
 
