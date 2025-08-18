@@ -129,6 +129,7 @@ fn compress_expressions<Rt: RuntimeType>(
 
 mod user_functions {
     use super::*;
+    use rand_core::OsRng;
     use zkpoly_compiler::{ast::user_function as uf, transit::type2};
     use zkpoly_runtime::error::RuntimeError;
 
@@ -520,17 +521,18 @@ mod user_functions {
         )
     }
 
-    pub type _PermuteExpressionPairF<Rt: RuntimeType> = uf::FunctionFn2<
+    pub type PermuteExpressionPairF<Rt: RuntimeType> = uf::FunctionFn2<
         Rt,
         ast::PolyLagrange<Rt>,
         ast::PolyLagrange<Rt>,
         ast::Tuple2<ast::PolyLagrange<Rt>, ast::PolyLagrange<Rt>, Rt>,
     >;
 
-    pub fn _permute_expression_pair<'params, Rt: RuntimeType>(
+    pub fn permute_expression_pair<'params, Rt: RuntimeType>(
         blinding_factors: usize,
         n: u64,
-    ) -> _PermuteExpressionPairF<Rt>
+        random_on: bool,
+    ) -> PermuteExpressionPairF<Rt>
     where
         Rt::Field: Ord,
     {
@@ -547,14 +549,24 @@ mod user_functions {
             // Sort input lookup expression values
             permuted_input_expression.sort();
 
+            let table_expression = if !random_on {
+                // to match the gpu implementation, we need to sort the table
+                let mut table_expression: Vec<Rt::Field> = b.as_ref().to_vec();
+                table_expression.truncate(usable_rows);
+                // Sort table lookup expression values
+                table_expression.sort();
+                table_expression
+            } else {
+                b.as_ref().to_vec()
+            };
             // A BTreeMap of each unique element in the table expression and its count
-            let mut leftover_table_map: BTreeMap<Rt::Field, u32> =
-                b.iter()
-                    .take(usable_rows)
-                    .fold(BTreeMap::new(), |mut acc, coeff| {
-                        *acc.entry(*coeff).or_insert(0) += 1;
-                        acc
-                    });
+            let mut leftover_table_map: BTreeMap<Rt::Field, u32> = table_expression
+                .iter()
+                .take(usable_rows)
+                .fold(BTreeMap::new(), |mut acc, coeff| {
+                    *acc.entry(*coeff).or_insert(0) += 1;
+                    acc
+                });
             let mut permuted_table_coeffs = vec![Rt::Field::ZERO; usable_rows];
 
             let mut repeated_input_rows = permuted_input_expression
@@ -582,16 +594,39 @@ mod user_functions {
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|err| rt::error::RuntimeError::Other(format!("{:?}", err)))?;
 
-            // Populate permuted table at unfilled rows with leftover table elements
-            for (coeff, count) in leftover_table_map.iter() {
-                for _ in 0..*count {
-                    permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = *coeff;
-                }
-            }
-            assert!(repeated_input_rows.is_empty());
+            // Collect leftover elements respecting counts
+            let mut leftover_elements: Vec<_> = leftover_table_map
+                .into_iter()
+                .flat_map(|(coeff, count)| std::iter::repeat(coeff).take(count as usize))
+                .collect();
 
-            assert_eq!(permuted_input_expression.len(), usable_rows);
-            assert_eq!(permuted_table_coeffs.len(), usable_rows);
+            assert_eq!(leftover_elements.len(), repeated_input_rows.len());
+
+            if !random_on {
+                // Sort leftover elements
+                leftover_elements.sort();
+                // also sort the repeated input rows
+                repeated_input_rows.sort();
+            }
+
+            for (row_idx, element) in repeated_input_rows.iter().zip(leftover_elements.iter()) {
+                permuted_table_coeffs[*row_idx] = *element;
+            }
+
+            let mut rng = OsRng;
+
+            if random_on {
+                permuted_input_expression
+                    .extend((0..(blinding_factors + 1)).map(|_| Rt::Field::random(&mut rng)));
+                permuted_table_coeffs
+                    .extend((0..(blinding_factors + 1)).map(|_| Rt::Field::random(&mut rng)));
+            } else {
+                permuted_input_expression
+                    .extend((0..(blinding_factors + 1)).map(|_| Rt::Field::ZERO));
+                permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| Rt::Field::ZERO));
+            }
+            assert_eq!(permuted_input_expression.len(), n as usize);
+            assert_eq!(permuted_table_coeffs.len(), n as usize);
 
             r.0.iter_mut()
                 .zip(r.1.iter_mut())
@@ -679,6 +714,7 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     n: u64,
     unusable_rows_start: u64,
     debug: bool,
+    permuter: &user_functions::PermuteExpressionPairF<Rt>,
 ) -> PermutedPlookupArgument<Rt> {
     let inputs_evaluated = pa
         .input_expressions
@@ -693,17 +729,7 @@ fn compute_permuted_for_plookup<Rt: RuntimeType>(
     let ci_values = compress_expressions(inputs_evaluated.iter().cloned(), theta, n);
     let ct_values = compress_expressions(tables_evaluated.iter().cloned(), theta, n);
 
-    let pi_pt_values =
-        ast::Tuple2::plonk_permute(&ci_values, &ct_values, unusable_rows_start as usize);
-    let (pi_values, pt_values) = (pi_pt_values.get0(), pi_pt_values.get1());
-    let (pi_values, pt_values) = if debug {
-        (pi_values.extend(n), pt_values.extend(n))
-    } else {
-        (
-            pi_values.extend(n).blind(unusable_rows_start, n),
-            pt_values.extend(n).blind(unusable_rows_start, n),
-        )
-    };
+    let (pi_values, pt_values) = permuter.call(ci_values.clone(), ct_values.clone()).unpack();
 
     let pt_coef = pt_values.to_coef();
     let pi_coef = pi_values.to_coef();
@@ -1699,7 +1725,7 @@ pub fn create_proof_validated<
     InputsShape<RtInstance<Scheme, E, T>, ConcreteCircuit>,
 )
 where
-    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
     ConcreteCircuit::Config: 'static + Send + Sync,
 {
     let domain = &pk.vk.domain;
@@ -2089,6 +2115,12 @@ where
         },
     );
 
+    let permuted_expression_pair_f = user_functions::permute_expression_pair(
+        meta.blinding_factors(),
+        params.n(),
+        trace.is_none(),
+    );
+
     let lookup_permuteds: Vec<Vec<_>> = tables
         .iter()
         .enumerate()
@@ -2107,6 +2139,7 @@ where
                         params.n(),
                         unusable_rows_start as u64,
                         trace.is_some(),
+                        &permuted_expression_pair_f,
                     );
                     if let Some(trace) = &trace {
                         ppa.validate(&trace.lookup_permuted[i][j], allocator)

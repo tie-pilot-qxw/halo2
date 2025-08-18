@@ -181,7 +181,7 @@ impl Compiler {
         driver::Error<'s, gen::RtInstance<Scheme, E, T>>,
     >
     where
-        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
     {
         std::thread::scope(|s| {
             let handler =
@@ -289,7 +289,7 @@ pub fn create_proof<
     circuit_identifier: &'static str,
 ) -> Result<(), Error>
 where
-    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
 {
     if let Some(env) = env {
         create_proof_gpu::<Scheme, P, _, _, _>(
@@ -332,7 +332,7 @@ pub fn create_proof_gpu<
     circuit_identifier: &'static str,
 ) -> Result<(), Error>
 where
-    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
 {
     let mut artifect_registry = env.artifect_registry.lock().unwrap();
 
@@ -414,6 +414,7 @@ where
         .expect("result pipe disconnected unexpectedly");
 
     env.compiler_lock().constant_pool.deallocate_inputs(inputs);
+    env.compiler_lock().constant_pool.cpu.shrink();
 
     let proof = result.ret_value.unwrap().unwrap_transcript_move().take();
 
