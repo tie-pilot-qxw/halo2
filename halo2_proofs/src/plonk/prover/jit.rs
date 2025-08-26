@@ -2,19 +2,20 @@
 
 use super::*;
 use std::{
+    marker::PhantomData,
     path::PathBuf,
     sync::{Mutex, MutexGuard},
 };
 
 use rand_core::OsRng;
-use zkpoly_compiler::driver::{self, Artifect, DebugOptions, HardwareInfo};
+use zkpoly_compiler::driver::{self, DebugOptions, HardwareInfo};
 use zkpoly_memory_pool::buddy_disk_pool::DiskMemoryPool;
 use zkpoly_runtime::{args::RuntimeType, async_rng::AsyncRng};
-use zkpoly_scheduler::scheduler::{
-    make_scheduler, ProgramToken, Programs, SubmittedTask, Submitter,
-};
+// use zkpoly_scheduler::scheduler::{
+//     make_scheduler, ProgramToken, Programs, SubmittedTask, Submitter,
+// };
 
-pub use zkpoly_scheduler::scheduler::{SchedulerConfig, SchedulerHandle};
+// pub use zkpoly_scheduler::scheduler::{SchedulerConfig, SchedulerHandle};
 
 #[derive(Debug, Clone)]
 /// Configuratios for the Just-In-Time compiler.
@@ -98,17 +99,19 @@ impl Compiler {
 #[derive(Debug, Clone)]
 pub struct JitProverEnv<Rt: RuntimeType> {
     compiler: Arc<Mutex<Compiler>>,
-    submitter: Submitter<Rt>,
-    artifect_registry: Arc<Mutex<HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape)>>>,
+    // submitter: Submitter<Rt>,
+    // artifect_registry: Arc<Mutex<HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape)>>>,
+    _phantom: PhantomData<Rt>,
 }
 
 impl<Rt: RuntimeType> JitProverEnv<Rt> {
     /// Assemble a [`JitProverEnv`] from compiler and scheduler submitter.
-    pub fn assemble(compiler: Compiler, submitter: Submitter<Rt>) -> Self {
+    pub fn assemble(compiler: Compiler) -> Self {
         Self {
             compiler: Arc::new(Mutex::new(compiler)),
-            submitter,
-            artifect_registry: Arc::new(Mutex::new(HashMap::new())),
+            // submitter,
+            // artifect_registry: Arc::new(Mutex::new(HashMap::new())),
+            _phantom: PhantomData,
         }
     }
 
@@ -117,8 +120,9 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
     pub fn alternative_rt<Rt2: RuntimeType>(&self) -> JitProverEnv<Rt2> {
         JitProverEnv {
             compiler: self.compiler.clone(),
-            submitter: self.submitter.alternative_rt(),
-            artifect_registry: Arc::new(Mutex::new(HashMap::new())),
+            // submitter: self.submitter.alternative_rt(),
+            // artifect_registry: Arc::new(Mutex::new(HashMap::new())),
+            _phantom: PhantomData,
         }
     }
 }
@@ -126,7 +130,7 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
 /// Make a [`JitProverEnv`], also returning the handle to the scheudler thread.
 pub fn make_env<Rt: RuntimeType>(
     config: JitConfig,
-    scheduler_config: SchedulerConfig,
+    // scheduler_config: SchedulerConfig,
     disk_pool: DiskMemoryPool,
     constant_pool: ConstantPool,
     hd_info: HardwareInfo,

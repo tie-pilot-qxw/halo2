@@ -34,7 +34,7 @@ use crate::{
 };
 use group::prime::PrimeCurveAffine;
 
-pub mod jit;
+// pub mod jit;
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
