@@ -150,6 +150,7 @@ fn main() {
             hd_info.clone(),
         );
 
+        // Create proof using JIT runner
         halo2_proofs::plonk::jit::create_proof_gpu::<
             KZGCommitmentScheme<Bn256>,
             ProverSHPLONK<Bn256>,

@@ -1,4 +1,58 @@
 //! Compile the create_proof computation graph if it has not been compiled, then running it.
+//!
+//! # Example of creating a JIT runner
+//! ```
+//!    use halo2_proofs::zkpoly_compiler::driver;
+//!
+//!    // Set compilation debugging options
+//!    // - Debugging files output to "target/debug/transit"
+//!    // - Compilation progress printed to STDOUT
+//!    // - Visualization tool set to cytoscape.js
+//!    let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
+//!        .with_log(true)
+//!        .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
+//!
+//!    // Configure devices including CPU memory, GPU's and Disks.
+//!    // - Delicate 160GB CPU memory, with 256MB delicated to smithereen data to proof generation
+//!    // - Delicate two GPU, each with 26GB GPU memory to proof generation
+//!    // - Place temporary files under /tmp and /data/tmp
+//!    // - Set page size used for GPU page table to 16MB
+//!    let hd_info = driver::HardwareInfo::new(MemoryInfo::new(160 * 2u64.pow(30), 2u64.pow(28)))
+//!        .with_gpu(MemoryInfo::new(26 * 2u64.pow(30), 2u64.pow(28)))
+//!        .with_gpu(MemoryInfo::new(26 * 2u64.pow(30), 2u64.pow(28)))
+//!        .with_disk(DiskMemoryInfo::new(Some(PathBuf::from("/tmp"))))
+//!        .with_disk(DiskMemoryInfo::new(Some(PathBuf::from("/data/tmp"))))
+//!        .with_page_size(16 * 2u64.pow(20));
+//!
+//!    // Create memory pools that contains contants.
+//!    // Disk is enabled here, so some big constants will be put on disk to reduce CPU memory usage.
+//!    // - Use a buddy allocator with maximum block containing 2^32 u32's on CPU memory
+//!    // - Use a buddy allocator with maximum block containing 2^34 bytes on Disk
+//!    let constant_pool = driver::ConstantPool::with_disk(
+//!        CpuMemoryPool::new(32, std::mem::size_of::<u32>()),
+//!        hd_info.disk_allocator(2usize.pow(34)),
+//!    );
+//!
+//!    // Cache compilation artifects to target/caf
+//!    let artifect_dir = "target/caf";
+//!
+//!    // Create the JIT runner
+//!    // - Re-compile the circuit each time without using cache in `artifect_dir`
+//!    // - Each artifect are compiled to occupy half of CPU memory
+//!    // - Use a buddy allocator with maximum block containing 2^34 bytes on Disk for runtime temporaries
+//!    let (jit, scheduler) = jit::make_env(
+//!        JitConfig::new(artifect_dir.into())
+//!            .with_debug_options(options)
+//!            .with_force_rebuild(true)
+//!            .with_artifect_versions_cpu_memory_divisions(vec![1]),
+//!        SchedulerConfig::default().with_runtime_debug(RuntimeDebug::none()),
+//!        hd_info.disk_allocator(2usize.pow(34)),
+//!        constant_pool,
+//!        hd_info.clone(),
+//!    );
+//! ```
+//!
+//! For example on how to create_proof with the JIT runner, refer to binary `debug_prover_lookup_cg_gen`.
 
 use super::*;
 use std::{
