@@ -379,6 +379,9 @@ fn main() {
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Graphviz);
+
+        options.init();
+
         let hd_info = driver::HardwareInfo::new(MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)))
             .with_page_size(2 * 2u64.pow(20))
             .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)))
@@ -388,19 +391,11 @@ fn main() {
         let kernels_dir = "target/kernels";
 
         println!("[Test] Begin Compiling to Runtime Instructions");
-        let pjh = driver::PanicJoinHandler::new();
-        let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
+        let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options).unwrap();
 
         let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
             let artifect = type2_fresh
-                .to_semi_artifect(
-                    &options,
-                    &hd_info,
-                    &mut constant_pool,
-                    1..=3,
-                    &pjh,
-                    kernels_dir.into(),
-                )
+                .to_semi_artifect(&hd_info, &mut constant_pool, 1..=1, kernels_dir.into())
                 .unwrap();
             artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
             artifect.finish(&mut constant_pool)
@@ -413,7 +408,7 @@ fn main() {
 
         let sconfig = SchedulerConfig::default()
             .with_runtime_debug(RuntimeDebug::none().with_print_instruction(true))
-            .with_num_executors(2)
+            .with_num_executors(1)
             .with_schedule_window_size(4);
         let mut programs = Programs::new();
         let disk_pool = hd_info.disk_allocator(artifect.max_bs());

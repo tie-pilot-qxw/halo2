@@ -206,10 +206,7 @@ impl Compiler {
                             .clone()
                             .with_debug_dir(self.config.artifect_dir.join(name));
 
-                        let pjh = driver::PanicJoinHandler::new();
-
-                        let fresh_type2 =
-                            driver::FreshType2::from_ast(cg_ret, &options, &pjh).unwrap();
+                        let fresh_type2 = driver::FreshType2::from_ast(cg_ret, &options).unwrap();
 
                         let artifect_dir = self.config.artifect_dir.join(name).join("artifect");
                         let kerneld_dir = self.config.artifect_dir.join(name).join("kernels");
@@ -219,32 +216,19 @@ impl Compiler {
                         {
                             println!("[Test] Applying Type2 passes and lowering to Artifect");
                             let processed_type2 = fresh_type2
-                                .apply_passes(
-                                    &options,
-                                    &self.hardware_info,
-                                    &mut self.constant_pool,
-                                    &pjh,
-                                )
+                                .apply_passes(&self.hardware_info, &mut self.constant_pool)
                                 .unwrap();
 
                             let artifect = processed_type2
                                 .fuse(
-                                    &options,
-                                    &self.hardware_info,
                                     self.config
                                         .artifect_versions_cpu_memory_divisions
                                         .iter()
                                         .cloned(),
-                                    &pjh,
                                 )?
-                                .to_type3(
-                                    &options,
-                                    &self.hardware_info,
-                                    &mut self.constant_pool,
-                                    &pjh,
-                                )?
-                                .apply_passes(&options)?
-                                .to_artifect(&options, &self.hardware_info, kerneld_dir)?;
+                                .to_type3(&mut self.constant_pool)?
+                                .apply_passes()?
+                                .to_artifect(kerneld_dir)?;
 
                             artifect
                                 .dump(&artifect_dir, &mut self.constant_pool)

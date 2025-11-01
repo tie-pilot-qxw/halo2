@@ -12,3 +12,5 @@ Cargo.lock
 /zkpoly-compiler/core/src/fused_kernels/src/fused_arith*
 **/*.png
 **/*.out
+/CLAUDE.md
+/.claude/
