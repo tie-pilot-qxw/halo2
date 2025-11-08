@@ -309,7 +309,13 @@ fn main() {
         (params, pk)
     }
 
-    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>, rebuild: bool) {
+    fn prover(
+        k: u32,
+        params: &ParamsKZG<Bn256>,
+        pk: &ProvingKey<G1Affine>,
+        rebuild: bool,
+        trace: bool,
+    ) {
         let rng = OsRng;
 
         let circuit: MyCircuit<Fr> = MyCircuit {
@@ -324,34 +330,38 @@ fn main() {
         let allocator = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
         let mut constant_pool = driver::ConstantPool::only_cpu(allocator);
 
-        // let mut trace = Trace::default();
+        let mut trace = if trace {
+            Some(halo2_proofs::tracing::Trace::default())
+        } else {
+            None
+        };
 
-        // println!("[Test] Begin Running Original Prover for Trace");
-        // use halo2_proofs::transcript::TranscriptWriterBuffer;
-        // let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
-        //     _,
-        //     _,
-        //     halo2_proofs::transcript::Challenge255<G1Affine>,
-        // >::init(vec![]);
-        // halo2_proofs::plonk::create_proof_traced::<
-        //     KZGCommitmentScheme<Bn256>,
-        //     ProverSHPLONK<Bn256>,
-        //     _,
-        //     _,
-        //     _,
-        //     _,
-        // >(
-        //     params,
-        //     pk,
-        //     &[circuit.clone()],
-        //     &[&[]],
-        //     rng,
-        //     &mut transcript,
-        //     Some(&mut trace),
-        // )
-        // .expect("proof generation should not fail");
-        // transcript.finalize();
-        // println!("[Test] End Running Original Prover for Trace");
+        println!("[Test] Begin Running Original Prover for Trace");
+        use halo2_proofs::transcript::TranscriptWriterBuffer;
+        let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
+            _,
+            _,
+            halo2_proofs::transcript::Challenge255<G1Affine>,
+        >::init(vec![]);
+        halo2_proofs::plonk::create_proof_traced::<
+            KZGCommitmentScheme<Bn256>,
+            ProverSHPLONK<Bn256>,
+            _,
+            _,
+            _,
+            _,
+        >(
+            params,
+            pk,
+            &[circuit.clone()],
+            &[&[]],
+            rng,
+            &mut transcript,
+            trace.as_mut(),
+        )
+        .expect("proof generation should not fail");
+        transcript.finalize();
+        println!("[Test] End Running Original Prover for Trace");
 
         unsafe {
             backtrace_on_stack_overflow::enable();
@@ -370,7 +380,7 @@ fn main() {
             vec![circuit],
             &vec![vec![]],
             &mut constant_pool,
-            None,
+            trace.as_ref(),
         );
         println!("[Test] End Computation Graph Generation");
 
@@ -419,7 +429,7 @@ fn main() {
 
         println!("[Test] Launch VM");
 
-        let results = (0..10)
+        let results = (0..1)
             .into_iter()
             .map(|_| {
                 let inputs = cg_inputs_shape.serialize(vec![vec![]], Tr::init(vec![]));
@@ -483,5 +493,5 @@ fn main() {
 
     let rebuild = std::env::args().any(|arg| arg == "--rebuild");
 
-    prover(k, &params, &pk, rebuild);
+    prover(k, &params, &pk, rebuild, true);
 }

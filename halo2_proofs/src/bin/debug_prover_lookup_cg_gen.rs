@@ -114,7 +114,6 @@ fn main() {
             _marker: PhantomData,
         };
 
-        println!("[Test] Begin Running Original Prover for Trace");
         use halo2_proofs::transcript::TranscriptWriterBuffer;
         let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
             _,
