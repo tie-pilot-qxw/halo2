@@ -1,4 +1,58 @@
 //! Compile the create_proof computation graph if it has not been compiled, then running it.
+//!
+//! # Example of creating a JIT runner
+//! ```
+//!    use halo2_proofs::zkpoly_compiler::driver;
+//!
+//!    // Set compilation debugging options
+//!    // - Debugging files output to "target/debug/transit"
+//!    // - Compilation progress printed to STDOUT
+//!    // - Visualization tool set to cytoscape.js
+//!    let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
+//!        .with_log(true)
+//!        .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
+//!
+//!    // Configure devices including CPU memory, GPU's and Disks.
+//!    // - Delicate 160GB CPU memory, with 256MB delicated to smithereen data to proof generation
+//!    // - Delicate two GPU, each with 26GB GPU memory to proof generation
+//!    // - Place temporary files under /tmp and /data/tmp
+//!    // - Set page size used for GPU page table to 16MB
+//!    let hd_info = driver::HardwareInfo::new(MemoryInfo::new(160 * 2u64.pow(30), 2u64.pow(28)))
+//!        .with_gpu(MemoryInfo::new(26 * 2u64.pow(30), 2u64.pow(28)))
+//!        .with_gpu(MemoryInfo::new(26 * 2u64.pow(30), 2u64.pow(28)))
+//!        .with_disk(DiskMemoryInfo::new(Some(PathBuf::from("/tmp"))))
+//!        .with_disk(DiskMemoryInfo::new(Some(PathBuf::from("/data/tmp"))))
+//!        .with_page_size(16 * 2u64.pow(20));
+//!
+//!    // Create memory pools that contains contants.
+//!    // Disk is enabled here, so some big constants will be put on disk to reduce CPU memory usage.
+//!    // - Use a buddy allocator with maximum block containing 2^32 u32's on CPU memory
+//!    // - Use a buddy allocator with maximum block containing 2^34 bytes on Disk
+//!    let constant_pool = driver::ConstantPool::with_disk(
+//!        CpuMemoryPool::new(32, std::mem::size_of::<u32>()),
+//!        hd_info.disk_allocator(2usize.pow(34)),
+//!    );
+//!
+//!    // Cache compilation artifects to target/caf
+//!    let artifect_dir = "target/caf";
+//!
+//!    // Create the JIT runner
+//!    // - Re-compile the circuit each time without using cache in `artifect_dir`
+//!    // - Each artifect are compiled to occupy half of CPU memory
+//!    // - Use a buddy allocator with maximum block containing 2^34 bytes on Disk for runtime temporaries
+//!    let (jit, scheduler) = jit::make_env(
+//!        JitConfig::new(artifect_dir.into())
+//!            .with_debug_options(options)
+//!            .with_force_rebuild(true)
+//!            .with_artifect_versions_cpu_memory_divisions(vec![1]),
+//!        SchedulerConfig::default().with_runtime_debug(RuntimeDebug::none()),
+//!        hd_info.disk_allocator(2usize.pow(34)),
+//!        constant_pool,
+//!        hd_info.clone(),
+//!    );
+//! ```
+//!
+//! For example on how to create_proof with the JIT runner, refer to binary `debug_prover_lookup_cg_gen`.
 
 use super::*;
 use std::{
@@ -106,13 +160,14 @@ impl Compiler {
 /// and artifect will be at p/id/'artifect',
 /// where id is the `circuit_identifier` passed to `create_proof`.
 #[derive(Debug, Clone)]
-pub struct JitProverEnv<Rt: RuntimeType> {
+pub struct JitProverEnv<Rt: RuntimeType, CC> {
     compiler: Arc<Mutex<Compiler>>,
     submitter: Submitter<Rt>,
-    artifect_registry: Arc<Mutex<HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape)>>>,
+    artifect_registry:
+        Arc<Mutex<HashMap<&'static str, (ProgramToken<Rt>, gen::InputsShape<Rt, CC>)>>>,
 }
 
-impl<Rt: RuntimeType> JitProverEnv<Rt> {
+impl<Rt: RuntimeType, CC: Circuit<Rt::Field>> JitProverEnv<Rt, CC> {
     /// Assemble a [`JitProverEnv`] from compiler and scheduler submitter.
     pub fn assemble(compiler: Compiler, submitter: Submitter<Rt>) -> Self {
         Self {
@@ -124,7 +179,9 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
 
     /// Clone a [`JitProverEnv`] that accepts requests for alternative [`RuntimeType`],
     /// but submits to the same scheduler.
-    pub fn alternative_rt<Rt2: RuntimeType>(&self) -> JitProverEnv<Rt2> {
+    pub fn alternative_rt<Rt2: RuntimeType, CC2: Circuit<Rt2::Field>>(
+        &self,
+    ) -> JitProverEnv<Rt2, CC2> {
         JitProverEnv {
             compiler: self.compiler.clone(),
             submitter: self.submitter.alternative_rt(),
@@ -134,13 +191,13 @@ impl<Rt: RuntimeType> JitProverEnv<Rt> {
 }
 
 /// Make a [`JitProverEnv`], also returning the handle to the scheudler thread.
-pub fn make_env<Rt: RuntimeType>(
+pub fn make_env<Rt: RuntimeType, CC: Circuit<Rt::Field>>(
     config: JitConfig,
     scheduler_config: SchedulerConfig,
     disk_pool: DiskMemoryPool,
     constant_pool: ConstantPool,
     hd_info: HardwareInfo,
-) -> (JitProverEnv<Rt>, SchedulerHandle) {
+) -> (JitProverEnv<Rt, CC>, SchedulerHandle) {
     let rng = AsyncRng::new(2usize.pow(24), OsRng);
     let (scheduler, submitter) = make_scheduler(
         hd_info.clone(),
@@ -157,7 +214,7 @@ pub fn make_env<Rt: RuntimeType>(
     (env, scheduler)
 }
 
-impl<Rt: RuntimeType> JitProverEnv<Rt> {
+impl<Rt: RuntimeType, CC: Circuit<Rt::Field>> JitProverEnv<Rt, CC> {
     pub fn compiler_lock<'a>(&'a self) -> MutexGuard<'a, Compiler> {
         self.compiler.lock().unwrap()
     }
@@ -181,7 +238,10 @@ impl Compiler {
         trace: Option<&Trace<Scheme::Curve>>,
         circuit_identifier: &'static str,
     ) -> Result<
-        (Artifect<gen::RtInstance<Scheme, E, T>>, gen::InputsShape),
+        (
+            Artifect<gen::RtInstance<Scheme, E, T>>,
+            gen::InputsShape<gen::RtInstance<Scheme, E, T>, ConcreteCircuit>,
+        ),
         driver::Error<'s, gen::RtInstance<Scheme, E, T>>,
     >
     where
@@ -192,20 +252,19 @@ impl Compiler {
                 std::thread::Builder::new()
                     .stack_size(64 * 1024 * 1024)
                     .spawn_scoped(s, || {
-                        let cg_gen_start = start_timer!(|| "Create proof");
+                        let cg_gen_start = start_timer!(|| "Generating Computation Graph");
                         let (cg_ret, cg_inputs_shape) =
                             gen::create_proof_validated::<Scheme, P, E, T, _>(
                                 params,
                                 &pk,
-                                circuits.to_vec(),
+                                circuits,
                                 &instance_lengths,
                                 &mut self.constant_pool,
                                 trace,
                             );
                         end_timer!(cg_gen_start);
 
-                        let compile_start =
-                            start_timer!(|| "[Test] Begin Compiling to Runtime Instructions");
+                        let compile_start = start_timer!(|| "Compiling to Runtime Instructions");
                         use zkpoly_compiler::driver;
 
                         let name = circuit_identifier;
@@ -225,7 +284,6 @@ impl Compiler {
                         let artifect = if self.config.force_rebuild
                             || !std::path::Path::new(&artifect_dir).exists()
                         {
-                            println!("[Test] Applying Type2 passes and lowering to Artifect");
                             let processed_type2 = fresh_type2
                                 .apply_passes(
                                     &self.hardware_info,
@@ -280,7 +338,7 @@ pub fn create_proof<
     instances: &[&[&[Scheme::Scalar]]],
     rng: R,
     transcript: &mut T,
-    env: Option<&mut JitProverEnv<gen::RtInstance<Scheme, E, T>>>,
+    env: Option<&mut JitProverEnv<gen::RtInstance<Scheme, E, T>, ConcreteCircuit>>,
     circuit_identifier: &'static str,
 ) -> Result<(), Error>
 where
@@ -323,7 +381,7 @@ pub fn create_proof_gpu<
     circuits: &[ConcreteCircuit],
     instances: &[&[&[Scheme::Scalar]]],
     transcript: &mut T,
-    env: &mut JitProverEnv<gen::RtInstance<Scheme, E, T>>,
+    env: &mut JitProverEnv<gen::RtInstance<Scheme, E, T>, ConcreteCircuit>,
     circuit_identifier: &'static str,
 ) -> Result<(), Error>
 where
@@ -382,6 +440,8 @@ where
         (program, inputs_shape)
     };
 
+    drop(artifect_registry);
+
     let instances = instances
         .iter()
         .map(|ins| {
@@ -395,16 +455,18 @@ where
                 .collect::<Vec<_>>()
         })
         .collect();
-    let inputs = inputs_shape.serialize(instances, transcript.clone());
+    let inputs = inputs_shape.serialize(instances, circuits.to_vec(), transcript.clone());
 
     let result_receiver = env
         .submitter
-        .submit(SubmittedTask::new(program, inputs))
+        .submit(SubmittedTask::new(program, inputs.clone()))
         .expect("submit to scheduler failure");
 
     let result = result_receiver
         .read()
         .expect("result pipe disconnected unexpectedly");
+
+    env.compiler_lock().constant_pool.deallocate_inputs(inputs);
 
     let proof = result.ret_value.unwrap().unwrap_transcript_move().take();
 

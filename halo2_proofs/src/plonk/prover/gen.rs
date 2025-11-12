@@ -132,11 +132,42 @@ mod user_functions {
     use zkpoly_compiler::{ast::user_function as uf, transit::type2};
     use zkpoly_runtime::error::RuntimeError;
 
-    pub type CalculateAdvicesF<Rt: RuntimeType, CC> = uf::FunctionFn3<
+    pub type ConfigureCircuitF<Rt: RuntimeType, CC: Circuit<Rt::Field>> =
+        uf::FunctionFn1<Rt, ast::Whatever<Rt, CC>, ast::Whatever<Rt, CC::Config>>;
+
+    pub fn configure_circuit<Rt: RuntimeType, CC: Circuit<Rt::Field>>() -> ConfigureCircuitF<Rt, CC>
+    where
+        CC: 'static + Send + Sync,
+    {
+        #[allow(unused_variables)]
+        let f = move |r: Box<dyn FnOnce(CC::Config) + '_>, circuit: &CC| {
+            let mut meta = ConstraintSystem::default();
+
+            #[cfg(feature = "circuit-params")]
+            let config = CC::configure_with_params(&mut meta, circuit.params());
+            #[cfg(not(feature = "circuit-params"))]
+            let config = CC::configure(&mut meta);
+
+            r(config);
+            Ok(())
+        };
+
+        uf::FunctionFn1::new(
+            "configure_circuit".to_string(),
+            f,
+            type2::Typ::Any(
+                any::TypeId::of::<CC::Config>().into(),
+                std::mem::size_of::<CC::Config>(),
+            ),
+        )
+    }
+
+    pub type CalculateAdvicesF<Rt: RuntimeType, CC: Circuit<Rt::Field>> = uf::FunctionFn4<
         Rt,
         ast::Array<Rt, ast::PolyLagrange<Rt>>,
         ast::Whatever<Rt, HashMap<usize, Rt::Field>>,
         ast::Whatever<Rt, CC>,
+        ast::Whatever<Rt, CC::Config>,
         ast::Array<Rt, ast::PolyLagrange<Rt>>,
     >;
 
@@ -149,7 +180,6 @@ mod user_functions {
         k: u32,
         current_phase: sealed::Phase,
         meta: &ConstraintSystem<Rt::Field>,
-        config: ConcreteCircuit::Config,
     ) -> CalculateAdvicesF<Rt, ConcreteCircuit>
     where
         ConcreteCircuit::Config: 'static + Send + Sync,
@@ -311,7 +341,8 @@ mod user_functions {
         let f = move |mut r: Vec<&mut zkpoly_runtime::scalar::ScalarArray<Rt::Field>>,
                       instances: Vec<&zkpoly_runtime::scalar::ScalarArray<Rt::Field>>,
                       challenges: &HashMap<usize, Rt::Field>,
-                      circuit: &ConcreteCircuit| {
+                      circuit: &ConcreteCircuit,
+                      config: &ConcreteCircuit::Config| {
             let mut witness = WitnessCollection {
                 k,
                 current_phase,
@@ -363,7 +394,7 @@ mod user_functions {
             Ok(())
         };
 
-        uf::FunctionFn3::new(
+        uf::FunctionFn4::new(
             "calculate_advices".to_string(),
             f,
             type2::Typ::Array(Box::new(type2::Typ::lagrange(n)), 2 * num_advice_columns),
@@ -1609,10 +1640,11 @@ where
 
 /// Shape of inputs of the computation graph
 #[derive(Debug, Clone)]
-pub struct InputsShape {
+pub struct InputsShape<Rt: RuntimeType, CC> {
     n_circuits: usize,
     n_columns: usize,
     instance_lengths: Vec<Vec<usize>>,
+    _phantom: PhantomData<(Rt, CC)>,
 }
 
 /// The generator for [`super::create_proof`].
@@ -1626,10 +1658,13 @@ pub fn create_proof<
 >(
     params: &Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
-    circuits: Vec<ConcreteCircuit>,
+    circuits: &[ConcreteCircuit],
     instance_lengths: &[Vec<usize>],
     allocator: &mut ast::ConstantPool,
-) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
+) -> (
+    ast::Transcript<RtInstance<Scheme, E, T>>,
+    InputsShape<RtInstance<Scheme, E, T>, ConcreteCircuit>,
+)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64> + Ord,
     ConcreteCircuit::Config: 'static + Send + Sync,
@@ -1655,11 +1690,14 @@ pub fn create_proof_validated<
 >(
     params: &Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
-    circuits: Vec<ConcreteCircuit>,
+    circuits: &[ConcreteCircuit],
     instance_lengths: &[Vec<usize>],
     allocator: &mut ast::ConstantPool,
     trace: Option<&Trace<Scheme::Curve>>,
-) -> (ast::Transcript<RtInstance<Scheme, E, T>>, InputsShape)
+) -> (
+    ast::Transcript<RtInstance<Scheme, E, T>>,
+    InputsShape<RtInstance<Scheme, E, T>, ConcreteCircuit>,
+)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     ConcreteCircuit::Config: 'static + Send + Sync,
@@ -1719,7 +1757,20 @@ where
         n_circuits: circuits.len(),
         n_columns: pk.vk.cs.num_instance_columns,
         instance_lengths: instance_lengths.to_vec(),
+        _phantom: PhantomData,
     };
+
+    let circuits: Vec<ast::Whatever<_, ConcreteCircuit>> = (0..circuits.len())
+        .map(|i| {
+            entry_definer.define(
+                format!("circuit_{i}"),
+                type2::Typ::Any(
+                    std::any::TypeId::of::<ConcreteCircuit>().into(),
+                    std::mem::size_of::<ConcreteCircuit>(),
+                ),
+            )
+        })
+        .collect::<Vec<_>>();
 
     let instances: Vec<Vec<ast::PolyLagrange<RtInstance<Scheme, E, T>>>> = (0..circuits.len())
         .map(|i| {
@@ -1734,6 +1785,8 @@ where
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
+
+    let rt_config = user_functions::configure_circuit().call(circuits[0].clone());
 
     let mut transcript: ast::Transcript<RtInstance<Scheme, E, T>> =
         entry_definer.define("transcript".to_string(), type2::Typ::Transcript);
@@ -1784,11 +1837,6 @@ where
     let new_hash_dict_f = user_functions::new_hash_dict();
     let mut challenges = new_hash_dict_f.call();
 
-    let circuits = circuits
-        .into_iter()
-        .map(|circuit| ast::Whatever::constant(circuit, "circuit".to_string()))
-        .collect::<Vec<_>>();
-
     let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
     for (phase_i, current_phase) in pk.vk.cs.phases().enumerate() {
         let column_indices = meta
@@ -1815,12 +1863,12 @@ where
                 params.k(),
                 current_phase,
                 meta,
-                config.clone(),
             );
             let advices_numerator_dominators = calculate_advice_f.call(
                 ast::Array::construct(instance_values.iter().cloned()),
                 challenges.clone(),
                 circuit.clone(),
+                rt_config.clone(),
             );
 
             let advice_numerators: Vec<_> = advices_numerator_dominators
@@ -2506,14 +2554,17 @@ where
     (transcript, inputs_shape)
 }
 
-impl InputsShape {
+impl<Rt: RuntimeType, CC: Circuit<Rt::Field> + 'static> InputsShape<Rt, CC> {
     /// Serialize the inputs to the entry table.
-    pub fn serialize<Rt: RuntimeType>(
+    pub fn serialize(
         &self,
         instances: Vec<Vec<rt::scalar::ScalarArray<Rt::Field>>>,
+        circuits: Vec<CC>,
         transcript: Rt::Trans,
     ) -> rt::args::EntryTable<Rt> {
         assert!(instances.len() == self.n_circuits);
+        assert!(circuits.len() == self.n_circuits);
+
         instances
             .iter()
             .zip(self.instance_lengths.iter())
@@ -2525,6 +2576,13 @@ impl InputsShape {
             });
 
         let mut entry_table = rt::args::EntryTable::new();
+
+        circuits.into_iter().for_each(|circuit| {
+            rt::args::add_entry(
+                &mut entry_table,
+                rt::args::Variable::Any(rt::any::AnyWrapper::new(Box::new(circuit))),
+            );
+        });
 
         instances.into_iter().for_each(|instances| {
             instances.into_iter().for_each(|col| {
@@ -2538,7 +2596,6 @@ impl InputsShape {
                 transcript,
             )),
         );
-
         entry_table
     }
 }
