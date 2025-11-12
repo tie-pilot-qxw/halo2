@@ -109,7 +109,7 @@ fn main() {
         (params, pk)
     }
 
-    fn prover(_k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
+    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
         let circuit: MyCircuit<Fr> = MyCircuit {
             _marker: PhantomData,
         };
@@ -126,10 +126,10 @@ fn main() {
         let options = driver::DebugOptions::all(PathBuf::from("target/debug/transit"))
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
+
         let hd_info =
-            driver::HardwareInfo::new(driver::MemoryInfo::new(300 * 2u64.pow(30), 2u64.pow(28)))
+            driver::HardwareInfo::new(driver::MemoryInfo::new(40 * 2u64.pow(30), 2u64.pow(28)))
                 .with_page_size(2u64.pow(24))
-                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)))
                 .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)));
 
         let cpu_pool = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
@@ -142,7 +142,14 @@ fn main() {
         let (mut jit, scheduler) = make_env(
             JitConfig::new(artifect_dir.into())
                 .with_debug_options(options)
-                .with_force_rebuild(rebuild),
+                .with_force_rebuild(rebuild)
+                .with_compiler_config(
+                    driver::Config::default().with_sliceable_subgraph_on(
+                        driver::SliceableSubgraphConfig::default()
+                            .with_chunk_len(2u64.pow(k - 6))
+                            .with_minimum_order(3),
+                    ),
+                ),
             SchedulerConfig::default(),
             hd_info.disk_allocator(2usize.pow(30)),
             constant_pool,

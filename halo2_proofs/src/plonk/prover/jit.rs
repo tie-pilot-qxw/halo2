@@ -20,6 +20,7 @@ pub use zkpoly_scheduler::scheduler::{SchedulerConfig, SchedulerHandle};
 /// Configuratios for the Just-In-Time compiler.
 pub struct JitConfig {
     assertions: bool,
+    compiler_config: driver::Config,
     debug_options: DebugOptions,
     artifect_dir: PathBuf,
     force_rebuild: bool,
@@ -32,9 +33,18 @@ impl JitConfig {
         Self {
             assertions: false,
             debug_options: DebugOptions::none(artifect_dir.clone()),
+            compiler_config: driver::Config::default(),
             artifect_dir: artifect_dir,
             force_rebuild: false,
             artifect_versions_cpu_memory_divisions: vec![1, 2, 3],
+        }
+    }
+
+    /// Set compiler config
+    pub fn with_compiler_config(self, compiler_config: driver::Config) -> Self {
+        Self {
+            compiler_config,
+            ..self
         }
     }
 
@@ -205,6 +215,7 @@ impl Compiler {
                             .debug_options
                             .clone()
                             .with_debug_dir(self.config.artifect_dir.join(name));
+                        options.prepare_dir();
 
                         let fresh_type2 = driver::FreshType2::from_ast(cg_ret, &options).unwrap();
 
@@ -216,7 +227,11 @@ impl Compiler {
                         {
                             println!("[Test] Applying Type2 passes and lowering to Artifect");
                             let processed_type2 = fresh_type2
-                                .apply_passes(&self.hardware_info, &mut self.constant_pool)
+                                .apply_passes(
+                                    &self.hardware_info,
+                                    &mut self.constant_pool,
+                                    &self.config.compiler_config,
+                                )
                                 .unwrap();
 
                             let artifect = processed_type2

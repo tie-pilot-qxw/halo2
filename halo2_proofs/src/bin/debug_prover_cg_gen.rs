@@ -390,11 +390,10 @@ fn main() {
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Graphviz);
 
-        options.init();
+        options.prepare_dir();
 
         let hd_info = driver::HardwareInfo::new(MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)))
             .with_page_size(2 * 2u64.pow(20))
-            .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)))
             .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
 
         let artifect_dir = "target/artifect";
@@ -405,7 +404,17 @@ fn main() {
 
         let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
             let artifect = type2_fresh
-                .to_semi_artifect(&hd_info, &mut constant_pool, 1..=1, kernels_dir.into())
+                .to_semi_artifect(
+                    &hd_info,
+                    &mut constant_pool,
+                    &driver::Config::default().with_sliceable_subgraph_on(
+                        driver::SliceableSubgraphConfig::default()
+                            .with_chunk_len(16)
+                            .with_minimum_order(3),
+                    ),
+                    1..=1,
+                    kernels_dir.into(),
+                )
                 .unwrap();
             artifect.dump(&artifect_dir, &mut constant_pool).unwrap();
             artifect.finish(&mut constant_pool)
@@ -493,5 +502,5 @@ fn main() {
 
     let rebuild = std::env::args().any(|arg| arg == "--rebuild");
 
-    prover(k, &params, &pk, rebuild, true);
+    prover(k, &params, &pk, rebuild, false);
 }
