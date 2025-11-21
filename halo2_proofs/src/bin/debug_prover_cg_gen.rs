@@ -428,14 +428,24 @@ fn main() {
         };
 
         let sconfig = SchedulerConfig::default()
-            .with_runtime_debug(RuntimeDebug::none().with_print_instruction(true))
+            .with_runtime_debug(
+                RuntimeDebug::none()
+                    .with_print_instruction(true)
+                    .with_serial_execution(true)
+                    .with_record_time(true),
+            )
             .with_num_executors(1)
             .with_schedule_window_size(4);
         let mut programs = Programs::new();
-        let disk_pool = hd_info.disk_allocator(artifect.max_bs());
         let program = programs.push(artifect);
         let rng = AsyncRng::new(2usize.pow(20), OsRng);
-        let (scheduler, submitter) = make_scheduler(hd_info, sconfig, rng, disk_pool, programs);
+        let (scheduler, submitter) = make_scheduler(
+            hd_info.clone(),
+            sconfig,
+            rng,
+            hd_info.disk_allocator(2),
+            programs,
+        );
         let scheduler = scheduler.launch();
 
         println!("[Test] Launch VM");
@@ -462,6 +472,11 @@ fn main() {
 
                 let mut f = std::fs::File::create("./runtime_debug.html").unwrap();
                 result.log.waterfall().build(&mut f).unwrap();
+
+                result
+                    .log
+                    .plot_percentage_to_file("./runtime_statistics.svg", 10)
+                    .unwrap();
             }
 
             let proof = result
