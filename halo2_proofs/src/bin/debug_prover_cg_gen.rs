@@ -12,7 +12,7 @@ use halo2_proofs::poly::kzg::{
     strategy::SingleStrategy,
 };
 
-use halo2_proofs::transcript::{self, TranscriptWriterBuffer};
+use halo2_proofs::transcript;
 use zkpoly_compiler::driver::MemoryInfo;
 use zkpoly_memory_pool::CpuMemoryPool;
 use zkpoly_runtime::async_rng::AsyncRng;
@@ -394,26 +394,26 @@ fn main() {
 
         options.prepare_dir();
 
-        let hd_info = driver::HardwareInfo::new(MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)))
-            .with_page_size(2 * 2u64.pow(20))
-            .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30), 2u64.pow(28)));
+        let hd_info = driver::HardwareInfo::new(MemoryInfo::new(4 * 2u64.pow(30)))
+            .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30)));
 
         let artifect_dir = "target/artifect";
         let kernels_dir = "target/kernels";
 
         println!("[Test] Begin Compiling to Runtime Instructions");
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options).unwrap();
+        let config = driver::Config::default().with_sliceable_subgraph_on(
+            driver::SubgraphSlicingConfig::default()
+                .with_chunk_len(16)
+                .with_minimum_order(3),
+        );
 
         let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
             let artifect = type2_fresh
                 .to_semi_artifect(
                     &hd_info,
                     &mut constant_pool,
-                    &driver::Config::default().with_sliceable_subgraph_on(
-                        driver::SliceableSubgraphConfig::default()
-                            .with_chunk_len(16)
-                            .with_minimum_order(3),
-                    ),
+                    &config,
                     1..=1,
                     kernels_dir.into(),
                 )
@@ -441,6 +441,7 @@ fn main() {
         let rng = AsyncRng::new(2usize.pow(20), OsRng);
         let (scheduler, submitter) = make_scheduler(
             hd_info.clone(),
+            config.memory().clone(),
             sconfig,
             rng,
             hd_info.disk_allocator(2),

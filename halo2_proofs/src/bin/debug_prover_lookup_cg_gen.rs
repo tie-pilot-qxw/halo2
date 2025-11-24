@@ -127,10 +127,8 @@ fn main() {
             .with_log(true)
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
 
-        let hd_info =
-            driver::HardwareInfo::new(driver::MemoryInfo::new(40 * 2u64.pow(30), 2u64.pow(28)))
-                .with_page_size(2u64.pow(24))
-                .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30), 2u64.pow(28)));
+        let hd_info = driver::HardwareInfo::new(driver::MemoryInfo::new(40 * 2u64.pow(30)))
+            .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30)));
 
         let cpu_pool = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
         let artifect_dir = "target/lookup";
@@ -145,7 +143,7 @@ fn main() {
                 .with_force_rebuild(rebuild)
                 .with_compiler_config(
                     driver::Config::default().with_sliceable_subgraph_on(
-                        driver::SliceableSubgraphConfig::default()
+                        driver::SubgraphSlicingConfig::default()
                             .with_chunk_len(2u64.pow(k - 6))
                             .with_minimum_order(3),
                     ),

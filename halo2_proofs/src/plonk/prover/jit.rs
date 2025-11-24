@@ -201,6 +201,7 @@ pub fn make_env<Rt: RuntimeType, CC: Circuit<Rt::Field>>(
     let rng = AsyncRng::new(2usize.pow(24), OsRng);
     let (scheduler, submitter) = make_scheduler(
         hd_info.clone(),
+        config.compiler_config.memory().clone(),
         scheduler_config,
         rng,
         disk_pool,
