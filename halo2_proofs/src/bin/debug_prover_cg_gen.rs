@@ -476,6 +476,7 @@ fn main() {
 
                 result
                     .log
+                    .statistics()
                     .plot_percentage_to_file("./runtime_statistics.svg", 10)
                     .unwrap();
             }
