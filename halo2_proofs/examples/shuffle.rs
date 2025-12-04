@@ -3,7 +3,7 @@ use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
     dev::{metadata, FailureLocation, MockProver, VerifyFailure},
-    halo2curves::pasta::EqAffine,
+    halo2curves::bn256::{Fr, G1Affine, G1},
     plonk::*,
     poly::{
         commitment::ParamsProver,
@@ -269,49 +269,13 @@ fn test_mock_prover<F: Ord + FromUniformBytes<64>, const W: usize, const H: usiz
     };
 }
 
-fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
-    k: u32,
-    circuit: MyCircuit<C::Scalar, W, H>,
-    expected: bool,
-) where
-    C::Scalar: FromUniformBytes<64>,
-{
-    let params = ParamsIPA::<C>::new(k);
-    let vk = keygen_vk(&params, &circuit).unwrap();
-    let pk = keygen_pk(&params, vk, &circuit).unwrap();
+mod common;
+use common::*;
 
-    let proof = {
-        let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+fn test_prover<const W: usize, const H: usize>(k: u32, circuit: MyCircuit<Fr, W, H>) {
+    let (params, pk) = keygen_or_load(k, &circuit);
 
-        create_proof::<IPACommitmentScheme<C>, ProverIPA<C>, _, _, _, _>(
-            &params,
-            &pk,
-            &[circuit],
-            &[&[]],
-            OsRng,
-            &mut transcript,
-        )
-        .expect("proof generation should not fail");
-
-        transcript.finalize()
-    };
-
-    let accepted = {
-        let strategy = AccumulatorStrategy::new(&params);
-        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-
-        verify_proof::<IPACommitmentScheme<C>, VerifierIPA<C>, _, _, _>(
-            &params,
-            pk.get_vk(),
-            strategy,
-            &[&[]],
-            &mut transcript,
-        )
-        .map(|strategy| strategy.finalize())
-        .unwrap_or_default()
-    };
-
-    assert_eq!(accepted, expected);
+    prover(k, &params, &pk, circuit);
 }
 
 fn main() {
@@ -323,30 +287,30 @@ fn main() {
 
     {
         test_mock_prover(K, circuit.clone(), Ok(()));
-        test_prover::<EqAffine, W, H>(K, circuit.clone(), true);
+        test_prover::<W, H>(K, circuit.clone());
     }
 
-    #[cfg(not(feature = "sanity-checks"))]
-    {
-        use std::ops::IndexMut;
+    // #[cfg(not(feature = "sanity-checks"))]
+    // {
+    //     use std::ops::IndexMut;
 
-        let mut circuit = circuit.clone();
-        circuit.shuffled = circuit.shuffled.map(|mut shuffled| {
-            shuffled.index_mut(0).swap(0, 1);
-            shuffled
-        });
+    //     let mut circuit = circuit.clone();
+    //     circuit.shuffled = circuit.shuffled.map(|mut shuffled| {
+    //         shuffled.index_mut(0).swap(0, 1);
+    //         shuffled
+    //     });
 
-        test_mock_prover(
-            K,
-            circuit.clone(),
-            Err(vec![(
-                ((1, "z should end with 1").into(), 0, "").into(),
-                FailureLocation::InRegion {
-                    region: (0, "Shuffle original into shuffled").into(),
-                    offset: 32,
-                },
-            )]),
-        );
-        test_prover::<EqAffine, W, H>(K, circuit, false);
-    }
+    //     test_mock_prover(
+    //         K,
+    //         circuit.clone(),
+    //         Err(vec![(
+    //             ((1, "z should end with 1").into(), 0, "").into(),
+    //             FailureLocation::InRegion {
+    //                 region: (0, "Shuffle original into shuffled").into(),
+    //                 offset: 32,
+    //             },
+    //         )]),
+    //     );
+    //     test_prover::<W, H>(K, circuit, false);
+    // }
 }

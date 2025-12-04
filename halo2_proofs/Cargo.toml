@@ -121,6 +121,9 @@ required-features = ["test-dev-graph"]
 name = "proof-size"
 required-features = ["cost-estimator"]
 
+[[example]]
+name = "shuffle"
+
 [[bin]]
 name = "debug_prover_cg_gen"
 
