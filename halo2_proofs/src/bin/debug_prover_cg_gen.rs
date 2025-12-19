@@ -309,6 +309,60 @@ fn main() {
         (params, pk)
     }
 
+    fn prover_cpu(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
+        let rng = OsRng;
+
+        let circuit: MyCircuit<Fr> = MyCircuit {
+            a: Value::known(Fr::random(rng)),
+            k,
+        };
+
+        use halo2_proofs::transcript::TranscriptWriterBuffer;
+        let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
+            _,
+            _,
+            halo2_proofs::transcript::Challenge255<G1Affine>,
+        >::init(vec![]);
+        halo2_proofs::plonk::create_proof_traced::<
+            KZGCommitmentScheme<Bn256>,
+            ProverSHPLONK<Bn256>,
+            _,
+            _,
+            _,
+            _,
+        >(
+            params,
+            pk,
+            &[circuit.clone()],
+            &[&[]],
+            rng,
+            &mut transcript,
+            None,
+        )
+        .expect("proof generation should not fail");
+        let proof = transcript.finalize();
+
+        let strategy = SingleStrategy::new(params);
+        use halo2_proofs::transcript::TranscriptReadBuffer;
+        let mut transcript = halo2_proofs::transcript::Blake2bRead::<
+            _,
+            _,
+            halo2_proofs::transcript::Challenge255<_>,
+        >::init(&proof[..]);
+        let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
+            params,
+            pk.get_vk(),
+            strategy,
+            &[&[]],
+            &mut transcript,
+        );
+
+        match verify_result {
+            Ok(_) => println!("[Test] Verify Proof Success"),
+            Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
+        }
+    }
+
     fn prover(
         k: u32,
         params: &ParamsKZG<Bn256>,
@@ -402,11 +456,13 @@ fn main() {
 
         println!("[Test] Begin Compiling to Runtime Instructions");
         let type2_fresh = driver::FreshType2::from_ast(cg_ret, &options).unwrap();
-        let config = driver::Config::default().with_sliceable_subgraph_on(
-            driver::SubgraphSlicingConfig::default()
-                .with_chunk_len(16)
-                .with_minimum_order(3),
-        );
+        let config = driver::Config::default()
+            .with_sliceable_subgraph_on(
+                driver::SubgraphSlicingConfig::default()
+                    .with_chunk_len(16)
+                    .with_minimum_order(3),
+            )
+            .with_scheduler_alg(driver::GraphSchedulingAlgorithm::PlainTopologySort);
 
         let artifect = if rebuild || !std::path::Path::new(artifect_dir).exists() {
             let artifect = type2_fresh
@@ -514,13 +570,18 @@ fn main() {
         println!("[Test] VM Exited");
     }
 
-    let k = 10;
+    let k = 14;
 
     print!("[Test] Keygen...");
     let (params, pk) = keygen(k);
     println!("Done");
 
     let rebuild = std::env::args().any(|arg| arg == "--rebuild");
+    let cpu_only = std::env::args().any(|arg| arg == "--cpu");
 
-    prover(k, &params, &pk, rebuild, false);
+    if cpu_only {
+        prover_cpu(k, &params, &pk)
+    } else {
+        prover(k, &params, &pk, rebuild, false);
+    }
 }

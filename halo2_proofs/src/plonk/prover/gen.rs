@@ -13,6 +13,7 @@ use zkpoly_compiler::{
     ast::{self},
     transit::{type2, HashTyp},
 };
+use zkpoly_runtime::runtime_type_common_impl;
 use zkpoly_runtime::{self as rt, args::RuntimeType};
 
 enum PolyOrScalar<Rt: RuntimeType> {
@@ -343,6 +344,9 @@ mod user_functions {
                       challenges: &HashMap<usize, Rt::Field>,
                       circuit: &ConcreteCircuit,
                       config: &ConcreteCircuit::Config| {
+            let ca_begin = start_timer!(|| "Calculate Advices");
+
+            let init_wit_begin = start_timer!(|| "Initialize WitnessCollection");
             let mut witness = WitnessCollection {
                 k,
                 current_phase,
@@ -357,8 +361,10 @@ mod user_functions {
                 usable_rows: ..unusable_rows_start,
                 _marker: std::marker::PhantomData,
             };
+            end_timer!(init_wit_begin);
 
             // Synthesize the circuit to obtain the witness and other information.
+            let syn_begin = start_timer!(|| "Call Circuit Synthesize");
             ConcreteCircuit::FloorPlanner::synthesize(
                 &mut witness,
                 circuit,
@@ -366,6 +372,9 @@ mod user_functions {
                 constants.clone(),
             )
             .map_err(|e| RuntimeError::Other(format!("{:?}", e)))?;
+            end_timer!(syn_begin);
+
+            let copy_to_pinned_begin = start_timer!(|| "Copy Advices to Pinned Memory");
 
             let r_dominators = r.split_off(num_advice_columns);
             let r_numerators = r;
@@ -391,6 +400,9 @@ mod user_functions {
                             *r_dominator = d;
                         });
                 });
+            end_timer!(copy_to_pinned_begin);
+
+            end_timer!(ca_begin);
             Ok(())
         };
 
@@ -1611,20 +1623,7 @@ fn shplonk_commit<Rt: RuntimeType>(
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct RtInstance<Scheme, E, T>(PhantomData<(Scheme, E, T)>);
 
-impl<Scheme, E, T> std::fmt::Debug for RtInstance<Scheme, E, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "RtInstance")
-    }
-}
-
-impl<Scheme, E, T> Clone for RtInstance<Scheme, E, T> {
-    fn clone(&self) -> Self {
-        Self(PhantomData)
-    }
-}
-
-unsafe impl<Scheme, E, T> Send for RtInstance<Scheme, E, T> {}
-unsafe impl<Scheme, E, T> Sync for RtInstance<Scheme, E, T> {}
+runtime_type_common_impl!(RtInstance, S, E, T);
 
 impl<Scheme: CommitmentScheme + 'static, E, T> RuntimeType for RtInstance<Scheme, E, T>
 where

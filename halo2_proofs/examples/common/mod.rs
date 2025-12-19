@@ -75,6 +75,58 @@ pub fn keygen_or_load<C: Circuit<Fr>>(
     (params, pk)
 }
 
+pub fn prover_cpu<C>(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>, circuit: C)
+where
+    C: Circuit<Fr> + Clone + Send + Sync + 'static,
+{
+    let rng = OsRng;
+
+    use halo2_proofs::transcript::TranscriptWriterBuffer;
+    let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
+        _,
+        _,
+        halo2_proofs::transcript::Challenge255<G1Affine>,
+    >::init(vec![]);
+    halo2_proofs::plonk::create_proof_traced::<
+        KZGCommitmentScheme<Bn256>,
+        ProverSHPLONK<Bn256>,
+        _,
+        _,
+        _,
+        _,
+    >(
+        params,
+        pk,
+        &[circuit.clone()],
+        &[&[]],
+        rng,
+        &mut transcript,
+        None,
+    )
+    .expect("proof generation should not fail");
+    let proof = transcript.finalize();
+
+    let strategy = SingleStrategy::new(params);
+    use halo2_proofs::transcript::TranscriptReadBuffer;
+    let mut transcript = halo2_proofs::transcript::Blake2bRead::<
+        _,
+        _,
+        halo2_proofs::transcript::Challenge255<_>,
+    >::init(&proof[..]);
+    let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
+        params,
+        pk.get_vk(),
+        strategy,
+        &[&[]],
+        &mut transcript,
+    );
+
+    match verify_result {
+        Ok(_) => println!("[Test] Verify Proof Success"),
+        Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
+    }
+}
+
 pub fn prover<C>(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>, circuit: C)
 where
     C: Circuit<Fr> + Clone + Send + Sync + 'static,
@@ -92,8 +144,8 @@ where
         .with_log(true)
         .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
 
-    let hd_info = driver::HardwareInfo::new(driver::MemoryInfo::new(3 * 2u64.pow(30)))
-        .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30)));
+    let hd_info = driver::HardwareInfo::new(driver::MemoryInfo::new(10 * 2u64.pow(30)))
+        .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30)));
 
     let cpu_pool = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
     let artifect_dir = "target/";
@@ -106,7 +158,14 @@ where
         JitConfig::new(artifect_dir.into())
             .with_debug_options(options)
             .with_force_rebuild(rebuild)
-            .with_compiler_config(driver::Config::default().with_sliceable_subgraph(None)),
+            .with_artifect_versions_cpu_memory_divisions(vec![0])
+            .with_compiler_config(
+                driver::Config::default().with_sliceable_subgraph_on(
+                    driver::SubgraphSlicingConfig::default()
+                        .with_minimum_order(1)
+                        .with_chunk_len(2u64.pow(k - 3)),
+                ),
+            ),
         SchedulerConfig::default(),
         hd_info.disk_allocator(2usize.pow(30)),
         constant_pool,
@@ -127,7 +186,7 @@ where
         &[&[]],
         &mut transcript,
         &mut jit,
-        "lookup-test",
+        "shuffle",
     )
     .expect("proof generation should not fail");
 

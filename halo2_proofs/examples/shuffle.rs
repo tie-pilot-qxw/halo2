@@ -275,19 +275,25 @@ use common::*;
 fn test_prover<const W: usize, const H: usize>(k: u32, circuit: MyCircuit<Fr, W, H>) {
     let (params, pk) = keygen_or_load(k, &circuit);
 
-    prover(k, &params, &pk, circuit);
+    let cpu_only = std::env::args().any(|arg| arg == "--cpu");
+
+    if cpu_only {
+        prover_cpu(k, &params, &pk, circuit);
+    } else {
+        prover(k, &params, &pk, circuit);
+    }
 }
 
 fn main() {
     const W: usize = 4;
     const H: usize = 32;
-    const K: u32 = 8;
+    let k: u32 = std::env::var("K").expect("provide K").parse().unwrap();
 
     let circuit = &MyCircuit::<_, W, H>::rand(&mut OsRng);
 
     {
-        test_mock_prover(K, circuit.clone(), Ok(()));
-        test_prover::<W, H>(K, circuit.clone());
+        test_mock_prover(k, circuit.clone(), Ok(()));
+        test_prover::<W, H>(k, circuit.clone());
     }
 
     // #[cfg(not(feature = "sanity-checks"))]
