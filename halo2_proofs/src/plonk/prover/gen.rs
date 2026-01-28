@@ -7,6 +7,7 @@ use crate::tracing::Trace;
 
 use super::*;
 use ff::PrimeField;
+use rayon::prelude::*;
 use std::collections::BTreeMap;
 use std::{any, marker::PhantomData};
 use zkpoly_compiler::{
@@ -191,7 +192,7 @@ mod user_functions {
             advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
             _unblinded_advice: HashSet<usize>,
             challenges: &'a HashMap<usize, F>,
-            instances: Vec<&'a rt::scalar::ScalarArray<F>>,
+            instances: &'a [Vec<F>],
             usable_rows: RangeTo<usize>,
             _marker: std::marker::PhantomData<F>,
         }
@@ -346,13 +347,20 @@ mod user_functions {
                       config: &ConcreteCircuit::Config| {
             let ca_begin = start_timer!(|| "Calculate Advices");
 
+            let copy_from_pinned_begin = start_timer!(|| "Copy Instances from Pinned Memory");
+            let mut instances_copy = Vec::with_capacity(instances.len());
+            for instance in instances {
+                instances_copy.push(instance.iter().copied().collect::<Vec<_>>());
+            }
+            end_timer!(copy_from_pinned_begin);
+
             let init_wit_begin = start_timer!(|| "Initialize WitnessCollection");
             let mut witness = WitnessCollection {
                 k,
                 current_phase,
                 advice: vec![Polynomial::empty_lagrange_assigned(n as usize); num_advice_columns],
                 _unblinded_advice: HashSet::from_iter(unblinded_advice_columns.iter().copied()),
-                instances,
+                instances: &instances_copy,
                 challenges,
                 // The prover will not be allowed to assign values to advice
                 // cells that exist within inactive rows, which include some
@@ -387,9 +395,9 @@ mod user_functions {
                 .for_each(|((advice, r_numerators), r_dominators)| {
                     advice
                         .values
-                        .into_iter()
-                        .zip(r_numerators.iter_mut())
-                        .zip(r_dominators.iter_mut())
+                        .into_par_iter()
+                        .zip(r_numerators.as_mut().par_iter_mut())
+                        .zip(r_dominators.as_mut().par_iter_mut())
                         .for_each(|((assigned, r_numerator), r_dominator)| {
                             let (n, d) = match assigned {
                                 Assigned::Zero => (Rt::Field::ZERO, Rt::Field::ONE),
