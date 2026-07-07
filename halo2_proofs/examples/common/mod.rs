@@ -1,3 +1,4 @@
+use ark_std::{end_timer, start_timer};
 use halo2_proofs::plonk::jit::{make_env, JitConfig};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::commitment::Params;
@@ -14,6 +15,7 @@ use zkpoly_memory_pool::CpuMemoryPool;
 
 use rand_core::OsRng;
 use std::path::PathBuf;
+use zkpoly_runtime::runtime::{Runtime, RuntimeDebug};
 use zkpoly_scheduler::scheduler::SchedulerConfig;
 
 pub fn keygen<C: Circuit<Fr>>(
@@ -87,6 +89,8 @@ where
         _,
         halo2_proofs::transcript::Challenge255<G1Affine>,
     >::init(vec![]);
+
+    let begin = start_timer!(|| "Begin Proof");
     halo2_proofs::plonk::create_proof_traced::<
         KZGCommitmentScheme<Bn256>,
         ProverSHPLONK<Bn256>,
@@ -104,6 +108,8 @@ where
         None,
     )
     .expect("proof generation should not fail");
+    end_timer!(begin);
+
     let proof = transcript.finalize();
 
     let strategy = SingleStrategy::new(params);
@@ -144,8 +150,8 @@ where
         .with_log(true)
         .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
 
-    let hd_info = driver::HardwareInfo::new(driver::MemoryInfo::new(10 * 2u64.pow(30)))
-        .with_gpu(driver::MemoryInfo::new(4 * 2u64.pow(30)));
+    let hd_info = driver::HardwareInfo::new(driver::MemoryInfo::new(20 * 2u64.pow(30)))
+        .with_gpu(driver::MemoryInfo::new(20 * 2u64.pow(30)));
 
     let cpu_pool = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
     let artifect_dir = "target/";
@@ -166,7 +172,7 @@ where
                         .with_chunk_len(2u64.pow(k - 3)),
                 ),
             ),
-        SchedulerConfig::default(),
+        SchedulerConfig::default().with_runtime_debug(RuntimeDebug::none().with_record_time(true)),
         hd_info.disk_allocator(2usize.pow(30)),
         constant_pool,
         hd_info.clone(),

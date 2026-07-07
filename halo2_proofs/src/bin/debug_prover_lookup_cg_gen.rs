@@ -1,3 +1,4 @@
+use ark_std::{end_timer, start_timer};
 use group::ff::Field;
 use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::jit::{make_env, JitConfig};
@@ -5,6 +6,7 @@ use halo2_proofs::plonk::*;
 use halo2_proofs::poly::kzg::multiopen::VerifierSHPLONK;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
+use rand_core::OsRng;
 
 use halo2_proofs::poly::kzg::{
     commitment::{KZGCommitmentScheme, ParamsKZG},
@@ -17,6 +19,7 @@ use zkpoly_memory_pool::CpuMemoryPool;
 use ff::PrimeField;
 use std::marker::PhantomData;
 use std::path::PathBuf;
+use zkpoly_runtime::runtime::RuntimeDebug;
 use zkpoly_scheduler::scheduler::SchedulerConfig;
 
 fn main() {
@@ -109,11 +112,68 @@ fn main() {
         (params, pk)
     }
 
-    fn prover(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>) {
-        let circuit: MyCircuit<Fr> = MyCircuit {
-            _marker: PhantomData,
-        };
+    pub fn prover_cpu<C>(k: u32, params: &ParamsKZG<Bn256>, pk: &ProvingKey<G1Affine>, circuit: C)
+    where
+        C: Circuit<Fr> + Clone + Send + Sync + 'static,
+    {
+        let rng = OsRng;
 
+        use halo2_proofs::transcript::TranscriptWriterBuffer;
+        let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
+            _,
+            _,
+            halo2_proofs::transcript::Challenge255<G1Affine>,
+        >::init(vec![]);
+
+        let begin = start_timer!(|| "Begin Proof");
+        halo2_proofs::plonk::create_proof_traced::<
+            KZGCommitmentScheme<Bn256>,
+            ProverSHPLONK<Bn256>,
+            _,
+            _,
+            _,
+            _,
+        >(
+            params,
+            pk,
+            &[circuit.clone()],
+            &[&[]],
+            rng,
+            &mut transcript,
+            None,
+        )
+        .expect("proof generation should not fail");
+        end_timer!(begin);
+
+        let proof = transcript.finalize();
+
+        let strategy = SingleStrategy::new(params);
+        use halo2_proofs::transcript::TranscriptReadBuffer;
+        let mut transcript = halo2_proofs::transcript::Blake2bRead::<
+            _,
+            _,
+            halo2_proofs::transcript::Challenge255<_>,
+        >::init(&proof[..]);
+        let verify_result = verify_proof::<_, VerifierSHPLONK<Bn256>, _, _, _>(
+            params,
+            pk.get_vk(),
+            strategy,
+            &[&[]],
+            &mut transcript,
+        );
+
+        match verify_result {
+            Ok(_) => println!("[Test] Verify Proof Success"),
+            Err(e) => println!("[Test] Verify Proof Failed: {:?}", e),
+        }
+    }
+
+    fn prover(
+        k: u32,
+        params: &ParamsKZG<Bn256>,
+        pk: &ProvingKey<G1Affine>,
+        circuit: MyCircuit<Fr>,
+    ) {
         use halo2_proofs::transcript::TranscriptWriterBuffer;
         let mut transcript = halo2_proofs::transcript::Blake2bWrite::<
             _,
@@ -128,7 +188,7 @@ fn main() {
             .with_type2_visualizer(driver::Type2DebugVisualizer::Cytoscape);
 
         let hd_info = driver::HardwareInfo::new(driver::MemoryInfo::new(40 * 2u64.pow(30)))
-            .with_gpu(driver::MemoryInfo::new(2 * 2u64.pow(30)));
+            .with_gpu(driver::MemoryInfo::new(20 * 2u64.pow(30)));
 
         let cpu_pool = CpuMemoryPool::new(30, std::mem::size_of::<u32>());
         let artifect_dir = "target/lookup";
@@ -141,6 +201,7 @@ fn main() {
             JitConfig::new(artifect_dir.into())
                 .with_debug_options(options)
                 .with_force_rebuild(rebuild)
+                .with_artifect_versions_cpu_memory_divisions(vec![0])
                 .with_compiler_config(
                     driver::Config::default().with_sliceable_subgraph_on(
                         driver::SubgraphSlicingConfig::default()
@@ -148,7 +209,8 @@ fn main() {
                             .with_minimum_order(3),
                     ),
                 ),
-            SchedulerConfig::default(),
+            SchedulerConfig::default()
+                .with_runtime_debug(RuntimeDebug::none().with_record_time(true)),
             hd_info.disk_allocator(2usize.pow(30)),
             constant_pool,
             hd_info.clone(),
@@ -198,11 +260,16 @@ fn main() {
         scheduler.shutdown();
     }
 
-    let k = 14;
+    let k = std::env::var("K").unwrap().parse().unwrap();
 
     print!("[Test] Keygen...");
     let (params, pk) = keygen(k);
     println!("Done");
 
-    prover(k, &params, &pk);
+    let circuit: MyCircuit<Fr> = MyCircuit {
+        _marker: PhantomData,
+    };
+
+    prover(k, &params, &pk, circuit.clone());
+    prover_cpu(k, &params, &pk, circuit);
 }
