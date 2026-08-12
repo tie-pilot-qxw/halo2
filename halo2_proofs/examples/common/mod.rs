@@ -164,7 +164,7 @@ where
         JitConfig::new(artifect_dir.into())
             .with_debug_options(options)
             .with_force_rebuild(rebuild)
-            .with_artifect_versions_cpu_memory_divisions(vec![0])
+            .with_artifect_versions_cpu_memory_divisions(vec![1])
             .with_compiler_config(
                 driver::Config::default().with_sliceable_subgraph_on(
                     driver::SubgraphSlicingConfig::default()

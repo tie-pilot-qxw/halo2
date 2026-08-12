@@ -44,7 +44,7 @@
 //!        JitConfig::new(artifect_dir.into())
 //!            .with_debug_options(options)
 //!            .with_force_rebuild(true)
-//!            .with_artifect_versions_cpu_memory_divisions(vec![1]),
+//!            .with_artifect_versions_cpu_memory_divisions(vec![2]),
 //!        SchedulerConfig::default().with_runtime_debug(RuntimeDebug::none()),
 //!        hd_info.disk_allocator(2usize.pow(34)),
 //!        constant_pool,
@@ -68,7 +68,7 @@ use zkpoly_scheduler::scheduler::{
     make_scheduler, ProgramToken, Programs, SubmittedTask, Submitter,
 };
 
-pub use zkpoly_scheduler::scheduler::{SchedulerConfig, SchedulerHandle};
+pub use zkpoly_scheduler::scheduler::{SchedulerConfig, SchedulerHandle, SchedulingPolicy};
 
 #[derive(Debug, Clone)]
 /// Configuratios for the Just-In-Time compiler.
@@ -90,7 +90,7 @@ impl JitConfig {
             compiler_config: driver::Config::default(),
             artifect_dir: artifect_dir,
             force_rebuild: false,
-            artifect_versions_cpu_memory_divisions: vec![1, 2, 3],
+            artifect_versions_cpu_memory_divisions: vec![2, 4, 8],
         }
     }
 
@@ -126,7 +126,10 @@ impl JitConfig {
         }
     }
 
-    /// Configure versions compiled for the artifect.
+    /// Configure versions compiled for the artifect by CPU-memory divisor.
+    ///
+    /// Each value is the denominator applied to the configured total CPU memory. For example,
+    /// `[1, 2, 4]` compiles versions for the full, half, and quarter CPU-memory budgets.
     /// See [`driver::UnfusedType2::fuse`] for details.
     pub fn with_artifect_versions_cpu_memory_divisions(self, x: Vec<u32>) -> Self {
         Self {
